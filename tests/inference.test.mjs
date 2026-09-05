@@ -1,0 +1,49 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { bar, line, point, unit, story } from '../dist/index.js';
+import { inferTransition } from '../dist/grammar/infer-transition.js';
+
+test('scene inference ignores operation history and agrees with raw endpoints', () => {
+  for (const factory of [bar, line, point, unit]) {
+    const a = factory('rows').x('category').y('value');
+    const b = a.highlight({ category: 'A' });
+    const repeated = b.highlight({ category: 'A' });
+    assert.deepEqual(b.toSpec(), repeated.toSpec());
+    assert.deepEqual(inferTransition(b, repeated), []);
+    for (const target of [a.y('other'), b, a.where({ category: 'A' }), a.guide({ x: { scale: { type: 'log' } } })]) {
+      assert.deepEqual(inferTransition(a, target), inferTransition(a.toSpec(), target.toSpec()));
+      const wrapped = { toSpec: () => target.toSpec(), operations: () => ['fake'], capabilities: () => ({ observation: false }) };
+      assert.deepEqual(inferTransition(a, target), inferTransition(a, wrapped));
+    }
+  }
+});
+
+test('measure changes, row filters and pure axis swaps have distinct endpoint semantics', () => {
+  for (const factory of [bar, line, point]) {
+    const a = factory('rows').x('category').y('value');
+    assert.deepEqual(inferTransition(a, a.y('other')), ['observation']);
+    assert.deepEqual(inferTransition(a, a.where({ category: 'A' })), ['focus']);
+    assert.deepEqual(inferTransition(a, a.where({ category: 'A' }).y('other')), ['focus', 'observation']);
+    assert.deepEqual(inferTransition(a, a.flip()), ['guide']);
+    assert.deepEqual(inferTransition(a, a.highlight({ category: 'A' }).y('other')), ['focus', 'observation']);
+  }
+});
+
+test('grouping changes remain granularity and layout-only changes remain guide', () => {
+  const a = bar('rows').x('category').y('value');
+  const split = a.breakdown('kind');
+  assert.deepEqual(inferTransition(a, split), ['granularity']);
+  assert.deepEqual(inferTransition(split, split.layout('grouped')), ['guide']);
+  for (const [first, second] of [
+    [line('rows').x('time').y('value'), view => view.breakdown('kind')],
+    [point('rows').x('x').y('y'), view => view.rollup('kind')]
+  ]) assert.deepEqual(inferTransition(first, second(first)), ['granularity']);
+});
+
+test('Story emits the same scene list for builders and their specs', () => {
+  const a = bar('rows').x('category').y('value');
+  const b = a.y('other');
+  const compile = (a, b) => story().add('First', a).add('Second', b).toSpec().steps.map(step => step.transition);
+  assert.deepEqual(compile(a, b), compile(a.toSpec(), b.toSpec()));
+  assert.deepEqual(inferTransition(null, a), []);
+});

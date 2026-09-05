@@ -27,11 +27,17 @@ export class ViewState {
         delete spec.__grammar;
         return spec;
     }
+    /** Legacy inspection metadata; not used to infer animated transitions. */
     operations() {
         return [...(this.state.__grammar?.operations ?? [])];
     }
+    capabilities() {
+        return { ...(this.state.__grammar?.capabilities ?? {}) };
+    }
 }
 export function cloneState(value) {
+    if (value instanceof Date)
+        return new Date(value.getTime());
     if (Array.isArray(value))
         return value.map(cloneState);
     if (!value || typeof value !== 'object')

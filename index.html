@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ScrollyLite — Declarative chart transitions</title>
-    <meta name="description" content="ScrollyLite: declarative scrollytelling grammar. Author chart states; the runtime infers and animates semantic transitions." />
+    <title>ScrollyLite | Declarative visualization transitions</title>
+    <meta name="description" content="Declare visualization states, compile their delta, and play or seek the resulting transition at any progress." />
 
     <!-- Default theme: Apple HIG glass + Vivid palette -->
     <link rel="stylesheet" href="./src/styles.css" />
@@ -13,7 +13,7 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='20' width='14' height='34' rx='4' fill='%231c6ae4'/%3E%3Crect x='26' y='10' width='14' height='44' rx='4' fill='%23fa4d1d'/%3E%3Crect x='44' y='28' width='14' height='26' rx='4' fill='%2303b976'/%3E%3C/svg%3E" />
 
     <style>
-      /* ── Page shell — inherits from :root tokens set by default theme ──────── */
+      /* ── Page shell, inherits from :root tokens set by default theme ──────── */
       *, *::before, *::after { box-sizing: border-box; }
 
       html { scroll-behavior: smooth; }
@@ -476,7 +476,7 @@
       }
 
       .showcase-chart-desc {
-        flex: 0 0 auto;         /* fixed height — doesn't steal from chart */
+        flex: 0 0 auto;         /* fixed height, does not steal from chart */
         padding: 0.55rem 1.1rem;
         border-bottom: 0.5px solid rgba(28,106,228,0.06);
       }
@@ -540,8 +540,8 @@
         margin-bottom: 0.6rem;
       }
 
-      .mode-badge.stepper { background: rgba(28,106,228,0.10); color: var(--sl-color-primary); }
-      .mode-badge.scroller { background: rgba(250,77,29,0.10); color: rgb(200,50,10); }
+      .mode-badge.step { background: rgba(28,106,228,0.10); color: var(--sl-color-primary); }
+      .mode-badge.scroll { background: rgba(250,77,29,0.10); color: rgb(200,50,10); }
 
       .mode-card h3 {
         margin: 0 0 0.4rem;
@@ -573,7 +573,7 @@
         white-space: pre;
       }
 
-      /* ── Mode demo — right column: chart fills width, control below ─────────── */
+      /* ── Mode demo, right column: chart fills width, control below ─────────── */
       .mode-demo {
         flex: 1;
         min-width: 0;
@@ -719,8 +719,18 @@
       /* ── Feature grid ───────────────────────────────────────────────────────── */
       .features-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
+      }
+
+      .feature-card:first-child,
+      .feature-card:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .feature-card:nth-child(1),
+      .feature-card:nth-child(4) {
+        background: rgba(28,106,228,0.055);
       }
 
       .feature-card {
@@ -736,15 +746,19 @@
       }
 
       .feature-icon {
-        width: 36px;
+        min-width: 36px;
         height: 36px;
+        width: fit-content;
+        padding: 0 0.65rem;
         border-radius: 10px;
         background: rgba(28,106,228,0.08);
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 0.9rem;
-        font-size: 1.1rem;
+        color: var(--sl-color-primary);
+        font: 700 0.68rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.04em;
       }
 
       .feature-card h3 {
@@ -823,6 +837,15 @@
         font-size: 0.84em;
       }
 
+      .api-card strong {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: var(--sl-color-on-surface);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
       .api-example {
         background: #0f1a30;
         border-radius: 14px;
@@ -839,12 +862,10 @@
         border-bottom: 1px solid rgba(255,255,255,0.07);
       }
 
-      .api-example-bar span {
-        width: 9px; height: 9px; border-radius: 50%;
+      .api-example-bar .panel-title {
+        color: rgba(201,216,245,0.62);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       }
-      .api-example-bar span:nth-child(1) { background: #ff5f57; }
-      .api-example-bar span:nth-child(2) { background: #febc2e; }
-      .api-example-bar span:nth-child(3) { background: #28c840; }
 
       .api-example pre {
         margin: 0;
@@ -895,6 +916,9 @@
         font-size: 0.88rem;
         line-height: 1.75;
         list-style: decimal;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1.6rem;
       }
 
       .task-map li { padding-left: 0.3em; }
@@ -932,6 +956,8 @@
         .api-grid, .agent-grid {
           grid-template-columns: 1fr;
         }
+
+        .task-map ol { grid-template-columns: 1fr; }
 
         /* Hero: single column, hide the chart panel */
         .hero {
@@ -974,9 +1000,9 @@
           min-height: 220px;
         }
 
-        .features-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
+        .features-grid { grid-template-columns: 1fr; }
+        .feature-card:first-child,
+        .feature-card:last-child { grid-column: auto; }
       }
 
       @media (max-width: 560px) {
@@ -1003,9 +1029,10 @@
         ScrollyLite
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#api">API</a>
-        <a href="#agent">Agent brief</a>
+        <a href="#api">Language</a>
+        <a href="#showcase">Sequence</a>
+        <a href="#modes">Drivers</a>
+        <a href="#features">Capabilities</a>
         <a href="./examples/weather/">Demo</a>
         <a href="./docs/getting-started.md">Docs</a>
         <a href="./llms.txt">llms.txt</a>
@@ -1019,37 +1046,32 @@
       <section class="wrap">
         <div class="hero">
           <div>
-            <p class="hero-eyebrow">ESM · Browser native · Agent readable</p>
-            <h1>Declarative chart transitions.</h1>
+            <p class="hero-eyebrow">Declarative visualization language</p>
+            <h1>Declare states. Control frames.</h1>
             <p class="hero-lede">
-              Write chart states, not animation code. ScrollyLite infers
-              focus, guide, and granularity transitions and renders them with D3.
+              Create immutable visualization states, compile their delta, then
+              play or seek the transition at any progress.
             </p>
             <div class="hero-actions">
-              <a class="btn-primary" href="#showcase">See it in action</a>
+              <a class="btn-primary" href="#modes">Run the transition</a>
               <a class="btn-ghost" href="./docs/getting-started.md">Read the docs</a>
-              <a class="btn-ghost" href="https://github.com/SonghaiFan/scrollylite">GitHub ↗</a>
             </div>
 
             <div class="install-block">
-              <div class="install-header"><span>npm</span><span>install</span></div>
-              <pre><code><span class="tok-k">npm</span> install scrollylite d3 arquero</code></pre>
+              <div class="install-header"><span>Current source</span><span>build</span></div>
+              <pre><code><span class="tok-k">npm</span> install &amp;&amp; <span class="tok-k">npm</span> run build</code></pre>
             </div>
             <div class="install-block">
-              <div class="install-header"><span>CDN / browser ESM</span></div>
-              <pre><code><span class="tok-k">import</span> <span class="tok-p">*</span> <span class="tok-k">as</span> sl <span class="tok-k">from</span>
-  <span class="tok-s">"https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm"</span>;</code></pre>
+              <div class="install-header"><span>Current source</span><span>package / bundler ESM</span></div>
+              <pre><code><span class="tok-k">import</span> { <span class="tok-fn">bar</span> } <span class="tok-k">from</span> <span class="tok-s">"scrollylite/bar"</span>;
+<span class="tok-k">import</span> { <span class="tok-fn">transition</span> } <span class="tok-k">from</span> <span class="tok-s">"scrollylite/transition"</span>;</code></pre>
             </div>
           </div>
 
           <!-- Animated chart panel in hero -->
           <aside class="hero-panel" aria-label="Live chart preview">
             <div class="hero-panel-bar">
-              <span class="panel-dots" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </span>
-              <span class="panel-title">Live transition preview</span>
-              <span style="width:56px"></span>
+              <span class="panel-title">Live visualization transition</span>
             </div>
             <div id="hero-chart"></div>
           </aside>
@@ -1059,55 +1081,62 @@
       <!-- ── API reference ─────────────────────────────────────────────────────── -->
       <section class="section" id="api">
         <div class="wrap">
-          <p class="section-label">API</p>
-          <h2 class="section-title">API</h2>
+          <h2 class="section-title">A small grammar for change.</h2>
           <p class="section-lede">
-            The package surface is intentionally compact: build specs,
-            create stories, and register idioms when you need to extend the grammar.
+            Visualization states are declarations. A delta describes what changed.
+            A transition evaluates that change at a normalized progress value.
           </p>
 
           <div class="api-grid">
             <!-- Left: four API cards -->
             <div class="api-cards">
               <div class="api-card">
-                <code>sl.bar("./data.csv")</code> — data URL inline.
-                Chain <code>.x()</code>, <code>.y()</code>, <code>.where()</code>, <code>.key()</code> to build a state.
+                <strong>Visualization</strong>
+                <code>bar().data(rows).x("country").y("sales")</code> is an immutable
+                declaration of one chart state.
               </div>
               <div class="api-card">
-                <code>sl.seq()</code> orders states into a navigable sequence.
-                <code>.add(state, text)</code> appends; <code>.next()</code> / <code>.goto(n)</code> navigate.
+                <strong>Delta</strong>
+                The runtime compares two resolved, same-idiom visualizations. The
+                controller exposes the result as <code>change.delta</code> for inspection.
               </div>
               <div class="api-card">
-                <code>sl.chart(seq, { target, d3, aq })</code> mounts a standalone animated chart.
-                Returns <code>{ to(n), resize, destroy }</code>.
+                <strong>Transition</strong>
+                <code>transition(from, to)</code> creates a seekable controller with
+                <code>progress()</code>, <code>play()</code>, <code>pause()</code>, and lifecycle methods.
               </div>
               <div class="api-card">
-                <code>seq.bind({ chart, text })</code> wires chart + caption element.
-                After binding, <code>seq.next()</code> drives both in one call.
+                <strong>Driver and composition</strong>
+                Buttons, sliders, timers, and scroll supply progress. <code>seq()</code>
+                and <code>story()</code> compose more than two states when needed.
               </div>
             </div>
 
             <!-- Right: full code example -->
             <div class="api-example">
               <div class="api-example-bar">
-                <span></span><span></span><span></span>
+                <span class="panel-title">Pair transition API</span>
               </div>
-              <pre><code><span class="tok-k">import</span> <span class="tok-p">*</span> <span class="tok-k">as</span> sl <span class="tok-k">from</span> <span class="tok-s">"scrollylite"</span><span class="tok-p">;</span>
+              <pre><code><span class="tok-k">import</span> { <span class="tok-fn">bar</span> } <span class="tok-k">from</span> <span class="tok-s">"scrollylite/bar"</span><span class="tok-p">;</span>
+<span class="tok-k">import</span> { <span class="tok-fn">transition</span> } <span class="tok-k">from</span> <span class="tok-s">"scrollylite/transition"</span><span class="tok-p">;</span>
 
-<span class="tok-c">// 1. Build states — data URL inline, no registration</span>
-<span class="tok-k">const</span> base <span class="tok-p">=</span> sl<span class="tok-p">.</span><span class="tok-fn">bar</span><span class="tok-p">(</span><span class="tok-s">"./data.csv"</span><span class="tok-p">)</span>
-  <span class="tok-p">.</span><span class="tok-fn">x</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">).</span><span class="tok-fn">y</span><span class="tok-p">(</span><span class="tok-s">"count"</span><span class="tok-p">).</span><span class="tok-fn">key</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">);</span>
+<span class="tok-c">// Two declarations, one shared source</span>
+<span class="tok-k">const</span> sales <span class="tok-p">=</span> <span class="tok-fn">bar</span><span class="tok-p">()</span>
+  <span class="tok-p">.</span><span class="tok-fn">data</span><span class="tok-p">(</span>rows<span class="tok-p">)</span>
+  <span class="tok-p">.</span><span class="tok-fn">x</span><span class="tok-p">(</span><span class="tok-s">"country"</span><span class="tok-p">)</span>
+  <span class="tok-p">.</span><span class="tok-fn">y</span><span class="tok-p">(</span><span class="tok-s">"sales"</span><span class="tok-p">)</span>
+  <span class="tok-p">.</span><span class="tok-fn">key</span><span class="tok-p">(</span><span class="tok-s">"country"</span><span class="tok-p">);</span>
 
-<span class="tok-c">// 2. Sequence — ordered states with narrative text</span>
-<span class="tok-k">const</span> sq <span class="tok-p">=</span> sl<span class="tok-p">.</span><span class="tok-fn">seq</span><span class="tok-p">()</span>
-  <span class="tok-p">.</span><span class="tok-fn">add</span><span class="tok-p">(</span>base<span class="tok-p">,</span>                          <span class="tok-s">"All decades"</span><span class="tok-p">)</span>
-  <span class="tok-p">.</span><span class="tok-fn">add</span><span class="tok-p">(</span>base<span class="tok-p">.</span><span class="tok-fn">where</span><span class="tok-p">({</span> type<span class="tok-p">:</span> <span class="tok-s">"Hot days"</span> <span class="tok-p">}),</span> <span class="tok-s">"Filter to hot"</span><span class="tok-p">)</span>
-  <span class="tok-p">.</span><span class="tok-fn">add</span><span class="tok-p">(</span>base<span class="tok-p">.</span><span class="tok-fn">breakdown</span><span class="tok-p">(</span><span class="tok-s">"type"</span><span class="tok-p">),</span>          <span class="tok-s">"Split by type"</span><span class="tok-p">);</span>
+<span class="tok-k">const</span> profit <span class="tok-p">=</span> sales<span class="tok-p">.</span><span class="tok-fn">y</span><span class="tok-p">(</span><span class="tok-s">"profit"</span><span class="tok-p">);</span>
 
-<span class="tok-c">// 3. Mount + bind — seq.next() drives chart &amp; caption together</span>
-<span class="tok-k">const</span> chart <span class="tok-p">=</span> <span class="tok-k">await</span> sl<span class="tok-p">.</span><span class="tok-fn">chart</span><span class="tok-p">(</span>sq<span class="tok-p">, {</span> target<span class="tok-p">:</span> <span class="tok-s">"#vis"</span><span class="tok-p">,</span> d3<span class="tok-p">,</span> aq <span class="tok-p">});</span>
-sq<span class="tok-p">.</span><span class="tok-fn">bind</span><span class="tok-p">({</span> chart<span class="tok-p">,</span> text<span class="tok-p">:</span> <span class="tok-s">"#caption"</span> <span class="tok-p">});</span>
-btn<span class="tok-p">.</span>onclick <span class="tok-p">= () =></span> sq<span class="tok-p">.</span><span class="tok-fn">next</span><span class="tok-p">();</span>   <span class="tok-c">// one line drives everything</span></code></pre>
+<span class="tok-c">// Compile once, then evaluate any frame</span>
+<span class="tok-k">const</span> change <span class="tok-p">=</span> <span class="tok-k">await</span> <span class="tok-fn">transition</span><span class="tok-p">(</span>
+  sales<span class="tok-p">,</span> profit<span class="tok-p">,</span>
+  <span class="tok-p">{</span> target<span class="tok-p">:</span> <span class="tok-s">"#vis"</span><span class="tok-p">,</span> d3 <span class="tok-p">}</span>
+<span class="tok-p">);</span>
+
+change<span class="tok-p">.</span><span class="tok-fn">progress</span><span class="tok-p">(</span><span class="tok-s">0.37</span><span class="tok-p">);</span>
+change<span class="tok-p">.</span><span class="tok-fn">play</span><span class="tok-p">({</span> duration<span class="tok-p">:</span> <span class="tok-s">800</span> <span class="tok-p">});</span></code></pre>
             </div>
           </div>
         </div>
@@ -1116,50 +1145,47 @@ btn<span class="tok-p">.</span>onclick <span class="tok-p">= () =></span> sq<spa
       <!-- ── Agent-readable ─────────────────────────────────────────────────────── -->
       <section class="section" id="agent">
         <div class="wrap">
-          <p class="section-label">Agent brief</p>
-          <h2 class="section-title">Agent-readable by design.</h2>
+          <h2 class="section-title">The transition is the core.</h2>
           <p class="section-lede">
-            This page includes a compact brief for AI agents, plus a dense
-            <a href="./llms.txt">llms.txt</a> reference that can become the seed
-            for a future ScrollyLite skill.
+            Scroll is one possible driver. Narrative text, sequences, and page
+            layout are optional composition layers around the same evaluator.
           </p>
 
           <div class="agent-grid">
             <!-- Left: Task map -->
             <div class="agent-card task-map">
-              <div class="agent-card-header">Task map</div>
+              <div class="agent-card-header">Canonical terminology</div>
               <ol>
-                <li>Use ScrollyLite when the user wants a narrated scrolling data story.</li>
-                <li>Build states with <code>seq().add(state, text)</code>; avoid hand-writing animation code.</li>
-                <li>Choose one built-in idiom: <code>bar</code>, <code>line</code>, <code>point</code>, or <code>unit</code>.</li>
-                <li>Use <code>import * as sl from "scrollylite"</code>; call <code>sl.render()</code> for the full story or <code>sl.chart()</code> for a standalone embed.</li>
-                <li>Use <code>.key()</code> for stable semantic identity across transitions.</li>
+                <li><code>Visualization</code>: an immutable declarative endpoint.</li>
+                <li><code>Delta</code>: the resolved difference between two endpoints.</li>
+                <li><code>Transition</code>: an executable mapping from progress to frame.</li>
+                <li><code>Progress</code>: a normalized value from <code>0</code> to <code>1</code>.</li>
+                <li><code>Driver</code>: an event, timer, gesture, or scroll position that supplies progress.</li>
+                <li><code>Composition</code>: an optional Sequence or Story around multiple visualizations.</li>
               </ol>
             </div>
 
             <!-- Right: Skill seed -->
             <div class="agent-card skill-seed">
-              <div class="agent-card-header">Skill seed</div>
-              <pre>---
-name: scrollylite
-description: Build declarative scrollytelling data
-  stories with ScrollyLite.
-use_when:
-  - user asks for a scroll-driven narrated visualization
-  - user needs a ScrollyLite spec, example, plugin,
-    or docs explanation
-first_read:
-  - ./llms.txt
-  - ./docs/getting-started.md
-  - ./docs/chart-idioms.md
-core_rule: Describe chart end states; do not
-  hand-write transition animation.
-public_api:
-  - sl.seq / sl.bar / sl.line / sl.point / sl.unit
-  - sl.seq (state sequence builder)
-  - sl.render (full scrollytelling runtime)
-  - sl.chart (standalone animated chart)
-  - chart.to(n|state) / chart.progress(n, t)</pre>
+              <div class="agent-card-header">Current scope</div>
+              <pre>core:
+  visualization: bar | line | point | unit
+  transition: same-idiom endpoints only
+  evaluation: play | pause | progress
+
+semantic_change_classes:
+  - focus
+  - guide
+  - granularity
+  - observation
+
+composition:
+  sequence: seq()
+  story: story() + render()
+  standalone_sequence: chart()
+
+deferred:
+  - cross-idiom transitions</pre>
             </div>
           </div>
         </div>
@@ -1168,11 +1194,10 @@ public_api:
       <!-- ── Interactive code showcase ─────────────────────────────────────────── -->
       <section class="section" id="showcase">
         <div class="wrap">
-          <p class="section-label">Interactive showcase</p>
-          <h2 class="section-title">Write states. Get transitions.</h2>
+          <h2 class="section-title">Compose more than two states.</h2>
           <p class="section-lede">
-            Click any step on the left to see the chart animate in real time.
-            Each step is a declarative spec — ScrollyLite infers the transition.
+            A sequence orders visualization declarations. Each adjacent pair is
+            still interpreted as a transition between two endpoints.
           </p>
 
           <div class="showcase">
@@ -1182,7 +1207,7 @@ public_api:
               <div class="showcase-code" id="showcase-code-panel">
 
                 <div class="code-preamble">
-                  <pre><code><span class="tok-c">// Data URL inline — no separate registration</span>
+                  <pre><code><span class="tok-c">// A shared source for every visualization</span>
 <span class="tok-k">const</span> base <span class="tok-p">=</span> <span class="tok-fn">bar</span><span class="tok-p">(</span><span class="tok-s">"./data/weather.csv"</span><span class="tok-p">)</span>
   <span class="tok-p">.</span><span class="tok-fn">x</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">).</span><span class="tok-fn">y</span><span class="tok-p">(</span><span class="tok-s">"count"</span><span class="tok-p">)</span>
   <span class="tok-p">.</span><span class="tok-fn">sort</span><span class="tok-p">(</span><span class="tok-s">"year"</span><span class="tok-p">).</span><span class="tok-fn">key</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">);</span></code></pre>
@@ -1212,12 +1237,10 @@ public_api:
       <!-- ── Two control modes ──────────────────────────────────────────────────── -->
       <section class="section" id="modes">
         <div class="wrap">
-          <p class="section-label">Control modes</p>
-          <h2 class="section-title">Wire any input to any chart.</h2>
+          <h2 class="section-title">Drive the same transition your way.</h2>
           <p class="section-lede">
-            <code>chart.to(n)</code> is the single public API for driving
-            transitions. Wire it to a button, slider, scroll offset, keyboard
-            shortcut, or timer — the same call, the same animated transition.
+            Use <code>play()</code> for time-based motion or <code>progress(p)</code>
+            for direct frame evaluation. Scroll is an adapter, not a requirement.
           </p>
 
           <div class="modes-grid">
@@ -1225,37 +1248,36 @@ public_api:
             <!-- Button control -->
             <div class="mode-card">
               <div class="mode-card-header">
-                <span class="mode-badge stepper">Discrete</span>
-                <h3>chart.to(n)</h3>
+                <span class="mode-badge step">Discrete</span>
+                <h3>change.play()</h3>
                 <p>
-                  Snap to any step index from any event — button click,
-                  keyboard shortcut, route change, or timer.
+                  A click, keyboard command, route change, or timer can play the
+                  transition forward or backward.
                 </p>
               </div>
               <div class="mode-card-body">
-                <pre class="mode-code"><code><span class="tok-k">const</span> base <span class="tok-p">=</span> sl<span class="tok-p">.</span><span class="tok-fn">bar</span><span class="tok-p">(</span><span class="tok-s">"./data.csv"</span><span class="tok-p">)</span>
-  <span class="tok-p">.</span><span class="tok-fn">x</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">).</span><span class="tok-fn">y</span><span class="tok-p">(</span><span class="tok-s">"count"</span><span class="tok-p">).</span><span class="tok-fn">key</span><span class="tok-p">(</span><span class="tok-s">"decade"</span><span class="tok-p">);</span>
-
-<span class="tok-k">const</span> chart <span class="tok-p">=</span> <span class="tok-k">await</span> sl<span class="tok-p">.</span><span class="tok-fn">chart</span><span class="tok-p">(</span>
-  sl<span class="tok-p">.</span><span class="tok-fn">story</span><span class="tok-p">()</span>
-    <span class="tok-p">.</span><span class="tok-fn">step</span><span class="tok-p">(</span><span class="tok-s">"Hot days"</span><span class="tok-p">,</span>  base<span class="tok-p">.</span><span class="tok-fn">where</span><span class="tok-p">({</span> type<span class="tok-p">:</span> <span class="tok-s">"Hot days"</span> <span class="tok-p">}))</span>
-    <span class="tok-p">.</span><span class="tok-fn">step</span><span class="tok-p">(</span><span class="tok-s">"Breakdown"</span><span class="tok-p">,</span> base<span class="tok-p">.</span><span class="tok-fn">breakdown</span><span class="tok-p">(</span><span class="tok-s">"type"</span><span class="tok-p">))</span>
-    <span class="tok-p">.</span><span class="tok-fn">toSpec</span><span class="tok-p">(),</span>
+                <pre class="mode-code"><code><span class="tok-k">const</span> change <span class="tok-p">=</span> <span class="tok-k">await</span> sl<span class="tok-p">.</span><span class="tok-fn">transition</span><span class="tok-p">(</span>
+  vertical<span class="tok-p">,</span> horizontal<span class="tok-p">,</span>
   <span class="tok-p">{</span> target<span class="tok-p">:</span> <span class="tok-s">"#chart"</span><span class="tok-p">,</span> d3<span class="tok-p">,</span> aq <span class="tok-p">}</span>
 <span class="tok-p">);</span>
 
-<span class="tok-c">// Button click → snap to next step</span>
-<span class="tok-k">let</span> n <span class="tok-p">=</span> <span class="tok-s">0</span><span class="tok-p">;</span>
-btn<span class="tok-p">.</span>onclick <span class="tok-p">= () =></span> chart<span class="tok-p">.</span><span class="tok-fn">to</span><span class="tok-p">(</span>n <span class="tok-p">^=</span> <span class="tok-s">1</span><span class="tok-p">);</span></code></pre>
+<span class="tok-k">let</span> reversed <span class="tok-p">=</span> <span class="tok-k">false</span><span class="tok-p">;</span>
+btn<span class="tok-p">.</span>onclick <span class="tok-p">= () => {</span>
+  change<span class="tok-p">.</span><span class="tok-fn">play</span><span class="tok-p">({</span>
+    from<span class="tok-p">:</span> reversed <span class="tok-p">?</span> <span class="tok-s">1</span> <span class="tok-p">:</span> <span class="tok-s">0</span><span class="tok-p">,</span>
+    to<span class="tok-p">:</span> reversed <span class="tok-p">?</span> <span class="tok-s">0</span> <span class="tok-p">:</span> <span class="tok-s">1</span>
+  <span class="tok-p">});</span>
+  reversed <span class="tok-p">= !</span>reversed<span class="tok-p">;</span>
+<span class="tok-p">};</span></code></pre>
                 <div class="mode-demo">
                   <div class="mode-demo-chart" id="btn-demo-chart"></div>
                   <div class="btn-control">
                     <span class="state-chip is-active" id="btn-state-0">
-                      <span class="state-dot"></span>Hot days
+                      Vertical
                     </span>
                     <button class="state-advance-btn" id="btn-demo-btn" aria-label="Toggle state">→</button>
                     <span class="state-chip" id="btn-state-1">
-                      <span class="state-dot"></span>Breakdown
+                      Horizontal
                     </span>
                   </div>
                 </div>
@@ -1265,35 +1287,34 @@ btn<span class="tok-p">.</span>onclick <span class="tok-p">= () =></span> chart<
             <!-- Slider control -->
             <div class="mode-card">
               <div class="mode-card-header">
-                <span class="mode-badge scroller">Slider</span>
-                <h3>chart.to(n) from any input</h3>
+                <span class="mode-badge scroll">Slider</span>
+                <h3>change.progress(p)</h3>
                 <p>
-                  Wire <code>chart.to(n)</code> to a range input, scroll offset,
-                  or any continuous value — same API, same animated transitions.
+                  A slider, gesture, or scroll adapter can display any normalized
+                  frame directly, in any order.
                 </p>
               </div>
               <div class="mode-card-body">
-                <pre class="mode-code"><code><span class="tok-c">// Same chart, same states — driven by a slider</span>
-<span class="tok-k">const</span> STEPS <span class="tok-p">=</span> <span class="tok-p">[</span>
-  base<span class="tok-p">.</span><span class="tok-fn">where</span><span class="tok-p">({</span> type<span class="tok-p">:</span> <span class="tok-s">"Hot days"</span> <span class="tok-p">}),</span>
-  base<span class="tok-p">.</span><span class="tok-fn">where</span><span class="tok-p">({</span> type<span class="tok-p">:</span> <span class="tok-s">"Hot days"</span><span class="tok-p">,</span> period<span class="tok-p">:</span> <span class="tok-s">"recent"</span> <span class="tok-p">}),</span>
-  base<span class="tok-p">.</span><span class="tok-fn">breakdown</span><span class="tok-p">(</span><span class="tok-s">"type"</span><span class="tok-p">),</span>
-<span class="tok-p">];</span>
+                <pre class="mode-code"><code><span class="tok-c">// Same endpoints, direct frame evaluation</span>
+<span class="tok-k">const</span> change <span class="tok-p">=</span> <span class="tok-k">await</span> sl<span class="tok-p">.</span><span class="tok-fn">transition</span><span class="tok-p">(</span>
+  vertical<span class="tok-p">,</span> horizontal<span class="tok-p">,</span>
+  <span class="tok-p">{</span> target<span class="tok-p">:</span> <span class="tok-s">"#chart"</span><span class="tok-p">,</span> d3<span class="tok-p">,</span> aq <span class="tok-p">}</span>
+<span class="tok-p">);</span>
 
-<span class="tok-c">// slider min=0, max=STEPS.length-1, step=1</span>
+<span class="tok-c">// slider min=0, max=1, step=0.01</span>
 slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
-  chart<span class="tok-p">.</span><span class="tok-fn">to</span><span class="tok-p">(+</span>slider<span class="tok-p">.</span>value<span class="tok-p">);</span></code></pre>
+  change<span class="tok-p">.</span><span class="tok-fn">progress</span><span class="tok-p">(+</span>slider<span class="tok-p">.</span>value<span class="tok-p">);</span></code></pre>
                 <div class="mode-demo">
                   <div class="mode-demo-chart" id="slider-demo-chart"></div>
                   <div class="slider-control">
                     <div class="slider-track-row">
                       <input class="slider-input" type="range" id="slider-demo-input"
-                             min="0" max="2" step="1" value="0"
+                             min="0" max="1" step="0.01" value="0"
                              autocomplete="off"
-                             aria-label="Select step 0 to 2">
+                             aria-label="Scrub transition progress">
                     </div>
                     <div class="slider-value-row">
-                      <span id="slider-state-name">Hot days</span>
+                      <span id="slider-state-name">Vertical</span>
                       <span id="slider-val-display">step 0</span>
                     </div>
                   </div>
@@ -1308,43 +1329,43 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
       <!-- ── Features ───────────────────────────────────────────────────────────── -->
       <section class="section" id="features">
         <div class="wrap">
-          <p class="section-label">Why ScrollyLite</p>
-          <h2 class="section-title">Built for concise, inspectable stories.</h2>
+          <p class="section-label">Current capabilities</p>
+          <h2 class="section-title">What the code supports today.</h2>
           <p class="section-lede">
-            No framework. No build step required for static pages. Just D3,
-            Arquero, and a declarative spec.
+            This page demonstrates the 0.2.0 release candidate, not a published
+            CDN version. The statements below describe this source checkout.
           </p>
 
           <div class="features-grid">
             <div class="feature-card">
-              <div class="feature-icon">🎯</div>
-              <h3>State-first authoring</h3>
-              <p>Describe each step as a chart state. ScrollyLite classifies and animates the transitions automatically.</p>
+              <div class="feature-icon">VIEW</div>
+              <h3>Immutable declarations</h3>
+              <p>Chain data, encodings, filters, identity, and idiom operations. Deriving a state preserves its source state.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">📊</div>
+              <div class="feature-icon">4</div>
               <h3>Four built-in idioms</h3>
-              <p>Bar, line, point, and unit charts share the same encoding, filtering, keying, and tooltip vocabulary.</p>
+              <p>Bar, line, point, and unit share the core encoding, filtering, keying, and tooltip vocabulary.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">🔍</div>
-              <h3>Semantic scene inference</h3>
-              <p>Changes are classified as focus, guide, granularity, or observation so transitions stay meaningful.</p>
+              <div class="feature-icon">Δ</div>
+              <h3>Semantic delta classes</h3>
+              <p>Changes can be classified as focus, guide, granularity, or observation. Idiom support varies by class.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">🎨</div>
-              <h3>Themeable</h3>
-              <p>CSS token system with three themes (Default, Arch, Paper). Swap the stylesheet; every chart updates.</p>
+              <div class="feature-icon">t</div>
+              <h3>Seekable evaluation</h3>
+              <p>Bar transitions cache compiled frames. Line, point, unit, and custom idioms currently use deterministic reconstruction.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">🔌</div>
-              <h3>Extensible idioms</h3>
-              <p>Register custom chart idioms with the same plugin system used by the built-ins.</p>
+              <div class="feature-icon">API</div>
+              <h3>Optional composition</h3>
+              <p>Use a pair directly, organize states with <code>seq()</code>, or mount a complete scrolling story with <code>render()</code>.</p>
             </div>
             <div class="feature-card">
-              <div class="feature-icon">🤖</div>
-              <h3>Agent readable</h3>
-              <p>Compact grammar and an llms.txt reference make spec generation reliable with code-generation AI.</p>
+              <div class="feature-icon">CSS</div>
+              <h3>Tokens and plugins</h3>
+              <p>Custom runtime idioms register with <code>registerChartModule({ plugin })</code>. Package theme entries include Default, Dark, and Paper. Warm remains a legacy source alias.</p>
             </div>
           </div>
         </div>
@@ -1369,16 +1390,19 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
     <script src="https://cdn.jsdelivr.net/npm/arquero@8/dist/arquero.min.js"></script>
 
     <script type="module">
-      // Cache-busting import so Vite dev server always serves the latest dist.
-      // The ?t= param is stripped by the module system but makes each page load fetch fresh.
-      const sl = await import("./dist/index.js?t=" + Date.now());
-      const { bar, seq, chart: slChart, render: slRender } = sl;
+      // Stable module URLs preserve one shared registry/helper graph. Rebuild
+      // dist and reload the page when developing; CDN hosting needs no node_modules.
+      const [{ bar }, { seq, chart: slChart }, { transition: slTransition }] = await Promise.all([
+        import("./dist/bar.js"),
+        import("./dist/story.js"),
+        import("./dist/transition-entry.js")
+      ]);
 
       const d3 = globalThis.d3;
       const aq = globalThis.aq;
 
       // ── Shared data & base spec ───────────────────────────────────────────────
-      // Observable-Plot style: data URL inline in bar(), no separate .data() call.
+      // A URL can be declared directly or through .data().
       const DATA_URL = "./examples/weather/data/weather_days_tidy.csv";
 
       function makeSeq(steps, height = 420) {
@@ -1389,7 +1413,7 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
       }
 
       // ── Showcase steps definition ─────────────────────────────────────────────
-      // bar(URL) — data source is inline, no registration step needed.
+      // All derived visualizations retain this source declaration.
       const base = bar(DATA_URL)
         .x("decade").y("count")
         .sort("year").key("decade");
@@ -1398,41 +1422,41 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
         {
           label: "Baseline",
           snippet: `base\n  .where({ type: "Hot days" })`,
-          desc: "One vertical bar per decade — bar height encodes hot days count.",
+          desc: "One vertical bar per decade. Bar height encodes hot days count.",
           chart: base.where({ type: "Hot days" }),
         },
         {
-          label: "Focus — filter",
+          label: "Focus: filter",
           snippet: `base\n  .where({ type: "Hot days", period: "recent" })`,
           desc: "Focus narrows to recent decades only. Axes rescale; bar positions are preserved by key.",
           chart: base.where({ type: "Hot days", period: "recent" }),
         },
         {
-          label: "Guide — flip axis",
+          label: "Guide: flip axis",
           snippet: `base\n  .where({ type: "Hot days", period: "recent" })\n  .flip()`,
-          desc: "Guide changes the reading frame — vertical becomes horizontal in a two-stage axis transition.",
+          desc: "Guide changes the reading frame. Vertical becomes horizontal in a two-stage axis transition.",
           chart: base.where({ type: "Hot days", period: "recent" }).flip(),
         },
         {
-          label: "Focus — swap category",
+          label: "Focus: swap category",
           snippet: `base\n  .where({ type: "Cold days" })\n  .flip()`,
           desc: "Keyed update swaps hot→cold while keeping the flipped orientation. Each bar morphs in place.",
           chart: base.where({ type: "Cold days" }).flip(),
         },
         {
-          label: "Granularity — breakdown",
+          label: "Granularity: breakdown",
           snippet: `base\n  .breakdown("type")`,
-          desc: "Granularity splits each decade bar into hot and cold segments — one aggregate becomes two.",
+          desc: "Granularity splits each decade bar into hot and cold segments. One aggregate becomes two.",
           chart: base.breakdown("type"),
         },
         {
-          label: "Focus — highlight",
+          label: "Focus: highlight",
           snippet: `base\n  .breakdown("type")\n  .highlight({ type: "Cold days" })`,
-          desc: "Focus highlights cold segments by fading hot ones — shape preserved, emphasis shifts.",
+          desc: "Focus highlights cold segments by fading hot ones. Shape is preserved while emphasis shifts.",
           chart: base.breakdown("type").highlight({ type: "Cold days" }),
         },
         {
-          label: "Guide — grouped layout",
+          label: "Guide: grouped layout",
           snippet: `base\n  .breakdown("type")\n  .layout("grouped")\n  .flip()`,
           desc: "Guide changes stacked → grouped and flips orientation. Three semantic changes, one smooth transition.",
           chart: base.breakdown("type").layout("grouped").flip(),
@@ -1525,78 +1549,58 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
 
       // Click-only: no scroll-triggered auto-advance
 
-      // ── Hero chart — auto-cycles through showcase steps ───────────────────────
-      let heroChart = null;
-      // Square figure: spec height = container width - figcaption (58px).
-      // hero-chart width = hero-panel inner width (right column of hero grid).
+      // ── Hero pair transition ───────────────────────────────────────────────────
+      let heroChange = null;
       const heroContainerW = document.getElementById("hero-chart").clientWidth;
-      const heroSq = makeSeq(
-        SHOWCASE_STEPS.map(s => [s.label, s.chart, s.desc]),
-        Math.max(heroContainerW - 58, 280)
-      );
+      const vertical = base.where({ type: "Hot days", period: "recent" });
+      const horizontal = vertical.flip();
 
       try {
-        heroChart = await slChart(heroSq, {
+        heroChange = await slTransition(vertical, horizontal, {
           target: "#hero-chart",
           d3, aq,
-          initialStep: 0
+          height: Math.max(heroContainerW - 58, 280)
         });
 
-        let heroStep = 0;
-        setInterval(() => {
-          heroStep = (heroStep + 1) % SHOWCASE_STEPS.length;
-          heroChart.to(heroStep);
-        }, 2400);
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          let reversed = false;
+          setInterval(() => {
+            heroChange.play({ from: reversed ? 1 : 0, to: reversed ? 0 : 1, duration: 900 });
+            reversed = !reversed;
+          }, 2400);
+        }
       } catch (e) {
-        console.warn("Hero chart failed:", e);
+        console.warn("Hero transition failed:", e);
       }
 
-      // ── Demo states: button (2 states) vs slider (3 states) ─────────────────
-      const BTN_STATES = [
-        { label: "Hot days",
-          chart: base.where({ type: "Hot days", period: "recent" }),
-          desc:  "Recent decades — bar height = hot days count" },
-        { label: "Breakdown",
-          chart: base.where({ period: "recent" }).breakdown("type"),
-          desc:  "Same decades split into Hot & Cold — stacked" },
-      ];
-      const SLIDER_STATES = [
-        { label: "Hot days",
-          chart: base.where({ type: "Hot days", period: "recent" }),
-          desc:  "Recent decades — vertical bars" },
-        { label: "Flip axis",
-          chart: base.where({ type: "Hot days", period: "recent" }).flip(),
-          desc:  "Same data, horizontal orientation" },
-        { label: "Breakdown",
-          chart: base.where({ period: "recent" }).breakdown("type"),
-          desc:  "Split into Hot & Cold — stacked" },
-      ];
-
+      // ── Same pair, two independent drivers ─────────────────────────────────────
       const demoContainerW = document.getElementById("btn-demo-chart").clientWidth;
-      const btnSq    = makeSeq(BTN_STATES.map(s => [s.label, s.chart, s.desc]), demoContainerW);
-      const sliderSq = makeSeq(SLIDER_STATES.map(s => [s.label, s.chart, s.desc]), demoContainerW);
 
       // ── Button demo ───────────────────────────────────────────────────────────
-      let btnDemoChart = null;
+      let btnChange = null;
       let btnState = 0;
 
       try {
-        btnDemoChart = await slChart(btnSq, { target: "#btn-demo-chart", d3, aq, initialStep: 0 });
-      } catch (e) { console.warn("Btn demo chart failed:", e); }
+        btnChange = await slTransition(vertical, horizontal, {
+          target: "#btn-demo-chart", d3, aq, height: demoContainerW
+        });
+      } catch (e) { console.warn("Button transition failed:", e); }
 
       document.getElementById("btn-demo-btn").addEventListener("click", () => {
         btnState ^= 1;
-        btnDemoChart?.to(btnState);
+        btnChange?.play({ from: btnState ? 0 : 1, to: btnState ? 1 : 0, duration: 800 });
         document.getElementById("btn-state-0").classList.toggle("is-active", btnState === 0);
         document.getElementById("btn-state-1").classList.toggle("is-active", btnState === 1);
       });
 
       // ── Slider demo ───────────────────────────────────────────────────────────
-      let sliderDemoChart = null;
+      let sliderChange = null;
 
       try {
-        sliderDemoChart = await slChart(sliderSq, { target: "#slider-demo-chart", d3, aq, initialStep: 0 });
-      } catch (e) { console.warn("Slider demo chart failed:", e); }
+        sliderChange = await slTransition(vertical, horizontal, {
+          target: "#slider-demo-chart", d3, aq, height: demoContainerW
+        });
+      } catch (e) { console.warn("Slider transition failed:", e); }
 
       const sliderInput    = document.getElementById("slider-demo-input");
       const sliderValEl    = document.getElementById("slider-val-display");
@@ -1606,10 +1610,10 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
       sliderInput.value = "0";
 
       sliderInput.addEventListener("input", () => {
-        const step = parseInt(sliderInput.value, 10);
-        sliderDemoChart?.to(step);
-        sliderValEl.textContent   = `step ${step}`;
-        sliderStateEl.textContent = SLIDER_STATES[step].label;
+        const value = Number(sliderInput.value);
+        sliderChange?.progress(value);
+        sliderValEl.textContent   = `progress ${value.toFixed(2)}`;
+        sliderStateEl.textContent = value < 0.5 ? "Vertical" : "Horizontal";
       });
     </script>
   </body>

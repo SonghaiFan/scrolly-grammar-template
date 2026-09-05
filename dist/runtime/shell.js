@@ -2,7 +2,7 @@
 import { diffViewStates } from '../grammar/diff.js';
 import { layoutClasses } from '../layouts/index.js';
 import { externalizeScrollyViewSpec } from '../scrolly-meta.js';
-import { compileEffectiveView } from './view-compile.js';
+import { createViewCompiler } from './view-compile.js';
 import { dash, escapeHtml } from './utils.js';
 export function renderShell(target, spec, options = {}) {
     target.className = ['sl-root', ...layoutClasses(spec.layout)].join(' ');
@@ -95,14 +95,14 @@ export function renderShell(target, spec, options = {}) {
     };
 }
 function renderStepInspector(step = {}) {
-    const authoringCode = step.inspector?.authoringCode;
+    const sourceCode = step.inspector?.code;
     const compiledSpec = stepCompiledViewSpec(step);
-    if (!authoringCode && !compiledSpec)
+    if (!sourceCode && !compiledSpec)
         return '';
     return `
     <section class="sl-step-inspector" aria-label="Step authoring and compiled specification">
       <div class="sl-step-inspector-grid">
-        ${authoringCode ? renderCodePanel('Authoring code', authoringCode) : ''}
+        ${sourceCode ? renderCodePanel('Source code', sourceCode) : ''}
         ${compiledSpec ? `
           <details class="sl-compiled-spec">
             <summary>Compiled specification</summary>
@@ -118,8 +118,8 @@ function renderStepTransitionInspector(steps = [], index, options = {}) {
         return '';
     const previousStep = steps[index - 1];
     const currentStep = steps[index];
-    const previousSpec = stepEffectiveViewSpec(previousStep);
-    const currentSpec = stepEffectiveViewSpec(currentStep);
+    const previousSpec = stepEffectiveViewSpec(previousStep, options.idioms);
+    const currentSpec = stepEffectiveViewSpec(currentStep, options.idioms);
     if (!previousSpec || !currentSpec)
         return '';
     const idiom = options.idioms?.get?.(currentSpec) || null;
@@ -170,11 +170,11 @@ function stepCompiledViewSpec(step = {}) {
         return null;
     return externalizeScrollyViewSpec(viewSpec);
 }
-function stepEffectiveViewSpec(step = {}) {
+function stepEffectiveViewSpec(step = {}, idioms) {
     const viewSpec = stepCompiledViewSpec(step);
     if (!viewSpec)
         return null;
-    return compileEffectiveView(viewSpec, step.transition || {}).effectiveViewSpec;
+    return idioms ? createViewCompiler(idioms).compileEffectiveView(viewSpec, step.transition || {}).effectiveViewSpec : viewSpec;
 }
 function prepareIdiomSpec(idiom, spec) {
     if (!spec)

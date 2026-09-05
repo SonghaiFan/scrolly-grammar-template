@@ -60,6 +60,9 @@ export declare class Seq {
     }): this;
     /** Register a custom onChange handler */
     on(event: 'change', handler: (state: SeqState) => void): this;
+    /** Release references to all chart/text bindings; does not destroy charts. */
+    unbind(): this;
+    off(event: 'change'): this;
     /**
      * Compile to a StorySpec.
      * Called internally by sl.chart(seq, opts) — you rarely need this directly.
@@ -71,6 +74,7 @@ export declare class Seq {
      * so the first sq.next() advances to step 1 rather than step 0.
      */
     syncCursor(index: number): void;
+    private _boundedIndex;
     private _stateAt;
     private _notify;
 }

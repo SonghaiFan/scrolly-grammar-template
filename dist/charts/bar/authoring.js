@@ -1,11 +1,14 @@
-import { compileViewSpec } from '../../transitions/index.js';
 import { externalizeScrollyViewSpec } from '../../scrolly-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
+import { normalizeFilter } from '../../data/filter.js';
 import { labelFromValue, titleize } from '../../labels.js';
 import { IdiomState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createBarSpecCompiler } from './compile.js';
 export function bar(data) {
     return new BarState({ data: normalizeDataSource(data), mark: 'bar', encoding: {} });
 }
+const BAR_SPEC_COMPILER = createBarSpecCompiler();
 export class BarState extends IdiomState {
     toSpec() {
         const spec = cloneState(this.state);
@@ -29,7 +32,7 @@ export class BarState extends IdiomState {
         delete spec.aggregate;
         if (spec.semanticKey == null)
             delete spec.semanticKey;
-        return pruneAuthoringState(compileViewSpec(externalizeScrollyViewSpec(spec), { scene: [] }));
+        return pruneAuthoringState(compileViewWithCompiler(externalizeScrollyViewSpec(spec), { scene: [] }, BAR_SPEC_COMPILER));
     }
     x(field, options = {}) {
         const channel = channelFrom(field, { type: 'nominal', ...options });
@@ -241,9 +244,11 @@ function aggregateBarState(view, config) {
     }, 'granularity');
 }
 function normalizeSelectors(selector) {
+    if (typeof selector === 'string')
+        return [normalizeFilter(selector)];
     const sel = selector;
     if (sel.field)
-        return [cloneState(sel)];
+        return [cloneState(normalizeFilter(sel))];
     return Object.entries(sel).map(([field, equal]) => ({ field, equal }));
 }
 function setConstraints(constraints, selectors) {

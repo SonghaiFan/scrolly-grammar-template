@@ -1,0 +1,50 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { bar, line, point, unit, transition } from '../dist/index.js';
+import { diffViewStates, sameValue } from '../dist/grammar/diff.js';
+
+test('builders accept deferred data and preserve both branches', () => {
+  const rows = [{ category: 'A', value: 1, other: 4 }];
+  for (const factory of [bar, line, point, unit]) {
+    const first = factory().data(rows).x('category').y('value');
+    const snapshot = first.toSpec();
+    const second = first.y('other');
+    assert.notEqual(first, second);
+    assert.deepEqual(first.toSpec(), snapshot);
+    assert.equal(second.toSpec().encoding.y.field, 'other');
+    rows[0].value = 9;
+    assert.deepEqual(first.toSpec(), snapshot);
+  }
+});
+
+test('data is replaced, including URL and inline source metadata', () => {
+  const first = bar().data({ url: './before.json', type: 'json' }).x('category').y('value');
+  assert.deepEqual(first.data([{ category: 'A', value: 1 }]).toSpec().data, [{ category: 'A', value: 1 }]);
+  assert.deepEqual(first.data({ values: [] }).toSpec().data, { values: [] });
+  assert.deepEqual(first.data('./after.csv').toSpec().data, { url: './after.csv' });
+});
+
+test('diff detects data and every bound encoding channel', () => {
+  const a = point().data('one').x('x').y('y');
+  assert.equal(diffViewStates(a, a.data('two')).hasDelta('data'), true);
+  assert.equal(diffViewStates(a, a.channel('size', 'count')).hasDelta('encoding.size'), true);
+  assert.equal(diffViewStates(a, a.tooltip('x')).hasDelta('encoding.tooltip'), true);
+});
+
+test('same result has the same delta independent of derivation and property order', () => {
+  const a = bar('rows').x('category').y('value');
+  const b = a.y('other');
+  const c = bar('rows').x('category').y('other');
+  assert.deepEqual(diffViewStates(a, b).deltas, diffViewStates(a, c).deltas);
+  assert.equal(sameValue({ a: 1, b: [2, 3] }, { b: [2, 3], a: 1 }), true);
+  assert.equal(sameValue([2, 3], [3, 2]), false);
+});
+
+test('pair validation runs before DOM access', async () => {
+  await assert.rejects(() => transition(bar('a'), line('a'), {}), /same chart idiom/);
+  await assert.rejects(() => transition(bar('a'), bar('a'), {}), /target, d3/);
+  await assert.rejects(() => transition(bar('a'), bar('a'), { d3: {}, aq: {} }), /missing dataset/);
+  const a = { mark: 'bar', data: [{ category: 'A', value: 1 }] };
+  await assert.rejects(() => transition(a, { ...a, transform: [null] }, { d3: {} }), /transform\[0\]/);
+  await assert.rejects(() => transition(a, { ...a, transform: [{ limit: -1 }] }, { d3: {} }), /transform\[0\]/);
+});

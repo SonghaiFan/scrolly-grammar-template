@@ -1,12 +1,14 @@
 import type { ViewSpec } from '../types/index.js';
+import type { ChartIdiomRegistry } from '../charts/index.js';
 import { resolveSceneTransition } from '../transitions/index.js';
-interface StepTransition {
+export interface StepTransition {
     scene?: string[];
 }
-interface CompileResult {
+export interface CompileResult {
     sceneTransition: ReturnType<typeof resolveSceneTransition>;
     effectiveViewSpec: ViewSpec | null;
 }
-export declare function compileEffectiveView(viewSpec: ViewSpec, stepTransition?: StepTransition): CompileResult;
-export declare function compileTransitionSource(viewSpec: ViewSpec | null | undefined, stepTransition?: StepTransition): CompileResult;
-export {};
+export declare function createViewCompiler(idioms: ChartIdiomRegistry): {
+    compileEffectiveView: (viewSpec: ViewSpec, stepTransition?: StepTransition) => CompileResult;
+    compileTransitionSource: (viewSpec: ViewSpec | null | undefined, stepTransition?: StepTransition) => CompileResult;
+};

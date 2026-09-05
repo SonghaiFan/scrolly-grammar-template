@@ -22,12 +22,13 @@ export function diffViewStates(
   const changed: string[] = [];
 
   if (!sameValue(prev.mark, curr.mark)) changed.push('mark');
+  if (!sameValue(prev.data, curr.data)) changed.push('data');
   if (!sameValue(prev.key, curr.key)) changed.push('key');
   if (!sameValue(prev.transform, curr.transform)) changed.push('transform');
   if (!sameValue(prev.filter, curr.filter)) changed.push('filter');
-  if (!sameValue(prev.encoding?.x, curr.encoding?.x)) changed.push('encoding.x');
-  if (!sameValue(prev.encoding?.y, curr.encoding?.y)) changed.push('encoding.y');
-  if (!sameValue(prev.encoding?.color, curr.encoding?.color)) changed.push('encoding.color');
+  for (const channel of encodingChannels(prev, curr)) {
+    if (!sameValue(prev.encoding?.[channel], curr.encoding?.[channel])) changed.push(`encoding.${channel}`);
+  }
   if (!sameValue(prev.guide, curr.guide)) changed.push('guide');
   if (!sameValue(prev.granularity, curr.granularity)) changed.push('granularity');
 
@@ -57,7 +58,20 @@ function toComparableSpec(
 }
 
 export function sameValue(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  return JSON.stringify(canonicalValue(a)) === JSON.stringify(canonicalValue(b));
+}
+
+function canonicalValue(value: unknown): unknown {
+  if (value == null) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, item]) => [key, canonicalValue(item)]));
+}
+
+function encodingChannels(a: ViewSpec, b: ViewSpec): string[] {
+  return [...new Set([...Object.keys(a.encoding ?? {}), ...Object.keys(b.encoding ?? {})])].sort();
 }
 
 export function diffSemanticViewStates(
@@ -69,13 +83,14 @@ export function diffSemanticViewStates(
   const deltas: Delta[] = [];
 
   pushDelta(deltas, 'mark', prev.mark, curr.mark);
+  pushDelta(deltas, 'data', previous.data, next.data);
   pushDelta(deltas, 'key', prev.key, curr.key);
   pushDelta(deltas, 'semantic-key', prev.semanticKey, curr.semanticKey);
   pushCollectionDelta(deltas, 'filter', prev.filters, curr.filters);
   pushDelta(deltas, 'transform', prev.nonFilterTransforms, curr.nonFilterTransforms);
-  pushDelta(deltas, 'encoding.x', prev.encoding.x, curr.encoding.x);
-  pushDelta(deltas, 'encoding.y', prev.encoding.y, curr.encoding.y);
-  pushDelta(deltas, 'encoding.color', prev.encoding.color, curr.encoding.color);
+  for (const channel of encodingChannels(previous, next)) {
+    pushDelta(deltas, `encoding.${channel}`, prev.encoding[channel], curr.encoding[channel]);
+  }
   pushStateDelta(deltas, 'focus', prev.focus, curr.focus);
   pushStateDelta(deltas, 'guide', prev.guide, curr.guide);
   pushStateDelta(deltas, 'granularity', prev.granularity, curr.granularity);

@@ -14,7 +14,7 @@ const spec = story()
   .data(/* … */)
   .layout(/* … */)
   .view(/* … */)
-  .step(/* … */)
+  .add(/* … */)
   .toSpec();
 ```
 
@@ -136,27 +136,26 @@ Registers named view(s):
 // Shorthand: registers under id "main"
 .view({ title: "Melbourne weather", height: 540 })
 
-// Multiple views in one call — pass an id/config map directly to the spec
-.view({ main: { title: "Trend", height: 480 }, detail: { title: "Detail", height: 320 } })
+// Multiple views: repeat the named form
+.view("main", { title: "Trend", height: 480 })
+.view("detail", { title: "Detail", height: 320 })
 ```
 
-> The two-arg form takes a single id; to register several views in one call,
-> pass an `{ id: config, … }` map as the sole argument (it's merged directly
-> into `spec.views`, same as the metadata-merge pattern used by `.data()`).
+> The single-object form is the config for `main`, not an id/config map.
+> To seed several views at once, use `story({ views: { main: ..., detail: ... } })`.
 
 Each view's `config` typically includes `title` (figure caption) and `height`
 (pixel height of the chart canvas) — both are read by the renderer and shell.
 
 ## `.action(actions)`
 
-Sets the **default action list** applied to every subsequent `.step()` call
-(until you call `.action()` again). Accepts a string or array:
+Sets the **default action list** applied to every subsequent `.add()` call
+(until you call `.action()` again). Prefer explicit token arrays:
 
 ```js
-.action("stepper")                 // alias for ["step", "tooltip"]
-.action("scroller")                // alias for ["scroll", "tooltip"]
-.action("step")                    // lower-level token: discrete jumps only
-.action(["scroll", "tooltip"])     // lower-level tokens: scroll-scrubbed transitions + tooltips
+.action(["step", "tooltip"])       // discrete jumps + tooltips
+.action(["scroll", "tooltip"])     // scroll-scrubbed transitions + tooltips
+.action("step")                    // low-level token form
 ```
 
 Recognized action values:
@@ -172,39 +171,39 @@ The builder's default is `["step", "tooltip"]`. The very first step always
 gets `"enter"` appended automatically, regardless of `.action()` or a
 per-step override.
 
-> Calling `.action()` recompiles all previously-defined steps with the new
-> default — so it's safe to call before *or* after `.step()` calls, though
-> calling it once up front is the clearest pattern.
+> Calling `.action()` before `.add()` is the clearest pattern. `toSpec()`
+> derives all steps from the current builder state, so changing the default
+> before `toSpec()` affects the emitted steps.
 
 You can also override one step without changing the story default:
 
 ```js
 story()
-  .action("stepper")
-  .step("Baseline", base)
-  .step("Scrub this reveal", base.where({ period: "recent" }), {
-    action: "scroller"
+  .action(["step", "tooltip"])
+  .add("Baseline", base)
+  .add("Scrub this reveal", base.where({ period: "recent" }), {
+    action: ["scroll", "tooltip"]
   })
 ```
 
-## `.step(titleOrDefinition, view?, options?)`
+## `.add(titleOrDefinition, view?, options?)`
 
 Appends one step. Three call shapes:
 
 ```js
 // 1) Full definition object — anything you'd put in a compiled step,
 //    plus `view` (a chart-state builder or raw view spec)
-.step({ title: "…", body: "…", view: bar("rows").x("a").y("b"), action: "scroller", authoring: "…" })
+.add({ title: "…", body: "…", view: bar("rows").x("a").y("b"), action: ["scroll", "tooltip"], code: "…" })
 
 // 2) (title, chartState, optionsObject)
-.step("Baseline", bar("rows").x("a").y("b"), {
+.add("Baseline", bar("rows").x("a").y("b"), {
   body: "Narrative copy shown beside/above the chart.",
-  action: "stepper",               // optional per-step override
-  authoring: 'bar("rows").x("a").y("b")'   // optional: source snippet shown in the inspector
+  action: ["step", "tooltip"],               // optional per-step override
+  code: 'bar("rows").x("a").y("b")'   // optional: source snippet shown in the inspector
 })
 
 // 3) (title, chartState, "body text shorthand")
-.step("Baseline", bar("rows").x("a").y("b"), "Narrative copy as a plain string")
+.add("Baseline", bar("rows").x("a").y("b"), "Narrative copy as a plain string")
 ```
 
 `view` may be:
@@ -213,35 +212,22 @@ Appends one step. Three call shapes:
 - a **raw view spec object** — used as-is (after `externalizeScrollyViewSpec`
   normalization)
 
-What happens when you call `.step()`:
+`.add()` stores a definition and returns the mutable Story builder; it does not
+compile or render on every call. When `.toSpec()` is called:
 
 1. The builder takes the *previous* step's view state and **diffs** it
    against this one, inferring `transition.scene` (see
    [Scenes & Transitions](./scenes-and-transitions.md)).
 2. It compiles the view spec and attaches narrative annotation (`title`,
    `description` from `body`).
-3. If you passed `authoring`/`authoringCode`/`code`, it's stored under
-   `inspector.authoringCode` (shown in the demo's source-code inspector
+3. If you passed `code`, it's stored under `inspector.code`
+   (shown in the demo's source-code inspector
    panel — handy for tutorials and live-coding walkthroughs).
 4. It assigns `action`: your per-step `action` override if present, otherwise
    the current `.action()` default. The first step also receives `"enter"`.
-5. It pushes the compiled step and **recompiles the whole step list** —
-   ScrollyLite always re-derives transitions from scratch so reordering or
-   inserting steps stays consistent.
-
-## `.steps(definitions)`
-
-Replaces the entire step list at once and recompiles:
-
-```js
-.steps([
-  { title: "Step 1", view: bar("rows").x("a").y("b"), body: "…" },
-  { title: "Step 2", view: bar("rows").x("a").y("b").where({ a: "x" }), body: "…" }
-])
-```
-
-Useful when generating steps programmatically (e.g. mapping over a list of
-filter values) rather than chaining `.step()` calls one by one.
+5. It returns the complete compiled step list. Transitions are re-derived for
+   that snapshot; changing the default `.action()` before `.toSpec()` affects
+   all definitions without a per-step action override.
 
 ## `.toSpec()`
 
@@ -264,11 +250,11 @@ the pattern the bundled examples use:
 const base = bar("weatherDays").x("decade").y("count").sort("year");
 
 story()
-  .step("Baseline", base.where({ type: "Hot days" }))
-  .step("Focus", base.where({ type: "Hot days", period: "recent" }))
-  .step("Guide", base.where({ type: "Hot days", period: "recent" }).flip())
-  .step("Granularity", base.breakdown("type"))
-  .step("Guide: grouped", base.breakdown("type").layout("grouped").flip())
+  .add("Baseline", base.where({ type: "Hot days" }))
+  .add("Focus", base.where({ type: "Hot days", period: "recent" }))
+  .add("Guide", base.where({ type: "Hot days", period: "recent" }).flip())
+  .add("Granularity", base.breakdown("type"))
+  .add("Guide: grouped", base.breakdown("type").layout("grouped").flip())
   .toSpec();
 ```
 

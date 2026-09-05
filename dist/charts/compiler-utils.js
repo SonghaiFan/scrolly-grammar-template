@@ -1,7 +1,8 @@
 import { narrativeObjectKey, withNarrative } from '../scrolly-meta.js';
 import { titleize } from '../labels.js';
+import { normalizeFilter } from '../data/filter.js';
 export function compileFilter(spec, operationSpec = {}) {
-    const filter = operationSpec.filter || selectorToFilter(operationSpec);
+    const filter = operationSpec.filter ? normalizeFilter(operationSpec.filter) : selectorToFilter(operationSpec);
     if (!filter)
         return spec;
     return withSceneState({
@@ -10,7 +11,7 @@ export function compileFilter(spec, operationSpec = {}) {
     }, { focus: { filter } });
 }
 export function compileHighlight(spec, operationSpec = {}) {
-    const filter = operationSpec.filter || selectorToFilter(operationSpec);
+    const filter = operationSpec.filter ? normalizeFilter(operationSpec.filter) : selectorToFilter(operationSpec);
     if (!filter)
         return spec;
     return withSceneState(spec, {
@@ -80,10 +81,10 @@ export function semanticPartToNarrative(part) {
 export function selectorToFilter(selector = {}) {
     if (!selector['field'])
         return null;
-    return {
+    return normalizeFilter({
         field: selector['field'],
         ...copyDefined(selector, ['equal', 'notEqual', 'oneOf', 'gte', 'gt', 'lte', 'lt'])
-    };
+    });
 }
 export function resolveGuideStaging(guideSpec = {}, orientation) {
     if (guideSpec['staging'] === false)

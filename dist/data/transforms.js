@@ -1,8 +1,14 @@
+import { filterPredicate } from './filter.js';
+import { validateTransforms } from './validate.js';
 export function applyTransforms(source, transforms = [], aq) {
+    validateTransforms(transforms);
+    if (!transforms.length)
+        return source.map((row) => ({ ...row }));
     if (!aq) {
-        throw new Error('ScrollyLite data transforms require Arquero. Pass { aq } to createStory().');
+        throw new Error('ScrollyLite data transforms require Arquero. Pass { aq } to the runtime.');
     }
-    let table = aq.from(source.map((row) => ({ ...row })));
+    const fields = [...new Set(source.flatMap(row => Object.keys(row)))];
+    let table = aq.from(source.map(row => Object.fromEntries(fields.map(field => [field, row[field]]))));
     transforms.forEach((transform) => {
         const t = transform;
         if (t['filter'])
@@ -17,15 +23,13 @@ export function applyTransforms(source, transforms = [], aq) {
             table = aggregateRows(table, t['aggregate'], aq);
         if (t['sort'])
             table = sortRows(table, t['sort'], aq);
-        if (t['limit'])
+        if ('limit' in t)
             table = table.slice(0, t['limit']);
     });
     return table.objects();
 }
 function timeUnitRows(table, timeUnit, aq) {
     const as = timeUnit.as || `${timeUnit.field}_${timeUnit.unit}`;
-    if (timeUnit.unit !== 'month')
-        return table;
     return table.derive({
         [as]: aq.escape((row) => monthLabel(row[timeUnit.field]))
     });
@@ -37,7 +41,7 @@ function monthLabel(value) {
     return date.toLocaleString('en', { month: 'short' });
 }
 function filterRows(table, filter, aq) {
-    return table.filter(aq.escape((row) => matchFilter(row, filter)));
+    return table.filter(aq.escape(filterPredicate(filter)));
 }
 function foldRows(table, fold, aq) {
     const fields = fold.fields || [];
@@ -58,21 +62,28 @@ function binRows(table, bin, aq) {
     const startAs = `${as}_start`;
     const endAs = `${as}_end`;
     const rows = table.objects();
-    const values = rows.map((row) => Number(row[bin.field])).filter(Number.isFinite);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const step = bin.step || Math.ceil((max - min) / (bin.maxbins || 10));
+    const numeric = (value) => value == null || value === '' || typeof value === 'boolean' ? NaN : Number(value);
+    const values = rows.map((row) => numeric(row[bin.field])).filter(Number.isFinite);
+    const min = values.length ? values.reduce((a, b) => Math.min(a, b)) : 0;
+    const max = values.length ? values.reduce((a, b) => Math.max(a, b)) : 0;
+    const step = bin.step ?? Math.max(1, Math.ceil((max - min) / (bin.maxbins ?? 10)));
     return table.derive({
         [startAs]: aq.escape((row) => {
-            const value = Number(row[bin.field]);
+            const value = numeric(row[bin.field]);
+            if (!Number.isFinite(value))
+                return null;
             return Math.floor((value - min) / step) * step + min;
         }),
         [endAs]: aq.escape((row) => {
-            const value = Number(row[bin.field]);
+            const value = numeric(row[bin.field]);
+            if (!Number.isFinite(value))
+                return null;
             return Math.floor((value - min) / step) * step + min + step;
         }),
         [as]: aq.escape((row) => {
-            const value = Number(row[bin.field]);
+            const value = numeric(row[bin.field]);
+            if (!Number.isFinite(value))
+                return null;
             const start = Math.floor((value - min) / step) * step + min;
             return `${start}-${start + step}`;
         })
@@ -100,7 +111,9 @@ function aggregateExpression(fieldSpec, aq) {
         return aq.op.max(field);
     if (op === 'median')
         return aq.op.median(field);
-    return aq.op.sum(field);
+    if (op === 'sum')
+        return aq.op.sum(field);
+    throw new Error(`Unsupported aggregate operator: ${op}`);
 }
 function sortRows(table, sort, aq) {
     if (Array.isArray(sort.fields)) {
@@ -114,54 +127,4 @@ function sortField(sort, aq) {
     if (sort.order === 'descending')
         return aq.desc(sort.field || '');
     return sort.field;
-}
-function matchFilter(row, filter) {
-    if (typeof filter === 'string')
-        return matchFilterExpression(row, filter);
-    const value = row[filter.field];
-    if ('equal' in filter)
-        return value === filter.equal;
-    if ('notEqual' in filter)
-        return value !== filter['notEqual'];
-    if ('oneOf' in filter)
-        return filter.oneOf.includes(value);
-    if ('gte' in filter && value < filter.gte)
-        return false;
-    if ('gt' in filter && value <= filter.gt)
-        return false;
-    if ('lte' in filter && value > filter.lte)
-        return false;
-    if ('lt' in filter && value >= filter.lt)
-        return false;
-    return true;
-}
-function matchFilterExpression(row, expression) {
-    const match = String(expression).trim().match(/^datum\.([A-Za-z_$][\w$]*)\s*(==|===|!=|!==|>=|>|<=|<)\s*(.+)$/);
-    if (!match)
-        return true;
-    const [, field, operator, rawValue] = match;
-    const left = row[field];
-    const right = parseFilterLiteral(rawValue);
-    if (operator === '==' || operator === '===')
-        return left === right;
-    if (operator === '!=' || operator === '!==')
-        return left !== right;
-    if (operator === '>=')
-        return left >= right;
-    if (operator === '>')
-        return left > right;
-    if (operator === '<=')
-        return left <= right;
-    if (operator === '<')
-        return left < right;
-    return true;
-}
-function parseFilterLiteral(value) {
-    const trimmed = String(value).trim();
-    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-        return trimmed.slice(1, -1);
-    }
-    const number = Number(trimmed);
-    return Number.isNaN(number) ? trimmed : number;
 }

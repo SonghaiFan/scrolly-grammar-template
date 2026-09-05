@@ -3,9 +3,26 @@
 ScrollyLite has a small vocabulary. Once these pieces click, every part of the
 API — the story builder, the chart idioms, the runtime — reads the same way.
 
+## Visualization, delta and transition
+
+The core unit is an immutable **visualization declaration**, produced by a
+chain such as `bar().data(rows).x("category").y("value")`. Deriving a new
+declaration does not mutate the original. A declaration is not a mounted chart.
+
+`delta(from, to)` describes semantic differences between two same-idiom
+endpoints without touching the DOM. `await transition(from, to, options)` loads
+data and creates a mounted **transition controller**: `progress(0…1)` seeks a
+frame, while `play()` supplies time-based progress. Neither requires Story or
+scrolling. Chart-type changes are outside this standalone contract.
+
+Story, steps, layouts and scroll drivers form an optional composition layer
+above that model. See [Visualization Transitions](./visualization-transitions.md)
+for the standalone API and [Module Boundaries](./modular-architecture.md) for
+focused imports.
+
 ## Story
 
-A **story** is the top-level spec: title, description, datasets, layout,
+A **story** is a narrative composition spec: title, description, datasets, layout,
 theme, named views, and an ordered list of **steps**. It's a plain JSON-like
 object — you can write it by hand, generate it, or build it with the
 [`story()`](./story-builder.md) chainable API. Either way, `createStory(spec,
@@ -35,7 +52,7 @@ scrolls or clicks through. Each step also carries:
   continuous scroll-scrubbing (`"scroll"`), tooltips (`"tooltip"`), or
   play-on-load (`"enter"`)
 
-You rarely write steps by hand. The story builder's `.step(title, chartState,
+You rarely write steps by hand. The story builder's `.add(title, chartState,
 options)` compiles all of this for you from a chart idiom chain.
 
 ## View
@@ -78,12 +95,12 @@ between two consecutive steps. There are four:
 
 | Scene         | Question it answers                          | Typical authoring trigger |
 |---------------|----------------------------------------------|---------------------------|
-| `focus`       | Which rows are emphasized or visible?        | `.where()`, `.filter()`, `.highlight()` |
+| `focus`       | Which rows are emphasized or visible?        | `.where()`, filter transforms, `.highlight()` |
 | `guide`       | How is the same data being read (orientation, scale, layout)? | `.flip()`, `.guide()`, `.layout()` |
 | `granularity` | What level of aggregation/grouping is shown?  | `.breakdown()`, `.rollup()`, `.segment()` |
 | `observation` | Which variable/field is encoded?              | `.x()`, `.y()`, `.color()` with a new field |
 
-You almost never set scenes manually. When you chain `.step(title, viewState)`
+You almost never set scenes manually. When you chain `.add(title, viewState)`
 in the story builder, ScrollyLite **diffs** the current view state against the
 previous step's and infers `transition.scene` automatically — see
 [Scenes & Transitions](./scenes-and-transitions.md) for the full inference
@@ -109,7 +126,8 @@ in the final spec. Calling `.toSpec()` runs the compiler, which:
 
 - expands shorthand (`.y("count", "Total")` → `{ field: "count", title:
   "Total" }`)
-- folds `.where()`/`.filter()` into `transform: [{ filter }, …]`
+- compiles row-filtering `.where()` into filter transforms (line instead defaults
+  to displayed-range cropping)
 - prunes authoring-only bookkeeping (`__grammar`, default guide staging, …)
 - hands the result to `compileViewSpec`, which finalizes margins, narrative
   metadata, and idiom-specific defaults
@@ -128,16 +146,16 @@ const spec = story()
   .data("weatherDays", { url: "./weather_days_tidy.csv", type: "csv" })
   .layout("floatToText")
   .view("main", { title: "Melbourne", height: 540 })
-  .step("Baseline", base.where({ type: "Hot days" }))            // observation: count by decade
-  .step("Focus", base.where({ type: "Hot days", period: "recent" })) // scene: focus
-  .step("Guide", base.where({ type: "Hot days", period: "recent" }).flip()) // scene: guide
-  .step("Granularity", base.breakdown("type"))                   // scene: granularity
+  .add("Baseline", base.where({ type: "Hot days" }))            // observation: count by decade
+  .add("Focus", base.where({ type: "Hot days", period: "recent" })) // scene: focus
+  .add("Guide", base.where({ type: "Hot days", period: "recent" }).flip()) // scene: guide
+  .add("Granularity", base.breakdown("type"))                   // scene: granularity
   .toSpec();
 
 await createStory(spec, { target: "#app", d3, aq });
 ```
 
-Each `.step()` call records a chart state; the builder diffs consecutive
+Each `.add()` call records a chart state; the builder diffs consecutive
 states, infers the scene(s), compiles the view, and appends a finished step to
 `spec.steps`. By the time `.toSpec()` runs, the whole story — narrative,
 scenes, and chart specs — is ready to render.

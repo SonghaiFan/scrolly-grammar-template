@@ -25,7 +25,7 @@ export declare function setupScroll(spec: {
         scroll?: unknown;
     };
 }, shell: Shell, renderer: Renderer): ScrollDriver;
-export declare function setupNav(shell: Shell, renderer: Renderer, scrollDriver: ScrollDriver): void;
+export declare function setupNav(shell: Shell, renderer: Renderer, scrollDriver: ScrollDriver): () => void;
 export declare function setupResize(renderer: Renderer, scrollDriver: ScrollDriver): () => void;
-export declare function restoreHashPosition(shell: Shell, renderer: Renderer, scrollDriver: ScrollDriver): void;
+export declare function restoreHashPosition(shell: Shell, renderer: Renderer, scrollDriver: ScrollDriver): () => void;
 export {};

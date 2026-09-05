@@ -1,86 +1,40 @@
 import { diffViewStates, sameValue } from './diff.js';
+/** Classify endpoint semantics only; builder provenance is not animation input. */
 export function inferTransition(previous, next) {
-    if (!previous)
+    if (!previous || !next)
         return [];
+    const diff = diffViewStates(previous, next);
     const scenes = [];
-    const nextOps = getOperations(next);
-    if (nextOps.length) {
-        const prevOps = getOperations(previous);
-        scenes.push(...operationDelta(prevOps, nextOps));
-    }
-    const prevSpec = toViewSpec(previous);
-    const nextSpec = toViewSpec(next);
-    const diff = diffViewStates(prevSpec, nextSpec);
-    if (diff.has('filter') || diff.hasDelta('focus') || filterTransformChanged(diff.previous, diff.next)) {
+    const layoutOnly = onlyGranularityLayoutChanged(diff.delta('bar.granularity') ?? diff.delta('granularity'));
+    const aggregateChanged = !sameValue(diff.previous.nonFilterTransforms.filter(t => 'aggregate' in t || 'bin' in t), diff.next.nonFilterTransforms.filter(t => 'aggregate' in t || 'bin' in t));
+    const granularity = !layoutOnly && (diff.hasDelta('granularity') || diff.hasDelta('bar.granularity') || aggregateChanged);
+    const prev = diff.previous.encoding;
+    const curr = diff.next.encoding;
+    const swapped = Boolean(prev.x?.field && prev.y?.field && prev.x.field !== prev.y.field &&
+        prev.x.field === curr.y?.field && prev.y.field === curr.x?.field);
+    const fieldChanged = ['x', 'y'].some(channel => prev[channel]?.field && curr[channel]?.field && prev[channel]?.field !== curr[channel]?.field);
+    const coordinatesChanged = ['x', 'y'].some(channel => !sameValue(coordinates(prev[channel]), coordinates(curr[channel])));
+    if (diff.hasDelta('filter') || diff.hasDelta('focus'))
         scenes.push('focus');
-    }
-    if (xyObservationChanged(diff)) {
+    // A pure axis swap changes reading direction, not the selected variables.
+    // Generated aggregate fields belong to granularity rather than observation.
+    if (fieldChanged && !swapped && !granularity)
         scenes.push('observation');
-    }
-    if ((diff.has('granularity') || diff.hasDelta('granularity') || diff.hasDelta('bar.granularity')) &&
-        !onlyGranularityLayoutChanged(diff.delta('bar.granularity') ?? diff.delta('granularity'))) {
+    if (granularity)
         scenes.push('granularity');
-    }
-    if (diff.has('guide') || diff.hasDelta('guide') || diff.hasDelta('bar.guide')) {
+    if (swapped || coordinatesChanged || layoutOnly || diff.hasDelta('guide') || diff.hasDelta('bar.guide'))
         scenes.push('guide');
-    }
-    return unique(scenes);
+    return scenes;
 }
-// ─── Internal helpers ─────────────────────────────────────────────────────────
-function toViewSpec(value) {
-    if (!value)
-        return {};
-    return typeof value.toSpec === 'function'
-        ? value.toSpec()
-        : value;
-}
-function getOperations(value) {
-    if (!value)
-        return [];
-    return typeof value.operations === 'function'
-        ? value.operations()
-        : [];
-}
-function filterTransformChanged(previous, next) {
-    return !sameValue(filterTransforms(previous.transform), filterTransforms(next.transform));
-}
-function filterTransforms(transforms = []) {
-    return transforms
-        .filter((t) => t?.filter)
-        .map((t) => t.filter);
+function coordinates(channel) {
+    if (!channel)
+        return null;
+    return { scale: channel.scale ?? null, domain: channel.domain ?? null, sort: channel.sort ?? null };
 }
 function onlyGranularityLayoutChanged(delta) {
     if (!delta?.previous || !delta?.next)
         return false;
-    const prev = delta.previous;
-    const curr = delta.next;
-    const prevRest = { ...prev };
-    const nextRest = { ...curr };
-    delete prevRest.layout;
-    delete nextRest.layout;
-    return sameValue(prevRest, nextRest) && !sameValue(prev.layout, curr.layout);
-}
-function xyObservationChanged(diff) {
-    if (diff.has('transform') || diff.has('filter') || diff.hasDelta('focus'))
-        return false;
-    const prevMark = String(diff.previous?.mark ?? '').toLowerCase();
-    const nextMark = String(diff.next?.mark ?? '').toLowerCase();
-    if (prevMark === 'bar' || nextMark === 'bar')
-        return false;
-    return ['x', 'y'].some((channel) => {
-        const prev = diff.previous?.encoding?.[channel];
-        const nextCh = diff.next?.encoding?.[channel];
-        return prev?.field && nextCh?.field && prev.field !== nextCh.field;
-    });
-}
-function operationDelta(previous, next) {
-    let i = 0;
-    while (i < previous.length && i < next.length && previous[i] === next[i])
-        i++;
-    if (i < previous.length && i === next.length)
-        return previous.slice(i);
-    return next.slice(i);
-}
-function unique(values) {
-    return [...new Set(values.filter(Boolean))];
+    const { layout: previousLayout, ...previous } = delta.previous;
+    const { layout: nextLayout, ...next } = delta.next;
+    return sameValue(previous, next) && !sameValue(previousLayout, nextLayout);
 }

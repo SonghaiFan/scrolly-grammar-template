@@ -1,13 +1,10 @@
 export function createNativeScrollDriver({ steps = [], offset = 0.55, config = {}, onEnter = () => { }, onExit = () => { }, onProgress = () => { }, isLocked = () => false } = {}) {
     let activeIndex = -1;
     let lastScrollY = window.scrollY;
-    let observedScrollY = window.scrollY;
     let frame = null;
-    let watchFrame = null;
-    let watchInterval = null;
     let destroyed = false;
     const schedule = () => {
-        if (destroyed || frame)
+        if (destroyed || frame !== null)
             return;
         frame = window.requestAnimationFrame(() => {
             frame = null;
@@ -33,14 +30,21 @@ export function createNativeScrollDriver({ steps = [], offset = 0.55, config = {
     };
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
-    watchScrollPosition();
-    watchInterval = window.setInterval(watchScrollPosition, 80);
+    // Geometry changes (fonts/images/responsive content) also invalidate progress.
+    // No perpetual animation frame or polling interval is needed while idle.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+    const geometryRoots = new Set([document.documentElement, document.body, ...steps]);
+    for (const element of geometryRoots)
+        if (element)
+            observer?.observe(element);
     schedule();
     return {
         type: 'native',
         resize: schedule,
         refresh: schedule,
         scrollToStep(index, options = {}) {
+            if (destroyed)
+                return null;
             const step = steps[index];
             if (!step)
                 return null;
@@ -52,31 +56,17 @@ export function createNativeScrollDriver({ steps = [], offset = 0.55, config = {
             });
         },
         destroy() {
+            if (destroyed)
+                return;
             destroyed = true;
-            if (frame)
+            if (frame !== null)
                 window.cancelAnimationFrame(frame);
-            if (watchFrame)
-                window.cancelAnimationFrame(watchFrame);
-            if (watchInterval)
-                window.clearInterval(watchInterval);
+            frame = null;
+            observer?.disconnect();
             window.removeEventListener('scroll', schedule);
             window.removeEventListener('resize', schedule);
         }
     };
-    function watchScrollPosition() {
-        if (destroyed)
-            return;
-        if (window.scrollY !== observedScrollY) {
-            observedScrollY = window.scrollY;
-            schedule();
-        }
-        if (!watchFrame) {
-            watchFrame = window.requestAnimationFrame(() => {
-                watchFrame = null;
-                watchScrollPosition();
-            });
-        }
-    }
 }
 export function scrollToStepElement(step, { offset = 0.55, progress = 0.98, behavior = 'instant' } = {}) {
     const top = stepScrollTop(step, offset, progress);

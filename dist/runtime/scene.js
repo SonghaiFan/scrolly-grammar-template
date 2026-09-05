@@ -5,6 +5,7 @@ import { clearSceneTransitionProgress } from '../transition-progress.js';
 import { hasScene } from '../transitions/index.js';
 import { markAxisInactive } from './marks.js';
 import { clamp } from './utils.js';
+let sceneIdentity = 0;
 export function getScene(node, viewConfig, d3) {
     if (node.__scrollyLiteScene)
         return node.__scrollyLiteScene;
@@ -16,6 +17,7 @@ export function getScene(node, viewConfig, d3) {
     const grid = frame.append('g').attr('class', 'sl-grid');
     const markRoot = frame.append('g').attr('class', 'sl-mark-root');
     const scene = {
+        clipIdentity: ++sceneIdentity,
         node, svg, frame, grid, markRoot,
         xAxis: svg.append('g').attr('class', 'sl-axis sl-x-axis'),
         yAxis: svg.append('g').attr('class', 'sl-axis sl-y-axis'),

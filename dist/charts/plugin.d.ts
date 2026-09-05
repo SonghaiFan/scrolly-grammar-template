@@ -3,6 +3,7 @@ export declare const DEFAULT_SCENES: readonly ["focus", "guide", "granularity", 
 export declare const DEFAULT_STATE_OPERATIONS: StateOperations;
 export interface ChartIdiomConfig<S extends ViewSpec = ViewSpec> {
     key: string;
+    transitionEvaluation?: 'cached' | 'reconstruct';
     scenes?: string[];
     stateOperations?: StateOperations;
     renderer?: Renderer<S>;

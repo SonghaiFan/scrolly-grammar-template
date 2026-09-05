@@ -9,13 +9,17 @@ identical either way, only the loading mechanics differ.
 
 ## 1. Install
 
+This checkout prepares 0.2.0. Before publication install a local tarball; the
+versioned command below applies once that candidate is published.
+
 ```sh
-npm install scrollylite d3 arquero
+npm install scrollylite@0.2.0 d3 arquero
 ```
 
 `d3` and `arquero` are **peer dependencies** — ScrollyLite doesn't bundle
 them, so your project controls the versions and there's only one copy on the
-page. ScrollyLite requires `d3@^7` and `arquero@^8`.
+page. Rendering requires `d3@^7`; transforms require `arquero@^8`. Arquero is
+optional when no transforms are declared.
 
 ## 2. Minimal integration
 
@@ -30,7 +34,7 @@ import "scrollylite/style.css";
 const spec = story()
   .data("rows", { url: "./sales.csv", type: "csv" })
   .view("main", { height: 520 })
-  .step("Baseline", bar("rows").x("month").y("sales").key("month"))
+  .add("Baseline", bar("rows").x("month").y("sales").key("month"))
   .toSpec();
 
 const runtime = await createStory(spec, { target: "#app", d3, aq });
@@ -56,7 +60,7 @@ for `<script>`-tag globals if you need that shape inside a bundled project.
 |---|---|
 | `dist/scrollylite.esm.js` | Main ESM entry — `import { createStory, story, … } from "scrollylite"` |
 | `dist/scrollylite.browser.js` | ESM entry pre-wired for browser-global D3/Arquero — `scrollylite/browser` |
-| `dist/scrollylite.global.js` | IIFE/UMD bundle exposing `window.ScrollyLite` — fallback for plain script pages |
+| `dist/scrollylite.global.js` | IIFE bundle exposing `window.ScrollyLite` — fallback for plain script pages |
 | `dist/index.d.ts` / `dist/browser.d.ts` | TypeScript definitions (`types` field — automatic with most tooling) |
 | `dist/scrollylite.css` | Required structural styles — `scrollylite/style.css` |
 | `dist/themes/default.css` | Default color theme — `scrollylite/themes/default.css` |
@@ -76,12 +80,12 @@ serialization, server-side generation, or storing stories in a CMS).
 story()
   .data("rows", { url: "...", type: "csv" })
   .layout("floatToText")
-  .step("A", bar("rows").x("category").y("value").key("category"))
-  .step("B", bar("rows").x("category").y("value").key("category").highlight({ category: "X" }))
+  .add("A", bar("rows").x("category").y("value").key("category"))
+  .add("B", bar("rows").x("category").y("value").key("category").highlight({ category: "X" }))
   .toSpec();   // → plain object, JSON-serializable
 ```
 
-Each `.step(title, chartState)` describes *what that step's chart looks like*.
+Each `.add(title, chartState)` describes *what that step's chart looks like*.
 ScrollyLite diffs every consecutive pair of steps, classifies the differences
 into one or more **scenes** (`focus`, `observation`, `granularity`, `guide`),
 and computes/plays the corresponding D3 transition — you never hand-write
@@ -132,11 +136,15 @@ npm run examples:check # validate example specs compile
 npm run package:check  # validate package.json / exports shape
 npm run pack:check     # smoke-test the package as an npm consumer would see it
 npm run smoke          # end-to-end smoke test of the built bundles
-npm test               # check + manifest:check + build + examples:check + package:check + smoke
+npm test               # static checks, build, bundle budgets, examples, package, smoke, unit tests
+npm run test:browser   # real browser behavior and module-loading boundaries
+npm run release:check  # npm test + browser tests + installed tarball consumer
 ```
 
-`npm test` is the full gate — it's what `prepack`/`prepublishOnly` run
-automatically, and what `release:check` wraps for the release flow below.
+`prepack` runs `npm test`. `prepublishOnly` runs the complete `release:check`,
+including browsers and strict TypeScript checks against an installed tarball.
+Install Chromium with `npx playwright install chromium`, or point
+`SCROLLYLITE_CHROME_PATH` at an existing Chrome executable.
 
 ## 7. Running the examples locally
 
@@ -153,7 +161,7 @@ http://localhost:5510/examples/weather/      # full demo: 4 idioms, 2 layouts, s
 ```
 
 The weather demo accepts query params for quick exploration, e.g.
-`?layout=textOverVis&story=line&action=scroller` — see
+`?layout=textOverVis&story=line&action=scroll` — see
 [`examples/weather/index.html`](../examples/weather/index.html) for how it
 wires `createStory` to the URL, and
 [`examples/weather/specs/`](../examples/weather/specs/) for real authored
@@ -161,22 +169,28 @@ story specs across all four idioms.
 
 ## 8. Release flow (maintainers)
 
+Use Node 20+ for release tooling; CI uses Node 22. The package's Node 18 engine
+floor is for consumers, not the Playwright-based contributor workflow. After
+building under Node 22, CI switches to Node 18 and runs `pack:check` separately.
+
 ```sh
-npm version patch          # bump version, tag
-npm run release:check      # full test gate + dry-run pack
+npx playwright install chromium
+npm run release:check      # unit + browser + size + installed tarball checks
 npm publish                # publish to npm (mirrors automatically to jsDelivr/unpkg)
 git push --follow-tags
 ```
 
-Update `CHANGELOG.md` before tagging. `npm publish` re-runs
+Finalize the version/date and migration notes, review and commit intended files,
+then create the corresponding tag. This checkout already prepares 0.2.0; do not
+bump it again just to publish the candidate. `npm publish` re-runs
 `release:check` via `prepublishOnly` regardless — the manual run above is for
-catching problems *before* you bump the version.
+catching problems before publication. Choose the release increment deliberately;
+new public entry points and stricter grammar are more than a documentation patch.
 
 jsDelivr serves the published npm package directly. Prefer the package ESM
 endpoint for browser-native CDN usage:
 
 ```text
-https://cdn.jsdelivr.net/npm/scrollylite@<version>/+esm
 https://cdn.jsdelivr.net/npm/scrollylite@<version>/dist/scrollylite.global.js
 https://cdn.jsdelivr.net/npm/scrollylite@<version>/dist/scrollylite.esm.js
 ```

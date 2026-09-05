@@ -10,18 +10,27 @@ import * as sourceApi from "../dist/index.js";
 import * as distApi from "../dist/scrollylite.esm.js";
 
 const publicApi = [
+  "Seq",
   "availableChartIdioms",
   "bar",
+  "chart",
   "createChart",
   "createPage",
   "createStory",
   "defineChartIdiom",
+  "delta",
+  "diffViewStates",
   "line",
+  "page",
   "point",
   "registerChartIdiom",
   "registerChartModule",
+  "render",
+  "seq",
   "story",
-  "unit"
+  "transition",
+  "unit",
+  "visualizationSpec"
 ];
 const registry = createChartIdiomRegistry();
 registerChartModules(registry, chartModules, {});
@@ -36,7 +45,7 @@ const themeSpec = sourceApi.story()
   .theme("./theme.css", { accent: "#b05d3b" })
   .theme({ variables: { muted: "#777" } })
   .data("rows", { values: [{ category: "A", value: 1 }] })
-  .step("Theme", sourceApi.bar("rows").x("category").y("value"))
+  .add("Theme", sourceApi.bar("rows").x("category").y("value"))
   .toSpec();
 const actionBase = sourceApi.bar("rows").x("category").y("value").key("category");
 const actionSpec = sourceApi.story()
@@ -46,13 +55,13 @@ const actionSpec = sourceApi.story()
       { category: "B", value: 2 }
     ]
   })
-  .action("scroller")
-  .step("Scroller default", actionBase)
-  .step("Stepper override", actionBase.where({ category: "A" }), { action: "stepper" })
-  .step({
-    title: "Scroller object override",
+  .action(["scroll", "tooltip"])
+  .add("Scroll default", actionBase)
+  .add("Step override", actionBase.where({ category: "A" }), { action: ["step", "tooltip"] })
+  .add({
+    title: "Scroll object override",
     view: actionBase.where({ category: "B" }),
-    action: "scroller"
+    action: ["scroll", "tooltip"]
   })
   .toSpec();
 
@@ -70,7 +79,7 @@ assertSame(actionSpec.steps.map((step) => step.action), [
   ["scroll", "tooltip", "enter"],
   ["step", "tooltip"],
   ["scroll", "tooltip"]
-], "story action aliases and per-step overrides");
+], "story action tokens and per-step overrides");
 await assertRejects(
   () => sourceApi.createStory({ steps: [{ views: { main: { mark: "bar" } } }] }),
   "Pass { d3 } to createStory()",

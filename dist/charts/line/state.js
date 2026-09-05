@@ -1,4 +1,5 @@
 import { narrativeState } from '../../scrolly-meta.js';
+import { filterPredicate } from '../../data/filter.js';
 export function lineState(spec = {}, enc = {}) {
     const state = narrativeState(spec);
     const granularity = state.sceneState?.['granularity'] ?? {};
@@ -25,7 +26,7 @@ export function focusedLineXScale(rows, channel, chart, focus, deps) {
     if (!focus?.filter || focus['mode'] !== 'rangeCrop') {
         return bandOrLinear(rows, channel, baseRange, d3);
     }
-    const focusedRows = rows.filter((row) => rowMatchesFilter(row, focus.filter));
+    const focusedRows = rows.filter(filterPredicate(focus.filter));
     if (focusedRows.length < 2) {
         return bandOrLinear(rows, channel, baseRange, d3);
     }
@@ -55,24 +56,4 @@ function focusedDomain(rows, channel, d3, niceExtent) {
         return d3Obj['extent'](rows, (d) => new Date(d[channel.field]));
     }
     return niceExtent(rows, channel.field);
-}
-function rowMatchesFilter(row, filter) {
-    if (!filter?.['field'])
-        return true;
-    const value = row[filter['field']];
-    if ('equal' in filter)
-        return value === filter['equal'];
-    if ('notEqual' in filter)
-        return value !== filter['notEqual'];
-    if ('oneOf' in filter)
-        return filter['oneOf'].includes(value);
-    if ('gte' in filter && value < filter['gte'])
-        return false;
-    if ('gt' in filter && value <= filter['gt'])
-        return false;
-    if ('lte' in filter && value > filter['lte'])
-        return false;
-    if ('lt' in filter && value >= filter['lt'])
-        return false;
-    return Boolean(value);
 }

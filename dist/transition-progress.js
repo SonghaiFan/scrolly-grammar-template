@@ -35,6 +35,11 @@ function createProgressController(nodes, { transitionId = null, transitionName =
     items.sort((a, b) => a.time + a.delay - (b.time + b.delay));
     return {
         items,
+        // D3 schedules are only used to obtain interpolators at compile time. The
+        // resulting property tracks no longer depend on live timers/schedules.
+        compile() {
+            return compilePropertyTracks(items, minTime, span);
+        },
         progress(value) {
             const elapsed = clamp(value, 0, 1) * span;
             items.forEach((item) => scrubSchedule(item, elapsed, minTime));
@@ -99,11 +104,57 @@ function initializeSchedule(item) {
             return;
         schedule.state = STARTED;
     }
-    item.tweens = schedule.tween
-        .map((entry) => entry.value.call(node, node.__data__, schedule.index, schedule.group))
-        .filter(Boolean);
+    item.namedTweens = schedule.tween
+        .map((entry) => ({ name: entry.name, apply: entry.value.call(node, node.__data__, schedule.index, schedule.group) }))
+        .filter(entry => typeof entry.apply === 'function');
+    item.tweens = item.namedTweens.map(entry => entry.apply);
     schedule.state = RUNNING;
     item.started = true;
+}
+function compilePropertyTracks(items, minTime, span) {
+    const nodes = new Map();
+    const tracks = [];
+    const sample = (elapsed) => {
+        for (const track of tracks) {
+            // A later stage owns a property only once its start has been reached.
+            // Before the first start, evaluate its t=0 value. This resets delayed
+            // properties on backward seeks without rewinding other properties.
+            let segment = track.segments[0];
+            for (let i = 1; i < track.segments.length && track.segments[i].start <= elapsed; i++)
+                segment = track.segments[i];
+            const local = segment.duration > 0
+                ? clamp((elapsed - segment.start) / segment.duration, 0, 1)
+                : elapsed >= segment.start ? 1 : 0;
+            segment.apply.call(track.node, segment.ease(local));
+        }
+    };
+    let lastStart = -Infinity;
+    for (const item of items) {
+        const start = item.time - minTime + item.delay;
+        // Tween factories read starting DOM values. Materialize the earlier tracks
+        // at this stage's exact start before initializing its interpolators.
+        if (start !== lastStart) {
+            sample(start);
+            lastStart = start;
+        }
+        initializeSchedule(item);
+        let properties = nodes.get(item.node);
+        if (!properties) {
+            properties = new Map();
+            nodes.set(item.node, properties);
+        }
+        for (const tween of item.namedTweens ?? []) {
+            let track = properties.get(tween.name);
+            if (!track) {
+                track = { node: item.node, segments: [] };
+                properties.set(tween.name, track);
+                tracks.push(track);
+            }
+            track.segments.push({ start, duration: item.duration, ease: item.ease, apply: tween.apply });
+        }
+    }
+    sample(0);
+    return { progress(value) { sample(clamp(value, 0, 1) * span); } };
 }
 function finishSchedule(item) {
     if (item.finished)

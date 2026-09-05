@@ -8,6 +8,7 @@ import { createBarSpecCompiler } from './compile.js';
 
 export const plugin: ChartPlugin<BarSpec> = defineChartIdiom<BarSpec>({
   key: 'bar',
+  transitionEvaluation: 'cached',
   scenes: ['focus', 'guide', 'granularity', 'observation'],
   createIdiom: createBarIdiom,
   createSpecCompiler: createBarSpecCompiler

@@ -6,6 +6,8 @@ import { hasScene } from '../transitions/index.js';
 import { markAxisInactive } from './marks.js';
 import { clamp } from './utils.js';
 
+let sceneIdentity = 0;
+
 export function getScene(node, viewConfig, d3) {
   if (node.__scrollyLiteScene) return node.__scrollyLiteScene;
   const width = Math.max(60, node.clientWidth || 720);
@@ -16,6 +18,7 @@ export function getScene(node, viewConfig, d3) {
   const grid = frame.append('g').attr('class', 'sl-grid');
   const markRoot = frame.append('g').attr('class', 'sl-mark-root');
   const scene = {
+    clipIdentity: ++sceneIdentity,
     node, svg, frame, grid, markRoot,
     xAxis: svg.append('g').attr('class', 'sl-axis sl-x-axis'),
     yAxis: svg.append('g').attr('class', 'sl-axis sl-y-axis'),

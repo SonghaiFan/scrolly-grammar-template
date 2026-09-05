@@ -86,12 +86,12 @@
         color: #fff;
       }
       /* Action mode pills — distinct colours so they read as a different kind of control */
-      .demo-nav-pills a[data-action-link].is-active[data-action-link="stepper"] {
+      .demo-nav-pills a[data-action-link].is-active[data-action-link="step"] {
         background: #4f46e5;
         border-color: #4f46e5;
         color: #fff;
       }
-      .demo-nav-pills a[data-action-link].is-active[data-action-link="scroller"] {
+      .demo-nav-pills a[data-action-link].is-active[data-action-link="scroll"] {
         background: #d97706;
         border-color: #d97706;
         color: #fff;
@@ -140,8 +140,8 @@
       <div class="demo-nav-group">
         <span class="demo-nav-label">Action</span>
         <div class="demo-nav-pills">
-          <a href="?action=stepper" data-action-link="stepper">Stepper</a>
-          <a href="?action=scroller" data-action-link="scroller">Scroller</a>
+          <a href="?action=step" data-action-link="step">Step</a>
+          <a href="?action=scroll" data-action-link="scroll">Scroll</a>
         </div>
       </div>
 
@@ -190,11 +190,19 @@
         : "bar";
 
       // Action mode: explicit URL param takes priority; otherwise use the layout's
-      // natural default (floatToText → stepper, textOverVis → scroller).
+      // natural default (floatToText -> step, textOverVis -> scroll).
       const layout = layoutCopy[layoutPreset];
       const requestedAction = params.get("action");
-      const actionMode = (requestedAction === "stepper" || requestedAction === "scroller")
+      const requestedActionMode = requestedAction === "scroll"
+        ? ["scroll", "tooltip"]
+        : requestedAction === "step"
+          ? ["step", "tooltip"]
+          : null;
+      const actionKey = requestedActionMode
         ? requestedAction
+        : (layout.actionMode.includes("scroll") ? "scroll" : "step");
+      const actionMode = requestedActionMode
+        ? requestedActionMode
         : layout.actionMode;
 
       // ── Apply theme ─────────────────────────────────────────────────────────
@@ -224,7 +232,7 @@
         const url = new URL(link.href);
         url.searchParams.set("layout", layoutPreset);
         url.searchParams.delete("chart");
-        if (requestedAction) url.searchParams.set("action", actionMode);
+        if (requestedAction) url.searchParams.set("action", actionKey);
         if (themeName !== "default") url.searchParams.set("theme", themeName);
         link.href = `${url.pathname}${url.search}`;
       });
@@ -232,7 +240,7 @@
       // ── Action links ─────────────────────────────────────────────────────────
       document.querySelectorAll("[data-action-link]").forEach((link) => {
         const linkAction = link.dataset.actionLink;
-        const active = linkAction === actionMode;
+        const active = linkAction === actionKey;
         link.classList.toggle("is-active", active);
         link.toggleAttribute("aria-current", active);
         const url = new URL(link.href);
@@ -252,7 +260,7 @@
         const url = new URL(link.href);
         url.searchParams.set("layout", layoutPreset);
         url.searchParams.set("story", storyId);
-        if (requestedAction) url.searchParams.set("action", actionMode);
+        if (requestedAction) url.searchParams.set("action", actionKey);
         if (linkTheme !== "default") url.searchParams.set("theme", linkTheme);
         else url.searchParams.delete("theme");
         link.href = `${url.pathname}${url.search}`;

@@ -1,16 +1,24 @@
 import type { ChannelSpec, ViewSpec } from '../../types/index.js';
 import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createUnitSpecCompiler } from './compile.js';
+
+const UNIT_SPEC_COMPILER = createUnitSpecCompiler();
 
 export interface UnitViewState extends ViewSpec {
   mark: 'unit';
   unit?: Record<string, unknown>;
 }
 
-export function unit(data: unknown): UnitState {
+export function unit(data?: unknown): UnitState {
   return new UnitState({ data: normalizeDataSource(data) as UnitViewState['data'], mark: 'unit', encoding: {}, unit: {} });
 }
 
 export class UnitState extends IdiomState<UnitViewState> {
+  protected override compileSpec(spec: ViewSpec): ViewSpec {
+    return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { guide: 'layout' });
+  }
+
   value(field: string, options: { maxUnits?: number } = {}): this {
     return this.with({
       unit: {

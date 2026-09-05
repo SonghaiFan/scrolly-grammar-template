@@ -23,29 +23,24 @@ async function createStory(spec: object, options: CreateStoryOptions): Promise<S
 |---|---|---|---|---|
 | `target` | `string \| Element` | no | `"#app"` | CSS selector or DOM node to render into. ScrollyLite clears and owns everything inside it. Throws if a selector matches nothing. |
 | `d3` | D3 module | **yes** (ESM entry) | `globalThis.d3` (browser entry only) | The D3 v7+ library. Required for rendering, scales, transitions, easing, and data loading. |
-| `aq` | Arquero module | **yes** (ESM entry) | `globalThis.aq` (browser entry only) | The Arquero v8+ library. Required by the current runtime's data transform path (`applyTransforms`). |
+| `aq` | Arquero module | when transforms are used | `globalThis.aq` (browser entry only) | Arquero v8 for the data transform path. Not needed for untransformed data. |
 | `debug` | `boolean` | no | `false` | Enables the demo's debug affordances (e.g. the source-code inspector panel) in the rendered shell. |
 
-> **ESM vs. browser entry:** `import { createStory } from "scrollylite"` (or
-> `"scrollylite/browser"` imported as a module) requires you to pass both `d3`
-> and `aq` explicitly. The **global**
-> build (`scrollylite.global.js`, exposed as `window.ScrollyLite`) wraps
-> `createStory` to fall back to `globalThis.d3`/`globalThis.aq` when you omit
-> them — convenient for `<script>`-tag usage where D3/Arquero are loaded as
-> globals.
+> **Entry contracts:** `scrollylite` requires explicit D3 and, when transforms
+> are used, Arquero. `scrollylite/browser` and the global script delegate to the
+> same implementation but fall back to `globalThis.d3`/`globalThis.aq`.
 
 ### What it does, step by step
 
-1. **Resolves dependencies** — throws immediately with a clear error if `d3`
-   or `aq` is missing.
+1. **Resolves dependencies** — requires D3; missing Arquero is reported when
+   evaluating a declared data transform.
 2. **Compiles the spec** via `compileSpec(spec)` — normalizes structure and
    prepares everything the renderer needs. Builder-authored specs already carry
-   transitions inferred by `.step()` / `.steps()`.
-3. **Applies the theme** — loads any theme stylesheet declared in
-   `spec.theme`, then sets `--sl-*` custom properties such as palette, font,
-   accent, axis, and grid tokens.
-4. **Loads every dataset** declared in `spec.data` in parallel (CSV/JSON via
+   transitions inferred by `.add()`.
+3. **Loads every dataset** declared in `spec.data` in parallel (CSV/JSON via
    D3, or used directly for inline arrays/`values`).
+4. **Applies the theme** — waits for any stylesheet declared in `spec.theme`,
+   then sets palette, font, accent, axis and grid variables on the target only.
 5. **Clears `target`** and renders the **story shell**: header, narrated
    step list, sticky chart figure(s), nav rail (`layout.nav`), progress bar
    (`layout.progress`), and a shared tooltip layer.
@@ -75,7 +70,7 @@ in your own error handling rather than as unhandled rejections.
 ## Decoupled embedding: `createPage` + `createChart`
 
 These two functions let you use layout and animated chart independently — the
-action system (scroll driver, stepper nav) is only wired up by `createStory`.
+action system (scroll driver and navigation) is only wired up by `createStory`.
 
 ### `createPage(spec, options?)`
 
@@ -108,26 +103,26 @@ async function createChart(spec: object, options: {
 }): Promise<ChartRuntime>
 ```
 
-#### `chart.step(index)`
+#### `chart.to(indexOrState)`
 
 The primary trigger: animates to step `index` using a natural, timer-driven
 D3 transition. Use this for buttons, route changes, keyboard shortcuts, or
 any discrete trigger.
 
 ```js
-nextButton.addEventListener("click", () => chart.step(currentStep + 1));
-prevButton.addEventListener("click", () => chart.step(currentStep - 1));
+nextButton.addEventListener("click", () => chart.to(currentStep + 1));
+prevButton.addEventListener("click", () => chart.to(currentStep - 1));
 ```
 
-#### `chart.action(event)`
+#### `chart.progress(index, value)`
 
-The full event interface — same as `StoryRuntime.action`. Use this when you
-need scrubbing (e.g. a range slider tied to scroll progress):
+Scrubs the transition toward step `index` at `value` from `0` to `1`. Use this
+when a slider, gesture, or custom scroll driver owns transition progress:
 
 ```js
-slider.addEventListener("input", (e) =>
-  chart.action({ type: "progress", step: 2, value: e.target.valueAsNumber })
-);
+slider.addEventListener("input", () => {
+  chart.progress(2, slider.valueAsNumber);
+});
 ```
 
 #### Example: button-driven chart
@@ -144,8 +139,8 @@ const spec = story()
     { category: "B", value: 18 }
   ]})
   .view("main", { height: 420 })
-  .step("Baseline", bar("rows").x("category").y("value").key("category"))
-  .step("Highlight B", bar("rows").x("category").y("value").key("category")
+  .add("Baseline", bar("rows").x("category").y("value").key("category"))
+  .add("Highlight B", bar("rows").x("category").y("value").key("category")
     .highlight({ category: "B" }))
   .toSpec();
 
@@ -153,7 +148,7 @@ const chart = await createChart(spec, { target: "#chart", d3, aq });
 
 let step = 0;
 document.querySelector("#next").addEventListener("click", () => {
-  chart.step(++step);
+  chart.to(++step);
 });
 ```
 
@@ -161,9 +156,7 @@ document.querySelector("#next").addEventListener("click", () => {
 
 ```js
 const scrub = document.querySelector("#scrub"); // <input type="range" min="0" max="1" step="0.01">
-scrub.addEventListener("input", () =>
-  chart.action({ type: "progress", step: 1, value: scrub.valueAsNumber })
-);
+scrub.addEventListener("input", () => chart.progress(1, scrub.valueAsNumber));
 ```
 
 ## `StoryRuntime`
@@ -175,7 +168,7 @@ interface StoryRuntime {
   spec: object;                 // The compiled, normalized story spec
   data: Record<string, any[]>;  // Loaded datasets, keyed by name: { weatherDays: [...], … }
   signature: StepSignature[];   // Lightweight per-step metadata for nav/analytics
-  action(event: ActionEvent, options?: ActionOptions): void;
+  to(index: number): void;
   scrollDriver: ScrollDriver;
   destroy(): void;
 }
@@ -222,57 +215,18 @@ runtime.signature.forEach(({ index, title, transition }) => {
 });
 ```
 
-### `action(event, options?)`
+### `to(index)`
 
-The single trigger interface. It accepts discrete events and continuous
-progress values:
-
-```ts
-type ActionEvent =
-  | "enter" | "click" | "unclick" | "exit" | string
-  | number
-  | Event
-  | {
-      type?: string;
-      step?: number;
-      index?: number;
-      value?: number;          // progress value, 0..1
-      progress?: number;       // alias of value
-      scrollProgress?: number; // alias of value
-      direction?: "up" | "down" | string;
-      action?: "stepper" | "scroller" | string | string[];
-      force?: boolean;
-    };
-
-runtime.action(event: ActionEvent, options?: ActionOptions): void
-```
+Programmatically jumps the full story to a step with a natural animated
+transition. Use it for custom navigation, table-of-contents links, or external
+controls that should drive the same rendered story shell:
 
 ```js
-runtime.action({ type: "enter", step: 0 });    // one-shot page/view entry
-runtime.action({ type: "click", step: 2 });    // button/nav style trigger
-runtime.action({ type: "unclick", step: 2 });  // one-shot reset-style trigger
-runtime.action({ type: "progress", step: 2, value: 0.5 }); // scrubbed transition
+runtime.to(2);
 ```
 
-DOM events can be passed directly. `input`/`change` events from range or
-number controls become progress events; buttons become discrete events. Add
-`data-step-index` to the control, or pass the step as an option:
-
-```html
-<button data-step-index="1">Reveal</button>
-<input id="scrub" type="range" min="0" max="1" step="0.01">
-```
-
-```js
-button.addEventListener("click", runtime.action);
-scrub.addEventListener("input", (event) => runtime.action(event, { step: 2 }));
-```
-
-When the event carries a numeric value, the runtime uses scroll-style
-transition scrubbing even if the step was authored with the default stepper
-mode. When the event is discrete, the runtime plays the step transition once
-in full. The built-in scroll driver and nav rail both use this same interface
-internally.
+For continuous scrubbing, use the decoupled chart runtime from `createChart()`
+and call `chart.progress(index, value)`.
 
 ### `scrollDriver`
 
@@ -304,6 +258,12 @@ programmatically change layout that the driver can't observe, e.g. injecting
 content above the story). `destroy()` tears down its scroll/resize listeners
 — called automatically by `runtime.destroy()`.
 
+The native driver coalesces invalidations into one animation frame. Scroll and
+window-resize events, plus ResizeObserver notifications for document/step size
+changes, trigger measurement. It does not run a perpetual frame loop or interval
+while idle. Call `refresh()` for position changes that do not resize an observed
+element. Without ResizeObserver, scroll/resize/explicit refresh still work.
+
 ### `destroy()`
 
 Tears the story down completely: cancels pending animation frames, removes
@@ -320,6 +280,40 @@ runtime.destroy();
 > `destroy()` does **not** clear `target`'s contents — it only stops
 > ScrollyLite's own activity. Clear or replace the target element yourself if
 > you're tearing down the DOM as well.
+
+Destruction is idempotent. Story/chart controls reject calls after destruction;
+the native driver's refresh/resize/navigation methods become inert. Pending
+hash restoration is cancelled, navigation handlers are removed, and owned SVG
+transitions are interrupted. Standalone pair `destroy()` also removes its own
+markup; this differs from the compatible Story/chart embedding behavior above.
+
+Each host should have one active owner: destroy its previous runtime before
+mounting another into the same target. Different targets have independent
+Story color maps and plugin snapshots. Theme token cleanup restores the host's
+prior inline values, and shared stylesheet leases are reference counted.
+External CSS rules themselves remain document-wide.
+
+Story/chart/page initialization is transactional with respect to the host: failed
+data loading, theme loading or first rendering rejects the promise and preserves
+the previous child nodes (including their event listeners), class and theme
+values. It does not restore an already destroyed previous runtime.
+
+## Sequence bindings and cleanup
+
+`seq()` stores snapshots of the visualizations added to it; `at()` and `current`
+return inspection copies. Empty-sequence navigation and non-integer indexes throw
+without changing the cursor. Out-of-range integer indexes clamp to a valid step.
+
+```js
+const sequence = seq().add(first, "First").add(second, "Second");
+sequence.bind({ chart: chartRuntime, text: "#caption" }).on("change", onChange);
+// On application cleanup:
+sequence.unbind().off("change");
+chartRuntime.destroy();
+```
+
+`unbind()` releases all chart/text references; `off("change")` removes the change
+handler. Neither destroys externally owned chart instances.
 
 ## Registering chart idioms at runtime
 
@@ -352,8 +346,8 @@ const spec = story()
   .title("Demo")
   .data("rows", { values: [{ a: "x", b: 1 }, { a: "y", b: 2 }] })
   .view("main", { height: 420 })
-  .step("Baseline", bar("rows").x("a").y("b").key("a"))
-  .step("Highlight", bar("rows").x("a").y("b").key("a").highlight({ a: "y" }))
+  .add("Baseline", bar("rows").x("a").y("b").key("a"))
+  .add("Highlight", bar("rows").x("a").y("b").key("a").highlight({ a: "y" }))
   .toSpec();
 
 let runtime;

@@ -1,5 +1,5 @@
-import type { LayoutSpec, StepSpec, StorySpec, TransformSpec } from '../types/index.js';
-import { dataName } from '../scrolly-meta.js';
+import type { LayoutSpec, StepSpec, StorySpec } from '../types/index.js';
+export { loadData, viewRows, domainTransforms } from './data.js';
 import { normalizeScrollDriverConfig } from '../scroll-drivers/index.js';
 import { uniqueTokens } from './utils.js';
 
@@ -63,49 +63,6 @@ export function storySignature(spec: StorySpec): Array<{ index: number; id: stri
   }));
 }
 
-export async function loadData(dataSpec: Record<string, unknown>, d3: AnyRecord): Promise<Record<string, unknown[]>> {
-  if (!d3) {
-    throw new Error('ScrollyLite data loading requires D3. Pass { d3 } to createStory().');
-  }
-  const entries = await Promise.all(
-    Object.entries(dataSpec).map(async ([name, source]) => {
-      if (Array.isArray(source)) return [name, source];
-      const src = source as AnyRecord;
-      if (Array.isArray(src['values'])) return [name, src['values']];
-      if (!src['url']) return [name, []];
-
-      if ((src['type'] || 'csv') === 'csv') {
-        const rows = await (d3['csv'] as (url: string, fn: unknown) => Promise<unknown[]>)(src['url'] as string, d3['autoType']);
-        return [name, rows];
-      }
-
-      if (src['type'] === 'json') {
-        const rows = await (d3['json'] as (url: string) => Promise<unknown>)(src['url'] as string);
-        return [name, Array.isArray(rows) ? rows : (rows as AnyRecord)['values'] || []];
-      }
-
-      throw new Error(`Unsupported data type for "${name}": ${src['type']}`);
-    })
-  );
-  return Object.fromEntries(entries) as Record<string, unknown[]>;
-}
-
-export function viewRows(
-  dataSpec: unknown,
-  datasets: Record<string, unknown[]>
-): unknown[] {
-  if (Array.isArray(dataSpec)) return dataSpec;
-  if (Array.isArray((dataSpec as AnyRecord)?.['values'])) return (dataSpec as AnyRecord)['values'] as unknown[];
-  const name = dataName(dataSpec);
-  return name ? (datasets[name] || []) : [];
-}
-
-export function domainTransforms(transforms: TransformSpec[] = []): TransformSpec[] {
-  return transforms.filter((transform) => {
-    const t = transform as AnyRecord;
-    return !t['filter'] && !t['limit'];
-  });
-}
 
 function normalizeStepTransition(transition: AnyRecord = {}): { scene: string[] } {
   return { scene: uniqueTokens((transition['scene'] as unknown[]) || []) };

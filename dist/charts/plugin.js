@@ -16,6 +16,7 @@ export function defineChartIdiom(config) {
             : createRuntimeIdiom(config, deps);
         return normalizeChartIdiom({
             ...idiom,
+            transitionEvaluation: config.transitionEvaluation ?? idiom.transitionEvaluation,
             key: idiom.key || config.key,
             scenes: idiom.scenes ?? scenes,
             stateOperations: { ...stateOperations, ...(idiom.stateOperations ?? {}) }

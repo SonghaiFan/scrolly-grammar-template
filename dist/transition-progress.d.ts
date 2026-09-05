@@ -2,6 +2,9 @@ export declare const SCROLL_TRANSITION_NAME = "__scrollyLiteScroll";
 export declare function installTransitionProgress(d3: any): void;
 export declare function createSceneTransitionProgress(scene: any, options?: {}): {
     items: any[];
+    compile(): {
+        progress(value: any): void;
+    };
     progress(value: any): void;
     destroy({ finish }?: {
         finish?: boolean | undefined;

@@ -89,6 +89,10 @@ reads each step element's bounding box on every scroll/resize tick and
 derives `(index, progress, direction)` purely from layout geometry — no
 IntersectionObserver thresholds or manual breakpoints to tune.
 
+Updates are event-driven and coalesced per frame. ResizeObserver also watches
+document and step sizes; there is no continuous idle polling. Call the driver's
+`refresh()` after position-only layout changes that its observers cannot detect.
+
 `navigation` controls what happens when the reader **jumps** to a step (via
 the nav rail or a restored URL hash):
 
@@ -125,21 +129,21 @@ Per-view scroll easing can be tuned via `narrative.action.scroll.ease`:
 
 ```js
 story()
-  .action("scroller")
-  .step("Intro", base)                          // first step always also gets "enter"
-  .step("Reveal", base.where({ period: "recent" }))
+  .action(["scroll", "tooltip"])
+  .add("Intro", base)                          // first step always also gets "enter"
+  .add("Reveal", base.where({ period: "recent" }))
 ```
 
-Use `.action("stepper")` for the default discrete mode, `.action("scroller")`
-for the default scroll-scrubbed mode, or pass `action` to a single `.step()`
+Use `.action(["step", "tooltip"])` for the default discrete mode, `.action(["scroll", "tooltip"])`
+for the default scroll-scrubbed mode, or pass `action` to a single `.add()`
 when only one reveal should use a different mode:
 
 ```js
 story()
-  .action("stepper")
-  .step("Intro", base)
-  .step("Scroll-scrubbed reveal", base.where({ period: "recent" }), {
-    action: "scroller"
+  .action(["step", "tooltip"])
+  .add("Intro", base)
+  .add("Scroll-scrubbed reveal", base.where({ period: "recent" }), {
+    action: ["scroll", "tooltip"]
   })
 ```
 
@@ -183,7 +187,22 @@ story()
 At `createStory()` time, ScrollyLite loads `theme.href` (or `theme.url`,
 `theme.css`, `theme.stylesheet`, and each item in `theme.stylesheets`) before
 rendering the story. If the stylesheet is already present on the page, it is
-reused; if ScrollyLite inserted it, `runtime.destroy()` removes it.
+reused. Concurrent instances wait for the same load. An inserted stylesheet is
+removed only when the last using instance is destroyed; application-owned links
+are never removed. A failed load rejects initialization and releases its leases.
+
+Inline theme variables are written to the instance's `target`, not `:root`.
+Story colors and built-in chart helpers read from that target, including delayed
+animation callbacks. Destruction restores previous inline values/priorities,
+unless the application has changed them since initialization. Standalone pair
+transitions also read CSS variables from their target; call `resize()` after
+changing those tokens to rebuild cached frames.
+
+External CSS is still document-wide: loading two stylesheets with conflicting
+`:root` or unscoped rules does not create isolated themes. Use target-scoped CSS
+or inline theme variables for differently themed instances. Explicit semantic
+tokens such as `colorPrimary` also update their local renderer aliases; complex
+component tokens can be overridden directly with `theme.variables`.
 
 The variable aliases map directly onto the CSS custom properties consumed by
 the packaged stylesheets:
@@ -244,7 +263,7 @@ that targets `--sl-*` custom properties and the `.sl-*` structural classes
 …), and load it instead of (or alongside) `themes/default.css`:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
 ```
 
 `scrollylite.css` provides the structural layout rules every preset depends
@@ -260,7 +279,7 @@ story()
   .data(/* … */)
   .view("main", { title: "Melbourne Weather", height: 540 })
   .action(["scroll", "tooltip"])
-  .step(/* … */)
+  .add(/* … */)
   .toSpec();
 ```
 

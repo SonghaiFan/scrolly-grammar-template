@@ -1,5 +1,6 @@
 // @ts-nocheck — D3 rendering pattern; typed via deps injection
 import { narrativeState } from '../../scrolly-meta.js';
+import { matchesFilter as rowMatchesFilter } from '../../data/filter.js';
 export function createBarRenderKit(deps) {
     const { easeFor, staggerDelay, themeValue } = deps;
     function updateStage(chart, rendererOrientation, d3) {
@@ -225,24 +226,4 @@ function unionRect(a, b) {
 }
 function parentFromChildKey(key = '') {
     return String(key).includes('|') ? String(key).split('|')[0] : null;
-}
-function rowMatchesFilter(row = {}, filter = {}) {
-    if (!filter?.field)
-        return true;
-    const value = row[filter.field];
-    if ('equal' in filter)
-        return value === filter.equal;
-    if ('notEqual' in filter)
-        return value !== filter.notEqual;
-    if ('oneOf' in filter)
-        return filter.oneOf.includes(value);
-    if ('gte' in filter && value < filter.gte)
-        return false;
-    if ('gt' in filter && value <= filter.gt)
-        return false;
-    if ('lte' in filter && value > filter.lte)
-        return false;
-    if ('lt' in filter && value >= filter.lt)
-        return false;
-    return true;
 }

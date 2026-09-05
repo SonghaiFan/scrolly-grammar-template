@@ -1,8 +1,14 @@
 import { IdiomState, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createPointSpecCompiler } from './compile.js';
+const POINT_SPEC_COMPILER = createPointSpecCompiler();
 export function point(data) {
     return new PointState({ data: normalizeDataSource(data), mark: 'point', encoding: {} });
 }
 export class PointState extends IdiomState {
+    compileSpec(spec) {
+        return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
+    }
     x(field, options = {}) {
         return super.x(field, { type: 'quantitative', ...options });
     }

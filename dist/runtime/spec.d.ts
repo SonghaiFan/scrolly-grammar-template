@@ -1,4 +1,5 @@
-import type { LayoutSpec, StepSpec, StorySpec, TransformSpec } from '../types/index.js';
+import type { LayoutSpec, StepSpec, StorySpec } from '../types/index.js';
+export { loadData, viewRows, domainTransforms } from './data.js';
 type AnyRecord = Record<string, unknown>;
 interface CompiledSpec extends StorySpec {
     data: Record<string, unknown>;
@@ -15,7 +16,3 @@ export declare function storySignature(spec: StorySpec): Array<{
     transition: string[];
     action: string[];
 }>;
-export declare function loadData(dataSpec: Record<string, unknown>, d3: AnyRecord): Promise<Record<string, unknown[]>>;
-export declare function viewRows(dataSpec: unknown, datasets: Record<string, unknown[]>): unknown[];
-export declare function domainTransforms(transforms?: TransformSpec[]): TransformSpec[];
-export {};

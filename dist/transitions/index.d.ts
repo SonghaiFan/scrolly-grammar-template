@@ -1,4 +1,5 @@
 import type { FocusSpec, GranularitySpec, GuideSpec, ViewSpec } from '../types/index.js';
+import type { SpecCompilerEntry } from '../charts/index.js';
 export declare const SCENE_TRANSITIONS: readonly ["focus", "guide", "granularity", "observation"];
 export type SceneTransitionType = typeof SCENE_TRANSITIONS[number];
 interface SceneTransition {
@@ -10,8 +11,10 @@ interface SceneTransition {
 interface StepTransition {
     scene?: string[];
 }
-export declare function resolveSceneTransition(viewSpec?: ViewSpec, stepTransition?: StepTransition): SceneTransition;
+export declare function resolveSceneTransition(viewSpec?: ViewSpec, stepTransition?: StepTransition, compilerEntry?: {
+    scenes: readonly string[];
+}): SceneTransition;
 export declare function withSceneTransitionDefaults(viewSpec: ViewSpec, sceneTransition: SceneTransition): ViewSpec;
-export declare function compileViewSpec(viewSpec: ViewSpec, sceneTransition: SceneTransition): ViewSpec;
+export declare function compileViewSpec(viewSpec: ViewSpec, sceneTransition: SceneTransition, compilerEntry?: SpecCompilerEntry): ViewSpec;
 export declare function hasScene(sceneTransition: SceneTransition | null | undefined, type: string): boolean;
 export {};

@@ -5,23 +5,26 @@ a blog post, a static site, a CMS "custom HTML" block — **without** npm,
 bundlers, or a build step. If you can paste HTML into a page, you can use
 ScrollyLite.
 
+These examples target the **0.2.0 candidate**. Its CDN URLs require publication;
+until then use the local build or tarball. The browser regression suite runs the
+templates against files extracted from that tarball, not an older CDN release.
+
 If you're a JavaScript developer setting up a project with npm/bundlers,
 read the [Developer Guide](./for-developers.md) instead — it covers the same
 ground with that workflow in mind.
 
 ## 1. The complete copy-paste template
 
-Paste this into an HTML file and open it in a browser. It follows D3's modern
-CDN practice: use a `<script type="module">` block and import browser-native
-ES modules from jsDelivr's `+esm` endpoint.
+Serve this HTML file over HTTP. It imports ScrollyLite's packaged ESM file
+directly; D3 and Arquero use jsDelivr's `+esm` endpoints.
 
 ```html
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/themes/default.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/themes/default.css">
   </head>
   <body>
     <main id="app"></main>
@@ -29,7 +32,7 @@ ES modules from jsDelivr's `+esm` endpoint.
     <script type="module">
       import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
       import * as aq from "https://cdn.jsdelivr.net/npm/arquero@8/+esm";
-      import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm";
+      import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.esm.js";
 
       const spec = story()
         .title("Revenue")
@@ -41,8 +44,8 @@ ES modules from jsDelivr's `+esm` endpoint.
           ]
         })
         .view("main", { height: 420 })
-        .step("Baseline", bar("rows").x("category").y("value").key("category"))
-        .step(
+        .add("Baseline", bar("rows").x("category").y("value").key("category"))
+        .add(
           "Highlight B",
           bar("rows").x("category").y("value").key("category")
             .highlight({ category: "B" })
@@ -61,19 +64,22 @@ looks like, ScrollyLite figures out the animation between them.**
 
 ## 2. What each piece is for
 
+For a standalone transition without Story or scrolling, see the
+[standalone CDN template](#standalone-cdn-template) below.
+
 | Tag | Purpose |
 |---|---|
 | `scrollylite.css` | Required structural styles — layout, sticky positioning, nav rail, progress bar. Always load this. |
 | `themes/default.css` | The default color palette (backgrounds, text, accent color). Swap or override for your own look — see [Theming](#5-changing-colors-theming). |
-| `scrollylite@0.1.1/+esm` | The library itself, imported as browser-native ESM. |
+| `scrollylite@0.2.0/dist/scrollylite.esm.js` | The library itself, imported as browser-native ESM. |
 | `d3@7/+esm` | Charting/animation engine ScrollyLite is built on. **Required.** |
-| `arquero@8/+esm` | Data-shaping engine (filtering, grouping, aggregating). **Required.** |
+| `arquero@8/+esm` | Data-shaping engine (filtering, grouping, aggregating). Required only when transforms are declared. |
 
 The module script loads all three libraries before executing the story code.
 Pass `d3` and `aq` to `createStory()` explicitly; that is the clearest and
 most D3-like path.
 
-> **Pin the version.** `@0.1.1` always points at exactly that release — your
+> **Pin the version.** `@0.2.0` selects that exact release once published — your
 > page won't break if a new version ships. `@latest` is tempting but can
 > silently change the chart's behavior underneath you later. Always pin in
 > anything you intend to keep online.
@@ -83,7 +89,7 @@ If you cannot use module scripts, ScrollyLite also ships a global fallback:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/arquero@8/dist/arquero.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.global.js"></script>
 ```
 
 That build exposes `window.ScrollyLite` and reads `globalThis.d3` /
@@ -116,7 +122,7 @@ etc.):
 Then point your chart at the field names in *your* data:
 
 ```js
-.step("Baseline", bar("rows").x("month").y("sales").key("month"))
+.add("Baseline", bar("rows").x("month").y("sales").key("month"))
 ```
 
 `.x(field)` / `.y(field)` choose which columns drive the chart's axes;
@@ -132,7 +138,7 @@ and reshaping data (filtering, grouping, computing aggregates), see
 
 ## 4. Adding more steps
 
-Each `.step(title, chartState)` describes one "scene" of your story. Chain as
+Each `.add(title, chartState)` describes one **step** of your story. Chain as
 many as you like — ScrollyLite diffs each pair of consecutive steps and
 animates the difference automatically:
 
@@ -140,9 +146,9 @@ animates the difference automatically:
 const spec = story()
   .data("rows", { url: "https://example.com/sales.csv", type: "csv" })
   .view("main", { height: 480 })
-  .step("All months",      bar("rows").x("month").y("sales").key("month"))
-  .step("Focus on March",  bar("rows").x("month").y("sales").key("month").highlight({ month: "Mar" }))
-  .step("Filter to Q1",    bar("rows").x("month").y("sales").key("month").where({ quarter: "Q1" }))
+  .add("All months",      bar("rows").x("month").y("sales").key("month"))
+  .add("Focus on March",  bar("rows").x("month").y("sales").key("month").highlight({ month: "Mar" }))
+  .add("Filter to Q1",    bar("rows").x("month").y("sales").key("month").where({ quarter: "Q1" }))
   .toSpec();
 ```
 
@@ -244,3 +250,47 @@ with a build setup:
 If you later outgrow the CDN workflow (e.g. you want TypeScript, bundling, or
 to contribute to the project), the [Developer Guide](./for-developers.md) and
 [Getting Started](./getting-started.md) cover the npm/ESM path.
+
+## Standalone CDN template
+
+This uses the same 0.2.0 candidate files, but only the bar and transition entries.
+There are no transforms, so Arquero is unnecessary. Serve over HTTP; after
+publication the relative ESM imports inside the package resolve on the CDN.
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ScrollyLite transition</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
+  </head>
+  <body>
+    <div id="chart"></div>
+    <button id="play" type="button">Play</button>
+    <label for="progress">Transition progress</label>
+    <input id="progress" type="range" min="0" max="1" step="0.01" value="0">
+    <script type="module">
+      import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+      import { bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/bar.js";
+      import { transition } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/transition-entry.js";
+      const rows = [
+        { category: "A", sales: 12, profit: 3 },
+        { category: "B", sales: 18, profit: 9 },
+        { category: "C", sales: 9, profit: 6 }
+      ];
+      const first = bar().data(rows).x("category").y("sales").key("category");
+      const second = first.y("profit");
+      const change = await transition(first, second, { target: "#chart", d3, height: 400 });
+      const slider = document.querySelector("#progress");
+      slider.oninput = () => change.progress(Number(slider.value));
+      document.querySelector("#play").onclick = () => change.play({ duration: 800 });
+      // For component embedding, call change.destroy() in your cleanup hook.
+    </script>
+  </body>
+</html>
+```
+
+The slider supplies progress; it is not a playback-position display. If size or
+theme changes, call `change.resize()` to rebuild the cached frames.

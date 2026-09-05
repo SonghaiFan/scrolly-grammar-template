@@ -137,13 +137,12 @@ Overrides transition timing for this view. `timing` merges into the spec's
 .transition({ duration: 1200, delay: 100, stagger: { mode: "indexed", amount: 40, max: 600 } })
 ```
 
-### `.filter(selector)` / `.where(selector)`
+### `.where(selector)`
 
-Filter rows down to a subset. `.where()` is an alias for `.filter()` on the
-shared base — **bar overrides `.where()`** with richer behavior (see
-[Bar → `.where()`](#wherefilter-richer-on-bar) below); on `line`, `point`, and
-`unit`, `.where`/`.filter` set `state.focus` directly and infer a `focus`
-scene.
+Declare a selected subset. Bar accumulates per-field constraints (see its section
+below); point and unit filter rows. Line's default behavior crops the displayed
+range while retaining source rows. `.filter()` is not a public builder method.
+For low-level filtering, use `{ filter: ... }` entries in a raw view spec.
 
 `selector` shapes:
 
@@ -155,9 +154,9 @@ scene.
 
 ### `.highlight(selector, options?)`
 
-Keeps **all** rows rendered but visually de-emphasizes (fades) the
-non-matching ones — contrast this with `.where()`/`.filter()`, which removes
-non-matching rows entirely:
+On **bar**, keeps all rows rendered but visually de-emphasizes (fades) the
+non-matching ones. Other built-in builders currently store highlight metadata
+but do not render selective opacity; do not rely on it for line/point/unit:
 
 ```js
 .highlight({ type: "Cold days" })                       // default fade opacity
@@ -217,8 +216,9 @@ base.where({ type: "Cold days" })                         // swaps the `type` co
 base.where(null)                                           // clears everything
 ```
 
-`.filter(selector)` (inherited from the shared base) is also available as a
-plain, non-inferring filter if you don't want this extra bookkeeping.
+For a plain filter without bar's extra authoring bookkeeping, supply a raw
+view spec with `transform: [{ filter: ... }]`. It still contributes to the
+endpoint delta and focus inference.
 
 ### `.flip(options?)`
 
@@ -334,14 +334,14 @@ base.stage(["x", "y"], { duration: 700, stagger: 40 })
 const base = bar("weatherDays").x("decade").y("count").sort("year");
 
 story()
-  .step("Baseline",            base.where({ type: "Hot days" }))
-  .step("Focus",               base.where({ type: "Hot days", period: "recent" }))
-  .step("Guide: flip",         base.where({ type: "Hot days", period: "recent" }).flip())
-  .step("Focus: swap measure", base.where({ type: "Cold days" }).flip())
-  .step("Granularity: split",  base.breakdown("type"))
-  .step("Focus: highlight",    base.breakdown("type").highlight({ type: "Cold days" }))
-  .step("Guide: grouped",      base.breakdown("type").layout("grouped").flip())
-  .step("Granularity: rollup", base.rollup("decade", { title: "Average days", op: "mean" }))
+  .add("Baseline",            base.where({ type: "Hot days" }))
+  .add("Focus",               base.where({ type: "Hot days", period: "recent" }))
+  .add("Guide: flip",         base.where({ type: "Hot days", period: "recent" }).flip())
+  .add("Focus: swap measure", base.where({ type: "Cold days" }).flip())
+  .add("Granularity: split",  base.breakdown("type"))
+  .add("Focus: highlight",    base.breakdown("type").highlight({ type: "Cold days" }))
+  .add("Guide: grouped",      base.breakdown("type").layout("grouped").flip())
+  .add("Granularity: rollup", base.rollup("decade", { title: "Average days", op: "mean" }))
   .toSpec();
 ```
 
@@ -415,12 +415,12 @@ const base = line("weather").x("decade").y("hot_days").key("decade");
 const cold = base.y("cold_days").color(COLD_COLOR);
 
 story()
-  .step("Baseline: hot-days trend", base)
-  .step("Focus: zoom to recent",    base.where({ period: "recent" }))
-  .step("Guide: log scale",         base.guide({ y: { scale: { type: "log" } } }))
-  .step("Observation: cold days",   cold)
-  .step("Granularity: by period",   cold.breakdown("period"))
-  .step("Granularity: merge back",  cold.breakdown("period").rollup())
+  .add("Baseline: hot-days trend", base)
+  .add("Focus: zoom to recent",    base.where({ period: "recent" }))
+  .add("Guide: log scale",         base.guide({ y: { scale: { type: "log" } } }))
+  .add("Observation: cold days",   cold)
+  .add("Granularity: by period",   cold.breakdown("period"))
+  .add("Granularity: merge back",  cold.breakdown("period").rollup())
   .toSpec();
 ```
 
@@ -488,11 +488,11 @@ base.breakdown({ detail: "year", key: "period" })
 const base = point("weather").x("tmin").y("tmax").key("decade");
 
 story()
-  .step("Baseline: temperature scatter", base)
-  .step("Focus: recent decades",          base.where({ period: "recent" }))
-  .step("Observation: hot vs cold days",  base.x("hot_days").y("cold_days"))
-  .step("Granularity: rollup by period",  base.x("hot_days").y("cold_days").rollup("period"))
-  .step("Granularity: back to detail",    base.x("hot_days").y("cold_days").rollup("period").breakdown("decade"))
+  .add("Baseline: temperature scatter", base)
+  .add("Focus: recent decades",          base.where({ period: "recent" }))
+  .add("Observation: hot vs cold days",  base.x("hot_days").y("cold_days"))
+  .add("Granularity: rollup by period",  base.x("hot_days").y("cold_days").rollup("period"))
+  .add("Granularity: back to detail",    base.x("hot_days").y("cold_days").rollup("period").breakdown("decade"))
   .toSpec();
 ```
 
@@ -577,11 +577,11 @@ const base = unit("weather").x("year").y("hot_days").key("decade")
   .value("hot_days").label("decade");
 
 story()
-  .step("Baseline: every decade",      base)
-  .step("Focus: recent decades only",  base.where({ period: "recent" }))
-  .step("Guide: grouped by period",    base.group("period"))
-  .step("Guide: timeline layout",      base.timeline("year"))
-  .step("Guide: dodge layout",         base.dodge("year"))
+  .add("Baseline: every decade",      base)
+  .add("Focus: recent decades only",  base.where({ period: "recent" }))
+  .add("Guide: grouped by period",    base.group("period"))
+  .add("Guide: timeline layout",      base.timeline("year"))
+  .add("Guide: dodge layout",         base.dodge("year"))
   .toSpec();
 ```
 

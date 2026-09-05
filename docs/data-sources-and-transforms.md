@@ -63,21 +63,26 @@ Each view spec carries an optional `transform` array — a sequence of
 reshaping operations applied **in order** to the bound dataset before it's
 encoded and rendered. `applyTransforms(rows, transforms, aq)` runs this
 pipeline using Arquero under the hood; you rarely call it directly — it's
-invoked by the renderer for every step.
+an internal utility invoked by the renderer. Arquero is optional only when no
+transforms are declared. Cached bar pair transitions evaluate transforms during
+compilation and resize, not on every progress frame.
 
 Most transforms get attached for you by chart-idiom methods (`.where()` →
 `filter`, `.sort()` → `sort`, `.breakdown()`/`.rollup()` → `aggregate`/`fold`,
-…). You can also push raw transform objects into a spec by hand, or via
-`.channel`/`.guide`-level escape hatches when a builder method doesn't cover
-your case.
+…). You can also provide raw transform objects in a view spec when a builder
+method doesn't cover your case; `.channel()` and `.guide()` are not transform
+setters.
 
-The supported transform kinds, in the order they're checked (a single
-transform object may combine more than one key — they're applied in this
-fixed precedence):
+Each array entry must contain exactly one supported operation. Entries execute
+in declared array order; unknown properties, operators and invalid values throw
+an indexed error, even for empty data. See the [strict grammar reference](./data-transforms.md)
+for the complete validation and missing-value rules.
 
 ### `filter`
 
-Keeps rows matching a selector — the workhorse behind `.where()`/`.filter()`.
+Keeps rows matching a selector. This is a raw transform operation, not a
+`.filter()` builder method. Bar, point and unit `.where()` compile row filters;
+line's default `.where()` instead crops its displayed range.
 
 ```js
 { filter: { field: "type", equal: "Hot days" } }
@@ -90,7 +95,9 @@ Selector operators: `equal`, `notEqual`, `oneOf` (array membership), `gte`,
 `gt`, `lte`, `lt`. You can combine multiple operators in one selector object
 (all must pass). String expressions support a single comparison of the form
 `datum.<field> <op> <literal>` where `<op>` is one of `== === != !== >= > <= <`
-and `<literal>` is a quoted string or a number.
+and `<literal>` is a quoted string, finite JSON number, boolean or null.
+Numeric range bounds must be numbers. Both equality spellings are strict;
+arithmetic, logical expressions and function calls are not supported.
 
 ### `timeUnit`
 
@@ -137,7 +144,8 @@ numeric bounds.
 Produces three derived columns: `<as>` (a `"start-end"` label string),
 `<as>_start`, and `<as>_end` (numeric bounds). `step` takes precedence over
 `maxbins` (default `10`) when both are given; otherwise the bin width is
-computed as `ceil((max - min) / maxbins)`.
+computed as `max(1, ceil((max - min) / maxbins))`. This keeps constant data
+finite; nonnumeric values produce null bounds and labels.
 
 ### `aggregate`
 
@@ -176,6 +184,7 @@ Truncates to the first `n` rows after all preceding transforms run:
 
 ```js
 { limit: 10 }
+{ limit: 0 } // valid: no rows
 ```
 
 ## Putting it together

@@ -24,7 +24,7 @@ if (tsc.status !== 0) {
 await cp(new URL("../src/styles.css", import.meta.url), new URL("../dist/scrollylite.css", import.meta.url));
 await cp(new URL("../src/themes", import.meta.url), new URL("../dist/themes", import.meta.url), {
   recursive: true,
-  filter: (path) => !path.endsWith(".DS_Store")
+  filter: (path) => !path.endsWith(".DS_Store") && !path.endsWith("DESIGN.md")
 });
 await writeFile(
   new URL("../dist/scrollylite.esm.js", import.meta.url),
@@ -36,12 +36,12 @@ await writeFile(
 );
 await esbuild.build({
   bundle: true,
-  entryPoints: [new URL("../src/browser.ts", import.meta.url).pathname],
+  entryPoints: [fileURLToPath(new URL("../src/browser.ts", import.meta.url))],
   format: "iife",
   globalName: "ScrollyLite",
   legalComments: "none",
   minify: true,
-  outfile: new URL("../dist/scrollylite.global.js", import.meta.url).pathname,
+  outfile: fileURLToPath(new URL("../dist/scrollylite.global.js", import.meta.url)),
   target: "es2020"
 });
 

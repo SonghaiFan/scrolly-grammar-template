@@ -5,6 +5,8 @@ export { titleize };
 export declare function normalizeDataSource(data: unknown): unknown;
 export declare class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
     toSpec(): Omit<S, '__grammar'>;
+    /** Idiom subclasses override this without importing the global chart manifest. */
+    protected compileSpec(spec: ViewSpec): ViewSpec;
     data(data: unknown): this;
     x(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;
     y(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;
@@ -15,7 +17,6 @@ export declare class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState
     tooltip(items: string | ChannelSpec | Array<string | ChannelSpec>): this;
     sort(field: string, order?: SortOrder): this;
     transition(timing: TransitionSpec): this;
-    filter(selector: string | Record<string, unknown> | FilterSpec): this;
     where(selector: string | Record<string, unknown> | FilterSpec): this;
     highlight(selector: string | Record<string, unknown> | FilterSpec, options?: {
         opacity?: number;

@@ -1,8 +1,7 @@
-// @ts-nocheck
 // ─── Seq — ordered state sequence with navigation ────────────────────────────
 //
-// The core primitive: a list of (spec, text) pairs with a navigation cursor.
-// Completely decoupled from the DOM — no rendering happens here.
+// A composition helper: state snapshots with a navigation cursor.
+// Rendering is external; optional text bindings do access the DOM.
 //
 // Usage:
 //   const sq = seq()
@@ -15,6 +14,7 @@
 //   sq.bind({ chart, text: '#caption' });
 //   btn.onclick = () => sq.next();
 import { story } from './grammar/story.js';
+import { cloneState } from './grammar/view-state.js';
 export class Seq {
     constructor() {
         this._entries = [];
@@ -36,8 +36,10 @@ export class Seq {
     /** Add a state: chart grammar object + optional narrative text */
     add(viewSpec, text = '', opts = {}) {
         const index = this._entries.length;
+        viewSpec = cloneState(typeof viewSpec.toSpec === 'function'
+            ? viewSpec.toSpec() : viewSpec);
         this._entries.push({ viewSpec, text, title: opts.title });
-        this._builder.step(opts.title ?? `Step ${index + 1}`, viewSpec, { body: text });
+        this._builder.add(opts.title ?? `Step ${index + 1}`, viewSpec, { body: text });
         return this;
     }
     // ── Navigation ─────────────────────────────────────────────────────────────
@@ -51,11 +53,11 @@ export class Seq {
     }
     /** Whether the cursor is at the last state */
     get atEnd() {
-        return this._cursor >= this._entries.length - 1;
+        return this.length > 0 && this._cursor >= this._entries.length - 1;
     }
     /** Whether the cursor is at the first state */
     get atStart() {
-        return this._cursor <= 0;
+        return this.length > 0 && this._cursor <= 0;
     }
     /** Current state, or null before the first navigation */
     get current() {
@@ -63,11 +65,11 @@ export class Seq {
     }
     /** Read state at position without moving the cursor */
     at(index) {
-        return this._stateAt(Math.max(0, Math.min(index, this._entries.length - 1)));
+        return this._stateAt(this._boundedIndex(index));
     }
     /** Jump to position, notify all bindings, return the new state */
     goto(index) {
-        this._cursor = Math.max(0, Math.min(index, this._entries.length - 1));
+        this._cursor = this._boundedIndex(index);
         const state = this._stateAt(this._cursor);
         this._notify(state);
         return state;
@@ -103,6 +105,16 @@ export class Seq {
             this._onChange = handler;
         return this;
     }
+    /** Release references to all chart/text bindings; does not destroy charts. */
+    unbind() {
+        this._bindings = [];
+        return this;
+    }
+    off(event) {
+        if (event === 'change')
+            this._onChange = undefined;
+        return this;
+    }
     // ── Compilation ────────────────────────────────────────────────────────────
     /**
      * Compile to a StorySpec.
@@ -118,14 +130,21 @@ export class Seq {
      * so the first sq.next() advances to step 1 rather than step 0.
      */
     syncCursor(index) {
-        this._cursor = Math.max(0, Math.min(index, this._entries.length - 1));
+        this._cursor = this.length ? this._boundedIndex(index) : -1;
+    }
+    _boundedIndex(index) {
+        if (!this.length)
+            throw new Error('Cannot navigate an empty Seq. Add a visualization first.');
+        if (!Number.isSafeInteger(index))
+            throw new Error('Seq index must be a finite integer.');
+        return Math.max(0, Math.min(index, this.length - 1));
     }
     _stateAt(index) {
         const entry = this._entries[index];
         const spec = entry.viewSpec && typeof entry.viewSpec.toSpec === 'function'
             ? entry.viewSpec.toSpec()
             : entry.viewSpec;
-        return { spec, text: entry.text, title: entry.title, index };
+        return { spec: cloneState(spec), text: entry.text, title: entry.title, index };
     }
     _notify(state) {
         for (const b of this._bindings) {

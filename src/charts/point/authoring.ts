@@ -1,16 +1,24 @@
 import type { StageSpec, ViewSpec } from '../../types/index.js';
 import { IdiomState, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createPointSpecCompiler } from './compile.js';
+
+const POINT_SPEC_COMPILER = createPointSpecCompiler();
 
 export interface PointViewState extends ViewSpec {
   mark: 'point';
   size?: number;
 }
 
-export function point(data: unknown): PointState {
+export function point(data?: unknown): PointState {
   return new PointState({ data: normalizeDataSource(data) as PointViewState['data'], mark: 'point', encoding: {} });
 }
 
 export class PointState extends IdiomState<PointViewState> {
+  protected override compileSpec(spec: ViewSpec): ViewSpec {
+    return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
+  }
+
   override x(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
     return super.x(field, { type: 'quantitative', ...options });
   }

@@ -5,6 +5,7 @@ import { createDemoSpec, availableStories } from "../examples/weather/specs/demo
 import { compileSpec } from "../dist/runtime/spec.js";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const exampleDir = join(root, "examples", "weather");
 const htmlPath = join(exampleDir, "index.html");
 const html = await readFile(htmlPath, "utf8");
@@ -50,8 +51,8 @@ function assertMinimalEsmExample(source) {
   if (!source.includes('type="module"')) {
     throw new Error("Minimal example must use a module script.");
   }
-  if (!source.includes('from "https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm"')) {
-    throw new Error("Minimal example must follow the D3-style jsDelivr +esm import.");
+  if (!source.includes(`from "https://cdn.jsdelivr.net/npm/scrollylite@${version}/dist/scrollylite.esm.js"`)) {
+    throw new Error("Minimal example must import the candidate's packaged ESM file.");
   }
   if (!source.includes('from "https://cdn.jsdelivr.net/npm/d3@7/+esm"')) {
     throw new Error("Minimal example must import D3 from jsDelivr +esm.");

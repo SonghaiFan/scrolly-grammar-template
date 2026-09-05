@@ -1,19 +1,9 @@
 import { DEFAULT_TIMING } from '../timing.js';
 import { externalizeScrollyViewSpec, narrativeState, narrativeTransition, withNarrative } from '../scrolly-meta.js';
-import { chartModules } from '../charts/manifest.js';
-import { cloneViewSpec } from '../charts/compiler-utils.js';
-import { createSpecCompilerRegistry, resolveMarkRendererKey } from '../charts/index.js';
+import { compileViewWithCompiler } from '../charts/compile-view.js';
 export const SCENE_TRANSITIONS = ['focus', 'guide', 'granularity', 'observation'];
-const STATE_APPLICATION_ORDER = ['focus', 'granularity', 'guide'];
-const DEFAULT_STATE_OPERATION = {
-    focus: 'filter',
-    guide: 'coordinate',
-    granularity: 'aggregate'
-};
-const MARK_SPEC_COMPILERS = createSpecCompilerRegistry(chartModules);
-export function resolveSceneTransition(viewSpec = {}, stepTransition = {}) {
-    const rendererKey = resolveMarkRendererKey(viewSpec);
-    const supportedScenes = supportedSceneTypes(rendererKey);
+export function resolveSceneTransition(viewSpec = {}, stepTransition = {}, compilerEntry) {
+    const supportedScenes = compilerEntry?.scenes ?? SCENE_TRANSITIONS;
     const state = narrativeState(viewSpec);
     const scene = uniqueTokens([...(stepTransition.scene || [])]).filter((token) => SCENE_TRANSITIONS.includes(token) && supportedScenes.includes(token));
     return {
@@ -30,67 +20,13 @@ export function withSceneTransitionDefaults(viewSpec, sceneTransition) {
     }
     return withNarrative(viewSpec, { transition });
 }
-export function compileViewSpec(viewSpec, sceneTransition) {
-    const rendererKey = resolveMarkRendererKey(viewSpec);
-    const compilerEntry = MARK_SPEC_COMPILERS[rendererKey];
+export function compileViewSpec(viewSpec, sceneTransition, compilerEntry) {
     if (!compilerEntry?.compiler)
         return viewSpec;
-    const context = { rendererKey };
-    const compiled = stateOperationOrder(viewSpec, sceneTransition, compilerEntry).reduce((compiledSpec, entry) => {
-        const handler = compilerEntry.compiler.operations[entry.operation];
-        return handler ? handler(compiledSpec, entry.operationSpec, context) : compiledSpec;
-    }, compilerEntry.compiler.base(cloneViewSpec(viewSpec), context));
-    return externalizeScrollyViewSpec(pruneCompiledViewSpec(pruneConsumedSceneState(compiled)));
+    return externalizeScrollyViewSpec(compileViewWithCompiler(viewSpec, sceneTransition, compilerEntry.compiler, compilerEntry.stateOperations));
 }
 export function hasScene(sceneTransition, type) {
     return Boolean(sceneTransition?.scene?.includes(type));
-}
-function supportedSceneTypes(mark) {
-    const entry = MARK_SPEC_COMPILERS[mark];
-    const scenes = entry?.scenes;
-    return scenes?.length ? [...scenes] : [...SCENE_TRANSITIONS];
-}
-function stateOperationOrder(viewSpec, sceneTransition, compilerEntry) {
-    const supported = Object.keys(compilerEntry.compiler.operations);
-    const state = narrativeState(viewSpec);
-    const stateOperations = {
-        ...DEFAULT_STATE_OPERATION,
-        ...(compilerEntry.stateOperations || {})
-    };
-    const stateRecord = state;
-    const sceneRecord = sceneTransition;
-    return STATE_APPLICATION_ORDER
-        .map((stateKey) => {
-        const operationSpec = stateRecord[stateKey] || sceneRecord[stateKey] || null;
-        const operation = operationForState(stateKey, operationSpec, stateOperations);
-        return { stateKey, operation, operationSpec };
-    })
-        .filter((entry) => entry.operationSpec != null && supported.includes(entry.operation));
-}
-function operationForState(stateKey, operationSpec, stateOperations) {
-    if (stateKey === 'focus' && operationSpec?.['mode'] === 'highlight')
-        return 'highlight';
-    return stateOperations[stateKey] || DEFAULT_STATE_OPERATION[stateKey];
-}
-function pruneCompiledViewSpec(spec) {
-    const next = { ...spec };
-    if (Array.isArray(next['transform']) && !next['transform'].length)
-        delete next['transform'];
-    if (next['encoding'] && !Object.keys(next['encoding']).length)
-        delete next['encoding'];
-    return next;
-}
-function pruneConsumedSceneState(spec) {
-    const next = cloneViewSpec(spec);
-    const state = next.narrative?.['state'];
-    if (!state)
-        return next;
-    delete state['focus'];
-    delete state['guide'];
-    delete state['granularity'];
-    if (!Object.keys(state).length)
-        delete next.narrative?.['state'];
-    return next;
 }
 function normalizeToken(value) {
     if (value == null)

@@ -1,5 +1,6 @@
 import type { ChannelSpec, FocusSpec, ViewSpec } from '../../types/index.js';
 import { narrativeState } from '../../scrolly-meta.js';
+import { filterPredicate } from '../../data/filter.js';
 
 interface LineState {
   focus: FocusSpec | null;
@@ -46,7 +47,7 @@ export function focusedLineXScale(
     return (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(rows, channel, baseRange, d3);
   }
 
-  const focusedRows = rows.filter((row) => rowMatchesFilter(row, focus.filter as Record<string, unknown>));
+  const focusedRows = rows.filter(filterPredicate(focus.filter));
   if (focusedRows.length < 2) {
     return (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(rows, channel, baseRange, d3);
   }
@@ -98,17 +99,4 @@ function focusedDomain(
     );
   }
   return (niceExtent as (rows: unknown[], field: string) => unknown[])(rows, channel.field!);
-}
-
-function rowMatchesFilter(row: Record<string, unknown>, filter: Record<string, unknown>): boolean {
-  if (!filter?.['field']) return true;
-  const value = row[filter['field'] as string];
-  if ('equal' in filter) return value === filter['equal'];
-  if ('notEqual' in filter) return value !== filter['notEqual'];
-  if ('oneOf' in filter) return (filter['oneOf'] as unknown[]).includes(value);
-  if ('gte' in filter && (value as number) < (filter['gte'] as number)) return false;
-  if ('gt' in filter && (value as number) <= (filter['gt'] as number)) return false;
-  if ('lte' in filter && (value as number) > (filter['lte'] as number)) return false;
-  if ('lt' in filter && (value as number) >= (filter['lt'] as number)) return false;
-  return Boolean(value);
 }

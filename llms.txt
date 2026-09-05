@@ -8,24 +8,29 @@
 
 ## What ScrollyLite is
 
-A declarative scrollytelling grammar. The author writes a sequence of
-**steps**, each describing *what the chart looks like at that point* (which
-fields are encoded, which rows are filtered/highlighted, how the data is
-grouped, how it's oriented). ScrollyLite diffs every consecutive pair of
-steps, classifies the difference into one or more **scenes**
-(`focus`/`observation`/`granularity`/`guide`), and renders the corresponding
-D3 transition automatically. **Never hand-write animation/transition code —
-just describe the end state of each step.**
+A declarative visualization grammar with chainable chart-state builders and
+animated transitions between states. Authors describe encoded fields, selected
+rows, grouping and orientation. The 0.2.0 `transition(from, to, options)`
+API accepts two same-idiom visualizations directly, without a story or steps,
+and exposes playback and arbitrary normalized progress. See
+`docs/visualization-transitions.md` for its contract and implementation boundary.
+The story API composes states into narrated **steps**; its existing scene
+classification is `focus`/`observation`/`granularity`/`guide`. ScrollyLite derives
+rendering transitions rather than requiring authors to write mark tweens.
 
 Built on **D3** (rendering, scales, transitions — peer dep, `^7`) and
-**Arquero** (data loading/reshaping — peer dep, `^8`). Ships four chart
+**Arquero** (data reshaping — optional peer dep, `^8`, required for transforms).
+D3 loads remote data. Ships four chart
 idioms: `bar`, `line`, `point`, `unit`. Runs as ESM or as a CDN global
 (`window.ScrollyLite`).
 
 ## Install / load
 
+This checkout is a 0.2.0 candidate, not a publication claim. CDN/install URLs
+target 0.2.0 and require publication. Before that, build/use a local tarball.
+
 ```sh
-npm install scrollylite d3 arquero
+npm install scrollylite@0.2.0 d3 arquero
 ```
 ```js
 import * as d3 from "d3";
@@ -39,14 +44,14 @@ and pass both `d3` and `aq` to `createStory` / `createChart`.
 
 Browser CDN ESM (pin versions in production, `@latest` is unstable):
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/themes/default.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/themes/default.css">
 <script type="module">
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 import * as aq from "https://cdn.jsdelivr.net/npm/arquero@8/+esm";
-import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm";
+import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.esm.js";
 
-const spec = story().data("rows", { values }).step("Baseline", bar("rows").x("category").y("value").key("category")).toSpec();
+const spec = story().data("rows", { values }).add("Baseline", bar("rows").x("category").y("value").key("category")).toSpec();
 await createStory(spec, { target: "#app", d3, aq });
 </script>
 ```
@@ -55,7 +60,7 @@ Plain script fallback only when module scripts are unavailable:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/arquero@8/dist/arquero.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.global.js"></script>
 ```
 
 Docs: `docs/getting-started.md`, `docs/for-developers.md`, `docs/for-cdn-users.md`
@@ -68,9 +73,9 @@ const spec = story()                                      // StoryBuilder
   .data("rows", { url: "./data.csv", type: "csv" })       // or { values: [...] } / [...]
   .layout("floatToText")                                  // or "textOverVis"
   .view("main", { title: "…", height: 520 })
-  .action("scroller")                                      // default alias for ["scroll", "tooltip"]
-  .step("Title A", bar("rows").x("category").y("value").key("category"), "Narrative copy")
-  .step("Title B", bar("rows").x("category").y("value").key("category").highlight({ category: "B" }))
+  .action(["scroll", "tooltip"])                                      // default action tokens
+  .add("Title A", bar("rows").x("category").y("value").key("category"), "Narrative copy")
+  .add("Title B", bar("rows").x("category").y("value").key("category").highlight({ category: "B" }))
   .toSpec();                                              // → plain JSON-serializable object
 
 const runtime = await createStory(spec, { target: "#app", d3, aq });
@@ -83,11 +88,8 @@ Runtime choice:
   steps, figure containers, tooltip; does not render chart or install
   triggers.
 - `createChart(spec, { target, d3, aq })`: animated chart only; call
-  `chart.action(event, options?)` for every trigger. Send one-shot events
-  like `{ type: "click", step: 1 }` or continuous progress events like
-  `{ type: "progress", step: 1, value: 0.5 }`. DOM `click`/`input` events and
-  numeric `0..1` progress values are accepted. Runtime action events do **not**
-  depend on step authoring action.
+  `chart.to(indexOrState)` for discrete jumps and `chart.progress(index, value)`
+  for continuous `0..1` scrubbing.
 
 `story()` returns a `StoryBuilder`. Every method returns `this` (chainable).
 Chart-idiom builders (`bar()`, `line()`, …) are **immutable** — every
@@ -96,9 +98,9 @@ branch it per step:
 ```js
 const base = bar("rows").x("decade").y("count").sort("year");
 story()
-  .step("A", base.where({ type: "Hot days" }))
-  .step("B", base.where({ type: "Hot days" }).flip())
-  .step("C", base.breakdown("type"));
+  .add("A", base.where({ type: "Hot days" }))
+  .add("B", base.where({ type: "Hot days" }).flip())
+  .add("C", base.breakdown("type"));
 ```
 
 ## `StoryBuilder` (`story()`) — full method list
@@ -111,29 +113,27 @@ story()
 | `.description(value)` | `string` | narrative subtitle |
 | `.data(name, source)` / `.data({name: source, …})` | see Data below | merges into `spec.data`, additive |
 | `.layout(presetOrConfig, options?)` | `"floatToText" \| "textOverVis"` or raw config | merges into `spec.layout`, additive |
-| `.view(idOrConfig, config?)` | `(id, {title, height})` or `({id: {…}, …})` | registers named view(s); 2-arg form = single id, map form = many |
-| `.action(actions)` | `string \| string[]` | sets default action list; `"stepper"` = `["step","tooltip"]`, `"scroller"` = `["scroll","tooltip"]`; recompiles all steps |
-| `.step(titleOrDef, view?, options?)` | 3 call shapes — see below | infers transition, appends, recompiles whole list |
-| `.steps(definitions[])` | `[{title, view, body}, …]` | replaces entire step list at once |
+| `.view(idOrConfig, config?)` | `(id, {title, height})` or `({title, height})` | single object configures main; repeat named calls for multiple views |
+| `.action(actions)` | `string \| string[]` | sets default action tokens, usually `["step","tooltip"]` or `["scroll","tooltip"]` |
+| `.add(titleOrDef, view?, options?)` | 3 call shapes — see below | stores definition; compilation and inference happen at toSpec() |
 | `.toSpec()` | → `object` | deep clone of compiled spec, JSON-serializable, idempotent |
 
-`.step()` call shapes:
+`.add()` call shapes:
 ```js
-.step({ title, body, view, action: "scroller", authoring })       // 1: full definition object
-.step("Title", chartState, { body: "…", action: "stepper", authoring: 'bar(...)' })  // 2: title, state, options
-.step("Title", chartState, "Narrative body as plain string")      // 3: title, state, body shorthand
+.add({ title, body, view, action: ["scroll", "tooltip"], code })       // 1: full definition object
+.add("Title", chartState, { body: "…", action: ["step", "tooltip"], code: 'bar(...)' })  // 2: title, state, options
+.add("Title", chartState, "Narrative body as plain string")      // 3: title, state, body shorthand
 ```
 `view` = a chart-idiom builder (its `.toSpec()` is called for you) or a raw
 view-spec object. The **first step always gets `"enter"` appended** to its
 action list automatically — you don't need to set this.
 
-Action aliases: `"stepper"` = `["step", "tooltip"]`; `"scroller"` =
-`["scroll", "tooltip"]`. Lower-level action values: `"step"` (discrete
-nav/programmatic playback), `"scroll"` (continuous scroll-scrubbed transition;
-only meaningful on steps with an inferred `transition.scene`), `"tooltip"`
-(hover tooltips), `"enter"` (auto-played entrance, reserved for step 0, added
-automatically). Default: `["step", "tooltip"]`. Per-step action overrides are
-allowed in `.step(..., { action })` and `.step({ action, ... })`.
+Action values: `"step"` (discrete nav/programmatic playback), `"scroll"`
+(continuous scroll-scrubbed transition; only meaningful on steps with an
+inferred `transition.scene`), `"tooltip"` (hover tooltips), `"enter"`
+(auto-played entrance, reserved for step 0, added automatically).
+Default: `["step", "tooltip"]`. Per-step action overrides are
+allowed in `.add(..., { action })` and `.add({ action, ... })`.
 
 ## Agent skill seed
 
@@ -180,7 +180,10 @@ story().theme({
   ]
 })
 ```
-→ loads optional CSS and sets `--sl-*` custom properties. `series` maps to
+→ loads optional CSS and sets `--sl-*` custom properties on the target, not root.
+Shared external CSS remains document-wide and is reference counted; colors/helper
+contexts are per-instance. Destroy restores prior inline tokens unless the app
+changed them. `series` maps to
 `--sl-series-1`, `--sl-series-2`, … and controls default D3 categorical mark
 colors. `fontFamily` maps to `--sl-font-family` for shell and SVG text.
 
@@ -200,15 +203,19 @@ calls merge additively (later names add/override, don't clear earlier ones).
 ## Transforms (filter, fold, bin, aggregate, sort, …)
 
 Applied via Arquero under the hood; configured through chart-state methods
-(`.sort()`, `.where()`/`.filter()`, `.breakdown()`, `.rollup()`, `.segment()`)
+(`.sort()`, `.where()`, `.breakdown()`, `.rollup()`, `.segment()`)
 or raw `transform` arrays in a hand-authored spec. Exact option shapes for
 every transform type (filter, timeUnit, fold, bin, aggregate, sort, limit):
 `docs/data-sources-and-transforms.md`
 
+Each transform entry has one operation, executed in array order. Invalid or
+unknown operators/properties throw with transform[index], even for empty data.
+For scalar expression syntax and missing-value rules see docs/data-transforms.md.
+
 ## Chart idioms — shared methods (bar, line, point, unit all extend `ChartState`)
 
 ```js
-.data(name)                       // switch bound dataset (rare mid-chain)
+.data(source)                     // replace complete source: name, URL, values object or row array
 .x(field, options?) / .y(field, options?)   // string field name (auto-titled) or { field, title, type, scale }
 .channel(name, field, options?)   // bind any encoding channel by name (escape hatch)
 .color(value | field | config)    // "#hex" literal | "fieldName" | { field, domain, range } | { hue, luminance } composite
@@ -217,8 +224,8 @@ every transform type (filter, timeUnit, fold, bin, aggregate, sort, limit):
 .tooltip(items)                   // "field" | ["f1","f2"] | [{field,title,format}, "f2", …]
 .sort(field, order?)              // order: "ascending" (default) | "descending"; accumulates
 .transition(timing)               // { duration, delay, stagger: { mode, amount, max } }
-.filter(selector) / .where(selector)  // {field: value} | {field, equal} | null (clear); BAR OVERRIDES — see below
-.highlight(selector, options?)    // keeps all rows, fades non-matching ({opacity}); doesn't remove rows
+.where(selector)                  // scalar expression or field selector; null clear is bar-only; line crops range
+.highlight(selector, options?)    // visual fade only on bar; other idioms store metadata but do not apply selective opacity
 .guide(config)                    // raw guide escape hatch: { y: { scale: { type: "log" } } }, { flip, staging }
 ```
 
@@ -252,7 +259,8 @@ const base = bar("rows").x("decade").y("count").sort("year");
   measure" (classified as `focus`, NOT `observation` — see Scenes below) and
   auto-retitles the y-axis to the selected value.
 - `.where(null)` clears all constraints.
-- Plain non-inferring filter still available via inherited `.filter()`.
+- There is no public `.filter()` method; raw filter transforms avoid authoring
+  bookkeeping but still contribute to endpoint delta/focus inference.
 
 ```js
 .flip(options?)        // vertical↔horizontal; 2-stage staged transition (guide scene)
@@ -322,14 +330,14 @@ const base = unit("rows").x("year").y("hot_days").key("decade")
 
 ## Scenes — how transitions are inferred (CRITICAL: read before predicting animation)
 
-Every `.step()` diffs the previous chart-state against the current one and
-infers one or more scenes from the union of (a) the authoring-operation delta
-and (b) a structural spec diff:
+Every `.add()` and standalone transition diffs the endpoint specs only.
+Builder operation history and private capabilities are not inference inputs;
+equivalent builders and raw specs produce the same classification:
 
 | Scene | Triggered by | Question it answers |
 |---|---|---|
-| `focus` | `.where()`/`.filter()`/`.highlight()`, any filter-transform change | Which rows are emphasized/visible? |
-| `observation` | `.x()`/`.y()` bound **field** changes — **except on bar** (folded into `focus`, see Bar `.where()` above) | Which variable is encoded? |
+| `focus` | `.where()`/`.highlight()`, any filter-transform change | Which rows are emphasized/visible? |
+| `observation` | x/y bound field changes, including bar measure changes; excludes pure axis swaps and generated aggregate fields | Which variable is encoded? |
 | `granularity` | `.breakdown()`/`.rollup()`/`.segment()` (a real grouping-level change, not just `.layout()`) | What aggregation level is shown? |
 | `guide` | `.flip()`, `.guide()`, `.layout()`, `.stage()`, `.group()`/`.timeline()`/`.dodge()` (orientation/scale/staging/layout) | How is the data being read? |
 
@@ -337,6 +345,11 @@ Multiple scenes can co-occur (e.g. `["focus", "guide"]` for a filter+flip in
 one step) — ScrollyLite animates the union with the richest plan the idiom
 supports. **The first step in a story has no predecessor → `transition:
 undefined`** (it's the narrative's start, not a transition).
+
+The inferred order is focus, observation, granularity, guide. Runtime idioms
+filter the list by their declared support (unit: focus/guide). Only bar currently
+renders selective highlight opacity; line defaults to range-cropping for where().
+Unsupported data transforms/operators reject explicitly; see docs/data-transforms.md.
 
 Per-idiom animation specifics (enter/exit/morph rules, staging order,
 key-selection guidance): `docs/scenes-and-transitions.md`
@@ -364,8 +377,8 @@ story().layout("floatToText", { runtime: { offset: 0.58, nav: true, progress: tr
 Theming = optional stylesheet loading plus CSS custom properties set from
 `spec.theme`. Important tokens: `background` → `--sl-bg`, `foreground` →
 `--sl-fg`, `accent` → `--sl-accent`, `fontFamily` → `--sl-font-family`,
-`series`/`palette` → `--sl-series-*`, `semantic.hot/cold` →
-`--sl-semantic-hot` / `--sl-semantic-cold`. Default D3 categorical colors read
+`series`/`palette` → `--sl-series-*`. For custom semantic tokens use
+`theme.variables`, not an undocumented `theme.semantic` property. Default D3 categorical colors read
 from `--sl-series-*`. Always load `scrollylite.css` (structure);
 `themes/default.css` supplies a neutral, minimal baseline palette.
 
@@ -381,15 +394,16 @@ async function createStory(spec: object, options: {
   debug?: boolean;             // enables debug/inspector affordances
 }): Promise<StoryRuntime>
 ```
-Throws synchronously (before async work) on: missing `d3`; missing `aq` when
-needed; unresolvable `target`; non-object `spec`. Always `await`/`.catch()`.
+Initialization errors reject the returned Promise, including missing D3,
+missing Arquero when transforms are evaluated, or unresolvable targets.
+Always `await`/`.catch()`; async functions do not throw synchronously to callers.
 
 ```ts
 interface StoryRuntime {
   spec: object;                    // fully compiled spec (no authoring shorthand left)
   data: Record<string, any[]>;     // loaded datasets by name
   signature: { index, id?, title, transition: string[], action: string[] }[];
-  action(event, options?): void;    // one-shot or progress trigger; accepts DOM Event, object, string, or number
+  to(index): void;                  // jump the full story to a step
   scrollDriver: { type: "native", scrollToStep(index, {behavior?, progress?}), resize(), refresh(), destroy() };
   destroy(): void;                 // tears down listeners; does NOT clear `target`'s DOM
 }
@@ -408,17 +422,18 @@ const plugin = defineChartIdiom({
   stateOperations: { focus: "filter", guide: "coordinate", granularity: "aggregate" },
   createRenderer: (deps) => areaRenderer,
   createSpecCompiler: (deps) => compileAreaSpec,
-  transition: { plan: (src, tgt) => ({...}), intermediateSpecs: (src, tgt, plan) => [...] },
+  transition: { plan: (src, tgt) => ({...}), intermediateSpecs: (src, tgt) => [...] },
   defaults: { margin: (spec) => ({ top: 24, right: 24, bottom: 36, left: 56 }) }
 });
-registerChartIdiom(plugin);                  // or registerChartModule({ plugin })
-// availableChartIdioms() → ["bar","line","point","unit","area"]
+registerChartModule({ plugin });             // plugin factory registration
+// registerChartIdiom accepts an already-created runtime ChartIdiom, NOT a plugin.
+// availableChartIdioms() → ["area","bar","line","point","unit"]
 ```
-Author a chainable builder by extending `IdiomState` (re-exported as
-`ChartState` in types): `this.with(patch, sceneTag?)` is the immutable
-updater — pass the scene name (`"focus"|"guide"|"granularity"|"observation"`)
-as the 2nd arg to make your method participate in scene inference. Built-in
-idioms use exactly this API — nothing is special-cased.
+Custom visualizations may be raw specs or objects with toSpec(). Internal
+IdiomState/ViewState classes are not public package entry points. Their operation
+tags are legacy inspection metadata, not scene-inference inputs. Declare plugin
+scenes/compiler behavior and encode actual endpoint changes instead. Pair and
+Story runtimes snapshot registered idioms; later registrations affect new instances.
 
 Doc: `docs/extending-with-plugins.md`
 
@@ -426,15 +441,16 @@ Doc: `docs/extending-with-plugins.md`
 
 1. **Marks pop instead of morph** → missing/unstable `.key()`. Pick a field
    that names the tracked entity consistently across steps.
-2. **No `observation` scene fires on a bar measure-swap** → expected; bar
-   folds measure changes into `focus` (see Bar `.where()`).
+2. **Measure swaps and filters differ** → changing a bar y field is observation;
+   selecting another value with .where() is focus. Pure axis swaps are guide.
 3. **`.layout()` alone doesn't trigger `granularity`** → correct; pure layout
    switches (stacked↔grouped) are `guide`, not a grouping-level change.
 4. **`scroll.start/end/clamp/snap` have no effect** → not yet implemented;
    use `offset` + `navigation` instead.
 5. **`"ScrollyLite requires D3…"` / `"…require Arquero…"`** → pass `d3`
    (always) / `aq` (whenever transforms are used) explicitly to `createStory`
-   on the ESM entry — only the global/CDN build auto-falls-back to globals.
+   on the canonical ESM entry — browser adapter/global builds provide fallback,
+   not the raw ESM file merely because it is served from a CDN.
 6. **`"ScrollyLite target not found: …"`** → the target element must exist in
    the DOM *before* `createStory` runs.
 7. **Theming via `.theme()`** → supported. Use `.theme("./theme.css")` or
@@ -449,3 +465,21 @@ Doc: `docs/extending-with-plugins.md`
 `docs/layouts-themes-and-scrolling.md` · `docs/scenes-and-transitions.md` ·
 `docs/runtime-api.md` · `docs/extending-with-plugins.md` ·
 `docs/for-developers.md` · `docs/for-cdn-users.md` · `src/charts/README.md`
+# Standalone transition API (0.2.0)
+
+`transition(from, to, { target, d3, aq, height?, data? })` accepts two same-idiom
+visualization builders or view specs. No story/seq is needed. All built-in chart
+factories accept no arguments, followed by `.data(source)`; rebinding replaces the
+source. The async factory snapshots and resolves endpoint data and returns a
+controller with `progress(p)`, `play({duration?, from?, to?})`, `pause()`, `resize()`,
+`destroy()`, `value`, `view`, `from`, `to`, and `delta`. Progress is synchronous,
+clamped to 0..1, and pauses playback. Play defaults to replaying 0..1 over 800ms
+and returns the controller, not a promise. Different chart idioms reject. The
+implementation caches built-in bar property tracks and phase/endpoint DOM
+snapshots at initialization. Bar progress/play reuse SVG nodes without running
+transforms, scales, or D3 scheduling again. `resize()` recompiles at the current
+size/theme without fetching data and retains progress. New data/configuration
+requires a new transition. Line/point/unit/custom renderers still reconstruct
+each frame. The bar compiler uses D3 schedule internals to extract interpolators
+at compile time. See docs/visualization-transitions.md.
+This addition is not present in 0.1.1.

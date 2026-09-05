@@ -22,6 +22,7 @@ export const DEFAULT_STATE_OPERATIONS: StateOperations = {
 
 export interface ChartIdiomConfig<S extends ViewSpec = ViewSpec> {
   key: string;
+  transitionEvaluation?: 'cached' | 'reconstruct';
   scenes?: string[];
   stateOperations?: StateOperations;
   renderer?: Renderer<S>;
@@ -55,6 +56,7 @@ export function defineChartIdiom<S extends ViewSpec = ViewSpec>(
     return normalizeChartIdiom<S>(
       {
         ...idiom,
+        transitionEvaluation: config.transitionEvaluation ?? idiom.transitionEvaluation,
         key: idiom.key || config.key,
         scenes: idiom.scenes ?? scenes,
         stateOperations: { ...stateOperations, ...(idiom.stateOperations ?? {}) }

@@ -16,8 +16,30 @@ const publicExports = {
     types: "./dist/browser.d.ts",
     import: "./dist/scrollylite.browser.js"
   },
+  "./core": {
+    types: "./dist/core.d.ts",
+    import: "./dist/core.js"
+  },
+  "./bar": {
+    types: "./dist/bar.d.ts",
+    import: "./dist/bar.js"
+  },
+  "./transition": {
+    types: "./dist/transition-entry.d.ts",
+    import: "./dist/transition-entry.js"
+  },
+  "./plugins": {
+    types: "./dist/plugins.d.ts",
+    import: "./dist/plugins.js"
+  },
+  "./story": {
+    types: "./dist/story.d.ts",
+    import: "./dist/story.js"
+  },
   "./style.css": "./dist/scrollylite.css",
-  "./themes/default.css": "./dist/themes/default.css"
+  "./themes/default.css": "./dist/themes/default.css",
+  "./themes/dark.css": "./dist/themes/dark.css",
+  "./themes/paper.css": "./dist/themes/paper.css"
 };
 const requiredFiles = [
   "CHANGELOG.md",
@@ -26,13 +48,23 @@ const requiredFiles = [
   "README.md",
   "dist/browser.d.ts",
   "dist/browser.js",
+  "dist/bar.d.ts",
+  "dist/bar.js",
+  "dist/core.d.ts",
+  "dist/core.js",
   "dist/index.d.ts",
   "dist/index.js",
+  "dist/story.d.ts",
+  "dist/story.js",
+  "dist/transition-entry.d.ts",
+  "dist/transition-entry.js",
   "dist/scrollylite.browser.js",
   "dist/scrollylite.esm.js",
   "dist/scrollylite.global.js",
   "dist/scrollylite.css",
   "dist/themes/default.css",
+  "dist/themes/dark.css",
+  "dist/themes/paper.css",
   "dist/charts/manifest.js"
 ];
 const forbiddenDistPatterns = [
@@ -41,6 +73,7 @@ const forbiddenDistPatterns = [
   /weather_(days_tidy|sample)\.csv$/,
   /runtime\/deps\.js$/,
   /dist\/styles\.css$/,
+  /dist\/themes\/.*\/DESIGN\.md$/,
   /\.DS_Store$/
 ];
 const forbiddenSourceText = [
@@ -87,7 +120,7 @@ if (!packageJson.devDependencies?.esbuild) {
   throw new Error("package.json must pin esbuild as a devDependency for the global build.");
 }
 assertEqual(packageJson.scripts["pack:check"], "node scripts/check-pack-consumer.mjs", "pack:check");
-assertEqual(packageJson.scripts["release:check"], "npm test && npm run pack:check && npm pack --dry-run --ignore-scripts", "release:check");
+assertEqual(packageJson.scripts["release:check"], "npm test && npm run test:browser && npm run pack:check", "release:check");
 assertEqual(packageJson.scripts.prepublishOnly, "npm run release:check", "prepublishOnly");
 if (!changelog.includes(`## ${packageJson.version} - `)) {
   throw new Error(`CHANGELOG.md must include an entry for ${packageJson.version}.`);

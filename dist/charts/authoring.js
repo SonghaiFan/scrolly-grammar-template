@@ -1,7 +1,7 @@
-import { compileViewSpec } from '../transitions/index.js';
 import { externalizeScrollyViewSpec } from '../scrolly-meta.js';
 import { ViewState, cloneState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
+import { normalizeFilter } from '../data/filter.js';
 export { titleize };
 // ─── Data source normalisation ────────────────────────────────────────────────
 //
@@ -31,11 +31,18 @@ function isDataUrl(s) {
 // ─── IdiomState ───────────────────────────────────────────────────────────────
 export class IdiomState extends ViewState {
     toSpec() {
-        const spec = super.toSpec();
-        return pruneAuthoringSpec(compileViewSpec(externalizeScrollyViewSpec(spec), { scene: [] }));
+        return compileAuthoredView(this.compileSpec(externalizeScrollyViewSpec(super.toSpec())));
+    }
+    /** Idiom subclasses override this without importing the global chart manifest. */
+    compileSpec(spec) {
+        return spec;
     }
     data(data) {
-        return this.with({ data });
+        // A data binding replaces the old source (including URL/inline metadata).
+        const spec = cloneState(this.state);
+        spec.data = normalizeDataSource(data);
+        const Ctor = this.constructor;
+        return new Ctor(spec);
     }
     x(field, options = {}) {
         return this.channel('x', field, { type: 'quantitative', ...options });
@@ -77,11 +84,8 @@ export class IdiomState extends ViewState {
     transition(timing) {
         return this.with({ transition: timing });
     }
-    filter(selector) {
-        return this.with({ focus: selectorFrom(selector) }, 'focus');
-    }
     where(selector) {
-        return this.filter(selector);
+        return this.with({ focus: selectorFrom(selector) }, 'focus');
     }
     highlight(selector, options = {}) {
         return this.with({
@@ -95,6 +99,9 @@ export class IdiomState extends ViewState {
     guide(config = {}) {
         return this.with({ guide: cloneState(config) }, 'guide');
     }
+}
+function compileAuthoredView(spec) {
+    return pruneAuthoringSpec(spec);
 }
 // ─── Channel factories ────────────────────────────────────────────────────────
 export function channelFrom(field, options = {}) {
@@ -121,15 +128,17 @@ export function colorFrom(valueOrField, options = {}) {
         : { field: valueOrField, type: 'nominal', ...options };
 }
 export function selectorFrom(selector = {}) {
+    if (typeof selector === 'string')
+        return normalizeFilter(selector);
     const sel = selector;
     if (sel.field)
-        return cloneState(sel);
+        return cloneState(normalizeFilter(sel));
     const entries = Object.entries(sel);
     if (entries.length === 1) {
         const [field, equal] = entries[0];
         return { field, equal };
     }
-    return cloneState(sel);
+    throw new Error('Use a single field comparison for this idiom selector.');
 }
 // ─── Spec pruning ─────────────────────────────────────────────────────────────
 function pruneAuthoringSpec(spec) {

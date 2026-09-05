@@ -1,5 +1,10 @@
 # Getting Started
 
+For a standalone pair of chainable visualization instances with click or progress
+control, see [Visualization Transitions](./visualization-transitions.md).
+This guide targets the **0.2.0 candidate**. Until it is published, use a local
+build/tarball; the versioned CDN and install examples require that publication.
+
 ScrollyLite turns a declarative spec into a scrolling, narrated data
 visualization. You describe **what the data is**, **what charts to show**, and
 **what changes from step to step** — ScrollyLite figures out how to animate
@@ -26,15 +31,15 @@ you import the exact copies your page or app uses, then pass them to
 ## 2. Install with a package manager
 
 ```sh
-npm install scrollylite d3 arquero
+npm install scrollylite@0.2.0 d3 arquero
 ```
 
 ```sh
-yarn add scrollylite d3 arquero
+yarn add scrollylite@0.2.0 d3 arquero
 ```
 
 ```sh
-pnpm add scrollylite d3 arquero
+pnpm add scrollylite@0.2.0 d3 arquero
 ```
 
 Then import the libraries and create a story:
@@ -56,8 +61,8 @@ const spec = story()
     ]
   })
   .view("main", { height: 520 })
-  .step("Baseline", bar("rows").x("category").y("value").key("category"))
-  .step(
+  .add("Baseline", bar("rows").x("category").y("value").key("category"))
+  .add(
     "Highlight B",
     bar("rows").x("category").y("value").key("category")
       .highlight({ category: "B" })
@@ -69,16 +74,16 @@ await createStory(spec, { target: "#app", d3, aq });
 
 ## 3. Browser ESM from a CDN
 
-For vanilla HTML, use a module script and jsDelivr's `+esm` endpoint, matching
-D3's recommended CDN pattern:
+For vanilla HTML, import ScrollyLite's packaged ESM file directly. D3 and Arquero
+use jsDelivr's `+esm` endpoints:
 
 ```html
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/themes/default.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/themes/default.css">
   </head>
   <body>
     <main id="app"></main>
@@ -86,7 +91,7 @@ D3's recommended CDN pattern:
     <script type="module">
       import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
       import * as aq from "https://cdn.jsdelivr.net/npm/arquero@8/+esm";
-      import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm";
+      import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.esm.js";
 
       const spec = story()
         .title("Revenue")
@@ -98,8 +103,8 @@ D3's recommended CDN pattern:
           ]
         })
         .view("main", { height: 420 })
-        .step("Baseline", bar("rows").x("category").y("value").key("category"))
-        .step(
+        .add("Baseline", bar("rows").x("category").y("value").key("category"))
+        .add(
           "Highlight B",
           bar("rows").x("category").y("value").key("category")
             .highlight({ category: "B" })
@@ -117,7 +122,7 @@ A few important details:
 - **The ESM entry is explicit.** Import `d3` and `aq`, then pass both to
   `createStory()`. This mirrors D3's own module-first examples and keeps
   agent-generated code easy to inspect.
-- **Pin exact versions in production.** `@0.1.1` URLs are stable forever;
+- **Pin exact versions in production.** `@0.2.0` selects that exact release;
   `@latest` is convenient for experiments but will silently change underneath
   a published story.
 - `target` defaults to `"#app"` — a CSS selector or DOM element where the
@@ -130,7 +135,7 @@ If a page cannot use module scripts, use the global build:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/arquero@8/dist/arquero.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.global.js"></script>
 ```
 
 The global build exposes `window.ScrollyLite` and falls back to

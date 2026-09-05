@@ -12,7 +12,9 @@ export declare class ViewState<S extends object = Record<string, unknown>> {
     constructor(state?: S | StateWithMeta<S>);
     with(patch: Partial<StateWithMeta<S>>, operation?: string | OperationConfig | null): this;
     toSpec(): Omit<S, '__grammar'>;
+    /** Legacy inspection metadata; not used to infer animated transitions. */
     operations(): string[];
+    capabilities(): Record<string, boolean>;
 }
 export declare function cloneState<T>(value: T): T;
 export declare function mergeState<T extends object>(base: T, patch: Partial<T>): T;

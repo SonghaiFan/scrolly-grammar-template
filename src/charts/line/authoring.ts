@@ -1,5 +1,9 @@
 import type { StageSpec, ViewSpec } from '../../types/index.js';
 import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createLineSpecCompiler } from './compile.js';
+
+const LINE_SPEC_COMPILER = createLineSpecCompiler();
 
 export interface LineViewState extends ViewSpec {
   mark: 'line';
@@ -8,11 +12,15 @@ export interface LineViewState extends ViewSpec {
   pointSize?: number;
 }
 
-export function line(data: unknown): LineState {
+export function line(data?: unknown): LineState {
   return new LineState({ data: normalizeDataSource(data) as LineViewState['data'], mark: 'line', encoding: {} });
 }
 
 export class LineState extends IdiomState<LineViewState> {
+  protected override compileSpec(spec: ViewSpec): ViewSpec {
+    return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
+  }
+
   override x(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
     return super.x(field, { type: 'nominal', ...options });
   }

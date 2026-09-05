@@ -49,6 +49,7 @@ export class ViewState<S extends object = Record<string, unknown>> {
     return spec as Omit<S, '__grammar'>;
   }
 
+  /** Legacy inspection metadata; not used to infer animated transitions. */
   operations(): string[] {
     return [...(this.state.__grammar?.operations ?? [])];
   }
@@ -59,6 +60,7 @@ export class ViewState<S extends object = Record<string, unknown>> {
 }
 
 export function cloneState<T>(value: T): T {
+  if (value instanceof Date) return new Date(value.getTime()) as T;
   if (Array.isArray(value)) return value.map(cloneState) as unknown as T;
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(

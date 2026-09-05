@@ -61,7 +61,6 @@ export class StoryBuilder {
     }
     action(actions) {
         this._stepAction = normalizeStepActions(actions);
-        this._compileSteps();
         return this;
     }
     view(idOrConfig, config) {
@@ -71,30 +70,25 @@ export class StoryBuilder {
         this._spec.views = { ...(this._spec.views ?? {}), ...cloneState(views) };
         return this;
     }
-    step(titleOrDefinition, view, options = {}) {
+    add(titleOrDefinition, view, options = {}) {
         const normalizedOptions = typeof options === 'string' ? { body: options } : options;
         const definition = typeof titleOrDefinition === 'object'
             ? titleOrDefinition
             : { title: titleOrDefinition, view, ...normalizedOptions };
         this._stepDefinitions.push(definition);
-        this._compileSteps();
-        return this;
-    }
-    steps(definitions) {
-        this._stepDefinitions = [...definitions];
-        this._compileSteps();
         return this;
     }
     toSpec() {
-        return cloneState(this._spec);
-    }
-    _compileSteps() {
-        this._spec.steps = authoredSteps(this._stepDefinitions, { action: this._stepAction });
+        const spec = cloneState(this._spec);
+        if (this._stepDefinitions.length) {
+            spec.steps = authoredSteps(this._stepDefinitions, { action: this._stepAction });
+        }
+        return spec;
     }
 }
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 function compileStep(definition, view, scenes, isFirst, action) {
-    const authoringCode = definition.authoringCode ?? definition.authoring ?? definition.code;
+    const code = definition.code;
     const stepAction = normalizeStepActions(definition.action ?? action);
     const compiledView = withNarrative(compileView(view), {
         annotation: {
@@ -105,7 +99,7 @@ function compileStep(definition, view, scenes, isFirst, action) {
     return {
         title: definition.title,
         body: definition.body,
-        ...(authoringCode ? { inspector: { authoringCode } } : {}),
+        ...(code ? { inspector: { code } } : {}),
         transition: scenes.length ? { scene: scenes } : undefined,
         action: (isFirst ? withEnterAction(stepAction) : stepAction),
         views: { main: compiledView }
@@ -113,14 +107,7 @@ function compileStep(definition, view, scenes, isFirst, action) {
 }
 function normalizeStepActions(actions = ['step', 'tooltip']) {
     const values = Array.isArray(actions) ? actions : [actions];
-    return uniqueActions(values.flatMap(expandActionAlias));
-}
-function expandActionAlias(action) {
-    if (action === 'stepper')
-        return ['step', 'tooltip'];
-    if (action === 'scroller')
-        return ['scroll', 'tooltip'];
-    return [action];
+    return uniqueActions(values);
 }
 function withEnterAction(actions) {
     return uniqueActions([...actions, 'enter']);

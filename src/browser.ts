@@ -1,76 +1,35 @@
-import * as core from "./index.js";
-import {
-  createChart as coreCreateChart,
-  createPage as coreCreatePage,
-  createStory as coreCreateStory
-} from "./scrollylite.js";
-import { seq as coreSeq, Seq } from "./seq.js";
+import * as core from './index.js';
+import type { Visualization, TransitionOptions } from './transition.js';
+import type { ChartOptions, RuntimeOptions } from './types.js';
 
-type AnyRecord = Record<string, any>;
+export { availableChartIdioms, bar, delta, diffViewStates, defineChartIdiom,
+  line, point, registerChartIdiom, registerChartModule, story, unit,
+  visualizationSpec, seq, Seq, createPage, page } from './index.js';
 
-export const availableChartIdioms = core.availableChartIdioms;
-export const bar = core.bar;
-export const defineChartIdiom = core.defineChartIdiom;
-export const line = core.line;
-export const point = core.point;
-export const registerChartIdiom = core.registerChartIdiom;
-export const registerChartModule = core.registerChartModule;
-export const story = core.story;
-export const unit = core.unit;
-
-// ── Sequence builder ──────────────────────────────────────────────────────────
-export { Seq };
-export function seq() {
-  return coreSeq();
+type BrowserOptions = Partial<RuntimeOptions> & Record<string, unknown>;
+function dependencies(options: BrowserOptions): RuntimeOptions {
+  const globals = globalThis as unknown as Record<string, unknown>;
+  return { ...options, d3: options.d3 ?? globals['d3'] as RuntimeOptions['d3'],
+    aq: options.aq ?? globals['aq'] as RuntimeOptions['aq'] };
 }
 
-// ── Runtime (verbose names — backward compat) ─────────────────────────────────
-export const createPage = coreCreatePage;
-
-export function createStory(spec: AnyRecord, options: AnyRecord = {}) {
-  return coreCreateStory(spec, {
-    ...options,
-    d3: options.d3 || (globalThis as AnyRecord)['d3'],
-    aq: options.aq || (globalThis as AnyRecord)['aq']
-  });
+export function transition(from: Visualization, to: Visualization, options: Partial<TransitionOptions> = {}) {
+  return core.transition(from, to, { ...options, ...dependencies(options) });
+}
+export function createStory(spec: Parameters<typeof core.createStory>[0], options: BrowserOptions = {}) {
+  return core.createStory(spec, dependencies(options));
+}
+export function createChart(spec: Parameters<typeof core.createChart>[0], options: Partial<ChartOptions> = {}) {
+  return core.createChart(spec, { ...options, ...dependencies(options) });
+}
+export function chart(spec: Parameters<typeof core.chart>[0], options: BrowserOptions = {}) {
+  return core.chart(spec, dependencies(options));
+}
+export function render(spec: Parameters<typeof core.render>[0], options: BrowserOptions = {}) {
+  return core.render(spec, dependencies(options));
 }
 
-export function createChart(spec: AnyRecord, options: AnyRecord = {}) {
-  return coreCreateChart(spec, {
-    ...options,
-    d3: options.d3 || (globalThis as AnyRecord)['d3'],
-    aq: options.aq || (globalThis as AnyRecord)['aq']
-  });
-}
-
-// ── Short-form runtime aliases (import * as sl from 'scrollylite') ─────────────
-// sl.chart(seq | spec, opts) — standalone chart; accepts Seq or raw spec
-// sl.render(spec, opts)      — full scrollytelling story with layout
-// sl.page(spec, opts)        — layout shell only
-export function chart(specOrSeq: AnyRecord | Seq, options: AnyRecord = {}) {
-  const spec = specOrSeq instanceof Seq ? specOrSeq.toSpec() : specOrSeq;
-  return createChart(spec, options);
-}
-
-export function render(spec: AnyRecord, options: AnyRecord = {}) {
-  return createStory(spec, options);
-}
-
-export function page(spec: AnyRecord, options: AnyRecord = {}) {
-  return coreCreatePage(spec, options);
-}
-
-const browserApi = {
-  // Spec builders
-  bar, line, point, unit, story, seq,
-  // Short-form runtime
-  chart, render, page,
-  // Verbose runtime (backward compat)
-  createChart, createStory, createPage,
-  // Registration
-  availableChartIdioms, defineChartIdiom, registerChartIdiom, registerChartModule,
-};
-
-(globalThis as AnyRecord)['ScrollyLite'] = browserApi;
-// Also expose as `sl` for import * as sl from '...' convention
-(globalThis as AnyRecord)['sl'] = browserApi;
+// Only dependency lookup and global installation differ from the ESM entry.
+const browserApi = { ...core, transition, createStory, createChart, chart, render };
+(globalThis as unknown as Record<string, unknown>)['ScrollyLite'] = browserApi;
+(globalThis as unknown as Record<string, unknown>)['sl'] = browserApi;

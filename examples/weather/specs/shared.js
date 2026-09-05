@@ -1,20 +1,20 @@
 import { story as createStory } from "../../../dist/index.js";
 
-// Layout presets — each carries its natural action mode.
-// floatToText: sidebar chart, discrete stepper nav.
-// textOverVis: sticky chart background, scroller-driven transitions.
+// Layout presets — each carries its natural action token list.
+// floatToText: sidebar chart, discrete step navigation.
+// textOverVis: sticky chart background, scroll-driven transitions.
 export const layoutCopy = {
   floatToText: {
     label: "Float to Text",
     description: "Sidebar layout — chart floats beside the text. Navigate with the step buttons.",
     preset: "floatToText",
-    actionMode: "stepper"
+    actionMode: ["step", "tooltip"]
   },
   textOverVis: {
     label: "Text over Vis",
     description: "Scrolly layout — chart fills the background. Scroll to drive transitions.",
     preset: "textOverVis",
-    actionMode: "scroller"
+    actionMode: ["scroll", "tooltip"]
   }
 };
 

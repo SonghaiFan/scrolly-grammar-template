@@ -8,7 +8,7 @@ export interface BarViewState extends ViewSpec {
     aggregate?: unknown;
     semanticKey?: SemanticKey | null;
 }
-export declare function bar(data: unknown): BarState;
+export declare function bar(data?: unknown): BarState;
 export declare class BarState extends IdiomState<BarViewState> {
     toSpec(): Omit<BarViewState, '__grammar'>;
     x(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;

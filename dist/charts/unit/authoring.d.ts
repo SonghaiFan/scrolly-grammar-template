@@ -4,8 +4,9 @@ export interface UnitViewState extends ViewSpec {
     mark: 'unit';
     unit?: Record<string, unknown>;
 }
-export declare function unit(data: unknown): UnitState;
+export declare function unit(data?: unknown): UnitState;
 export declare class UnitState extends IdiomState<UnitViewState> {
+    protected compileSpec(spec: ViewSpec): ViewSpec;
     value(field: string, options?: {
         maxUnits?: number;
     }): this;

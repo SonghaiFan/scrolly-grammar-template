@@ -28,6 +28,13 @@ if (actual !== expected) {
 
 console.log(`Chart manifest covers ${idioms.length} idioms.`);
 
+const registrySource = await readFile(join(root, 'src/runtime/chart-registry.ts'), 'utf8');
+const lazyIdioms = [...registrySource.matchAll(/import\('\.\.\/charts\/([^/]+)\/plugin\.js'\)/g)]
+  .map(match => match[1]).sort();
+if (JSON.stringify(lazyIdioms) !== JSON.stringify(idioms)) {
+  throw new Error('The standalone lazy idiom loaders must match the built-in manifest.');
+}
+
 function manifestSource(names) {
   const importLines = names.map((name) => `import * as ${identifier(name)} from "./${name}/plugin.js";`);
   const moduleLines = names.map((name) => `  ${identifier(name)}`);

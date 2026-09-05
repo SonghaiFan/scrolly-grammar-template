@@ -1,16 +1,23 @@
 # ScrollyLite
 
-Declarative scrollytelling visualization grammar for browser ESM. Authors
-describe story steps, chart idioms, semantic object identity, and transitions;
-ScrollyLite renders the sticky visualization and scroll interaction with D3.
+Declarative visualization grammar for browser ESM, with chainable chart states
+and animated transitions between them. Derive one visualization from another,
+then play the change or seek any progress value. Stories compose these states
+into narrated steps with sticky visualizations and scroll interaction.
+
+This checkout prepares **0.2.0**. Versioned install/CDN snippets below target
+that candidate and become available after publication. For pre-release testing,
+build locally or install a locally packed tarball; no npm publication is implied.
+See the [release acceptance record](docs/release-0.2.0.md) and
+[migration notes](docs/migrating-to-0.2.md).
 
 ```js
 const spec = story()
   .data("weatherDays", { url: "./weather_days_tidy.csv", type: "csv" })
   .layout("floatToText")
-  .step("Baseline",     bar("weatherDays").x("decade").y("count").key("decade"))
-  .step("Focus",        bar("weatherDays").x("decade").y("count").key("decade").where({ period: "recent" }))
-  .step("Granularity",  bar("weatherDays").x("decade").y("count").key("decade").breakdown("type"))
+  .add("Baseline",     bar("weatherDays").x("decade").y("count").key("decade"))
+  .add("Focus",        bar("weatherDays").x("decade").y("count").key("decade").where({ period: "recent" }))
+  .add("Granularity",  bar("weatherDays").x("decade").y("count").key("decade").breakdown("type"))
   .toSpec();
 
 await createStory(spec, { target: "#app", d3, aq });
@@ -22,20 +29,48 @@ field?), and animates the transition for you.
 
 📖 **[Read the full documentation →](docs/getting-started.md)**
 
+## Standalone visualization transitions
+
+Derive a visualization from an existing one, then play or seek the change directly:
+
+```js
+import { bar } from "scrollylite/bar";
+import { transition } from "scrollylite/transition";
+
+const bar1 = bar().data(rows).x("country").y("sales").key("country");
+const bar2 = bar1.y("profit");
+const change = await transition(bar1, bar2, { target: "#chart", d3 });
+change.progress(0.37);
+change.play({ duration: 800 });
+```
+
+The focused subpath imports keep authoring and transitions separate from the Story
+composition API. Arquero is only needed when a visualization declares data transforms.
+No Story or Step is required.
+The runtime loads only the selected chart idiom; `scrollylite/plugins` supports
+custom registration without importing Story. See [module boundaries and remaining
+cleanup](docs/modular-architecture.md) for measured sizes and current limitations.
+This API requires 0.2.0; it is not part of 0.1.1.
+Built-in bar transitions compile and cache interpolation tracks once; playback
+and progress reuse SVG nodes. Call `change.resize()` after changing size or theme.
+See [Visualization Transitions](docs/visualization-transitions.md) for the contract,
+data sources, lifecycle, and current performance boundary, or try
+[`examples/transition/`](examples/transition/index.html) locally after building.
+
 ## Install
 
 Use your package manager, the same way you would install D3:
 
 ```sh
-npm install scrollylite d3 arquero
+npm install scrollylite@0.2.0 d3 arquero
 ```
 
 ```sh
-yarn add scrollylite d3 arquero
+yarn add scrollylite@0.2.0 d3 arquero
 ```
 
 ```sh
-pnpm add scrollylite d3 arquero
+pnpm add scrollylite@0.2.0 d3 arquero
 ```
 
 Then import ScrollyLite, D3, and Arquero explicitly:
@@ -56,8 +91,8 @@ const spec = story()
     ]
   })
   .view("main", { height: 520 })
-  .step("Baseline", bar("rows").x("category").y("value").key("category"))
-  .step(
+  .add("Baseline", bar("rows").x("category").y("value").key("category"))
+  .add(
     "Highlight B",
     bar("rows").x("category").y("value").key("category")
       .highlight({ category: "B" })
@@ -69,16 +104,16 @@ await createStory(spec, { target: "#app", d3, aq });
 
 ## Browser ESM from a CDN
 
-For vanilla HTML, follow D3's modern CDN practice: use a module script and
-jsDelivr's `+esm` endpoint.
+For vanilla HTML, use a module script. ScrollyLite's built ESM entry is served
+directly from the package; D3 and Arquero use jsDelivr's `+esm` endpoints.
 
 ```html
 <div id="app"></div>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
 <script type="module">
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 import * as aq from "https://cdn.jsdelivr.net/npm/arquero@8/+esm";
-import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/+esm";
+import { createStory, story, bar } from "https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.esm.js";
 
 const spec = story()
   .title("Revenue")
@@ -90,8 +125,8 @@ const spec = story()
     ]
   })
   .view("main", { height: 420 })
-  .step("Baseline", bar("rows").x("category").y("value").key("category"))
-  .step(
+  .add("Baseline", bar("rows").x("category").y("value").key("category"))
+  .add(
     "Highlight B",
     bar("rows").x("category").y("value").key("category")
       .highlight({ category: "B" })
@@ -118,7 +153,7 @@ If you cannot use module scripts, load the global bundle instead:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/arquero@8/dist/arquero.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.global.js"></script>
 ```
 
 The global build exposes `window.ScrollyLite` and falls back to
@@ -126,11 +161,16 @@ The global build exposes `window.ScrollyLite` and falls back to
 
 ## Public API
 
-The top-level package exports a small, stable surface:
+The full package exports authoring, rendering and composition APIs. For small
+bundles prefer the [focused entry points](docs/modular-architecture.md):
 
 ```js
 import {
   createStory,        // async (spec, { target, d3, aq, debug }) => StoryRuntime
+  createChart, createPage, chart, page, render,
+  transition,         // async (from, to, { target, d3, aq }) => seekable controller
+  delta, diffViewStates, visualizationSpec,
+  seq, Seq,
   story,              // chainable story-spec authoring builder
   bar, line, point, unit,            // chainable chart-idiom builders (the only built-ins — no aliases)
   defineChartIdiom,   // define a custom chart idiom plugin
@@ -220,28 +260,39 @@ to authoring and registering your own chart idiom.
 
 Release flow:
 
+Use Node 20+ for maintenance/release tooling (CI uses Node 22). The published
+package retains Node 18 consumer support, checked separately via its tarball;
+Playwright is a development-only dependency.
+
 ```sh
-npm version patch
+npx playwright install chromium
 npm run release:check
 npm publish
 git push --follow-tags
 ```
 
-Update `CHANGELOG.md` before tagging a release. `npm publish` runs
-`npm run release:check` automatically.
+Before publication, finalize the candidate's version/date and migration notes,
+review and commit the intended files, then create the matching version tag.
+Do not bump 0.2.0 again merely to publish this prepared candidate. `npm publish` runs
+`npm run release:check` automatically, including real-browser regressions and an
+installed tarball consumer check. On a development machine with Chrome already
+installed, `SCROLLYLITE_CHROME_PATH` can point to its executable instead of
+installing Playwright's Chromium. Choose the version bump deliberately: the
+API additions and stricter validation are not merely a docs patch. See the
+[0.2 migration notes](docs/migrating-to-0.2.md) for changed behavior and limits.
 
 jsDelivr can serve npm packages with:
 
 ```text
-https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.esm.js
-https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.browser.js
-https://cdn.jsdelivr.net/npm/scrollylite@0.1.1/dist/scrollylite.global.js
+https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.esm.js
+https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.browser.js
+https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.global.js
 ```
 
 It can also serve tagged GitHub releases:
 
 ```text
-https://cdn.jsdelivr.net/gh/SonghaiFan/scrollylite@0.1.1/dist/scrollylite.esm.js
+https://cdn.jsdelivr.net/gh/SonghaiFan/scrollylite@0.2.0/dist/scrollylite.esm.js
 ```
 
 For GitHub CDN links, commit `dist/` before tagging because GitHub CDN does not
@@ -260,7 +311,7 @@ to everything below in reading order:
 
 - [`docs/getting-started.md`](docs/getting-started.md): package-manager install, browser ESM CDN usage, a full working example, and what `createStory` does.
 - [`docs/concepts.md`](docs/concepts.md): the mental model — Story, Step, View, Idiom, Scene, semantic identity (`key`).
-- [`docs/story-builder.md`](docs/story-builder.md): the chainable `story()` API — `.data()`, `.layout()`, `.view()`, `.step()`, `.toSpec()`, and reusable/branching narrative patterns.
+- [`docs/story-builder.md`](docs/story-builder.md): the chainable `story()` API — `.data()`, `.layout()`, `.view()`, `.add()`, `.toSpec()`, and reusable/branching narrative patterns.
 - [`docs/chart-idioms.md`](docs/chart-idioms.md): every chart idiom (`bar`, `line`, `point`, `unit`) and every chainable method/option, with examples.
 - [`docs/data-sources-and-transforms.md`](docs/data-sources-and-transforms.md): declaring datasets and the transform pipeline (filter, fold, bin, aggregate, sort, …).
 - [`docs/layouts-themes-and-scrolling.md`](docs/layouts-themes-and-scrolling.md): layout presets, the `offset`/`scroll` config, step actions, and theming.

@@ -4,6 +4,13 @@ import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
 import { SCROLL_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
 
+export interface RenderContext {
+  root?: Element;
+  colors?: Map<string, Map<string, string>> | null;
+}
+
+/** Helpers capture one instance context, including delayed D3 callbacks. */
+export function createMarkHelpers(context: RenderContext = {}) {
 // ─── Color rules (Stephen Few, "Practical Rules for Using Color in Charts") ───
 //
 // Rule #3  Use color only when it serves a communication goal.
@@ -25,11 +32,6 @@ import { clamp, escapeHtml, titleize } from './utils.js';
 // Story-level color registry: field → (key → color string).
 // Set once per story so the same semantic key always maps to the same color
 // regardless of which subset of categories appears in a given scene.
-let _storyColorRegistry: Map<string, Map<string, string>> | null = null;
-
-export function setStoryColorRegistry(registry: Map<string, Map<string, string>> | null) {
-  _storyColorRegistry = registry;
-}
 
 // Tableau 10 — widely-adopted, perceptually balanced categorical palette.
 const DEFAULT_PALETTE = [
@@ -90,7 +92,7 @@ function parseColorHue(color) {
 // minimum pairwise hue distance among the chosen set is maximised.
 // Near-achromatic entries are relegated to the end (appended only when needed).
 // Works on any resolved-color array, so user-customised palettes benefit too.
-export function pickCategoricalColors(n, colors) {
+function pickCategoricalColors(n, colors) {
   if (n <= 0) return [];
   if (n >= colors.length) {
     return Array.from({ length: n }, (_, i) => colors[i % colors.length]);
@@ -127,9 +129,9 @@ export function pickCategoricalColors(n, colors) {
 // Numeric fallback → strips units and returns a number (e.g. parseFloat("11px") = 11).
 // String fallback  → returns the raw trimmed value.
 // Falls back silently when running outside a browser (SSR / tests).
-export function themeValue(cssVar, fallback) {
+function themeValue(cssVar, fallback) {
   if (typeof document === 'undefined') return fallback;
-  const style = getComputedStyle(document.documentElement);
+  const style = getComputedStyle(context.root ?? document.documentElement);
   const raw = style.getPropertyValue(cssVar).trim();
   if (!raw) return fallback;
   // Defensive var() resolution: if the browser returns an unresolved
@@ -157,7 +159,7 @@ export function themeValue(cssVar, fallback) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
+function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
   if (!d3) throw new Error('ScrollyLite transitions require D3. Pass { d3 } to createStory().');
   const local = narrativeTransition(spec);
   const previous = previousSpec ? narrativeTransition(previousSpec) : {};
@@ -168,11 +170,11 @@ export function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } 
   return { ...transition, base };
 }
 
-export function effectiveTransitionSpec(spec = {}) {
+function effectiveTransitionSpec(spec = {}) {
   return defaultTransition(narrativeTransition(spec));
 }
 
-export function easeFor(name, d3) {
+function easeFor(name, d3) {
   const eases = {
     linear: d3.easeLinear, cubic: d3.easeCubic, cubicInOut: d3.easeCubicInOut,
     exp: d3.easeExp, expInOut: d3.easeExpInOut, elastic: d3.easeElasticOut, back: d3.easeBackOut
@@ -180,7 +182,7 @@ export function easeFor(name, d3) {
   return eases[name] || d3.easeCubicInOut;
 }
 
-export function activeMarkLayer(scene, mark, transition) {
+function activeMarkLayer(scene, mark, transition) {
   fadeLayers(scene, mark, transition);
   if (!scene.markLayers.has(mark)) {
     scene.markLayers.set(mark, scene.markRoot.append('g').attr('class', `sl-mark-layer sl-${mark}-layer`));
@@ -190,7 +192,7 @@ export function activeMarkLayer(scene, mark, transition) {
   return layer;
 }
 
-export function fadeLayers(scene, activeMark, transition = null, d3 = null) {
+function fadeLayers(scene, activeMark, transition = null, d3 = null) {
   const resolvedTransition = transition || { base: d3.transition().duration(300) };
   scene.markLayers.forEach((layer, mark) => {
     if (mark === activeMark) return;
@@ -199,7 +201,7 @@ export function fadeLayers(scene, activeMark, transition = null, d3 = null) {
   scene.textLayer.interrupt().transition(resolvedTransition.base).style('opacity', activeMark === 'text' ? 1 : 0);
 }
 
-export function staggerDelay(spec, datum, index, override) {
+function staggerDelay(spec, datum, index, override) {
   const stagger = override === undefined ? effectiveTransitionSpec(spec).stagger : override;
   if (!stagger) return 0;
   if (typeof stagger === 'number') return index * stagger;
@@ -212,12 +214,12 @@ export function staggerDelay(spec, datum, index, override) {
   return Math.min(index * step, max);
 }
 
-export function curveFor(spec, d3) {
+function curveFor(spec, d3) {
   const curves = { linear: d3.curveLinear, monotoneX: d3.curveMonotoneX, basis: d3.curveBasis, step: d3.curveStep };
   return curves[spec.curve] || d3.curveMonotoneX;
 }
 
-export function drawPath(selection, transition, d3) {
+function drawPath(selection, transition, d3) {
   selection.each(function() {
     const path = d3.select(this);
     const total = this.getTotalLength();
@@ -232,44 +234,44 @@ export function drawPath(selection, transition, d3) {
   });
 }
 
-export function fadeNonBarShapes(chart) {
+function fadeNonBarShapes(chart) {
   chart.g.selectAll('circle,path:not(.sl-line)').transition(chart.transition.base).style('opacity', 0);
 }
 
-export function fadeNonLineShapes(chart) {
+function fadeNonLineShapes(chart) {
   chart.g.selectAll('rect.sl-bar,circle.sl-point,circle.sl-unit').transition(chart.transition.base).style('opacity', 0);
 }
 
-export function fadeNonPointShapes(chart) {
+function fadeNonPointShapes(chart) {
   chart.g.selectAll('rect.sl-bar,path.sl-line,circle.sl-line-point,circle.sl-unit').transition(chart.transition.base).style('opacity', 0);
 }
 
-export function fadeNonUnitShapes(chart) {
+function fadeNonUnitShapes(chart) {
   chart.g.selectAll('rect.sl-bar,path.sl-line,circle.sl-line-point,circle.sl-point').transition(chart.transition.base).style('opacity', 0);
 }
 
-export function applyPlotClip(chart, enabled) {
+function applyPlotClip(chart, enabled) {
   if (!enabled) { chart.g.attr('clip-path', null); return; }
-  const id = `sl-mark-clip-${chart.scene.node.dataset.viewId || 'main'}`;
+  const id = `sl-mark-clip-${chart.scene.clipIdentity}`;
   ensureClipRect(chart.scene, id, { x: 0, y: 0, width: chart.innerWidth, height: chart.innerHeight });
   chart.g.attr('clip-path', `url(#${id})`);
 }
 
-export function drawTextBoard(scene, spec) {
+function drawTextBoard(scene, spec) {
   const items = Array.isArray(spec.text) ? spec.text : [spec.text || ''];
   scene.textLayer
     .attr('x', 0).attr('y', 0).attr('width', scene.width).attr('height', scene.height)
     .html(`<div class="sl-text-board"><ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`);
 }
 
-export function drawUnsupported(chart, spec, availableTypes = []) {
+function drawUnsupported(chart, spec, availableTypes = []) {
   chart.g.append('text')
     .attr('x', chart.innerWidth / 2).attr('y', chart.innerHeight / 2)
     .attr('text-anchor', 'middle').attr('fill', 'var(--sl-muted)')
     .text(`Unsupported chart idiom for "${spec.mark}"${availableTypes.length ? ` · available: ${availableTypes.join(', ')}` : ''}`);
 }
 
-export function bandOrLinear(rows, channel, range, d3) {
+function bandOrLinear(rows, channel, range, d3) {
   if (!channel) return d3.scaleLinear().domain([0, 1]).range(range);
   if (channel.type === 'quantitative') return quantitativeScale(rows, channel, range, d3);
   if (channel.type === 'temporal') {
@@ -278,7 +280,7 @@ export function bandOrLinear(rows, channel, range, d3) {
   return d3.scaleBand().domain(channelDomain(rows, channel)).range(range).padding(0.24);
 }
 
-export function quantitativeScale(rows, channel = {}, range, d3) {
+function quantitativeScale(rows, channel = {}, range, d3) {
   const scaleType = channel.scale?.type || channel.scaleType || 'linear';
   const domain = quantitativeDomain(rows, channel, scaleType === 'log' ? 1 : undefined);
   if (scaleType === 'log') {
@@ -289,13 +291,13 @@ export function quantitativeScale(rows, channel = {}, range, d3) {
   return d3.scaleLinear().domain(domain).range(range).nice();
 }
 
-export function position(scale, value) {
+function position(scale, value) {
   const scaled = scale(value);
   if (typeof scale.bandwidth === 'function') return scaled + scale.bandwidth() / 2;
   return scaled;
 }
 
-export function niceExtent(rows, field, floor) {
+function niceExtent(rows, field, floor) {
   const values = rows.map((row) => Number(row[field])).filter(Number.isFinite);
   if (!values.length) return [0, 1];
   const min = floor ?? Math.min(...values);
@@ -303,17 +305,17 @@ export function niceExtent(rows, field, floor) {
   return min === max ? [min - 1, max + 1] : [min, max];
 }
 
-export function quantitativeDomain(rows, channel = {}, floor) {
+function quantitativeDomain(rows, channel = {}, floor) {
   if (Array.isArray(channel.domain)) return channel.domain;
   return niceExtent(rows, channel.field, floor);
 }
 
-export function channelDomain(rows, channel = {}) {
+function channelDomain(rows, channel = {}) {
   if (Array.isArray(channel.domain)) return channel.domain;
   return Array.from(new Set(rows.map((row) => row[channel.field])));
 }
 
-export function colorScale(rows, channel, d3) {
+function colorScale(rows, channel, d3) {
   const resolved = resolveColorChannel(rows, channel);
   if (!resolved) return () => cssColor('var(--sl-accent)', '#4e79a7');
   channel = resolved;
@@ -322,7 +324,7 @@ export function colorScale(rows, channel, d3) {
   if (!channel.field) return () => cssColor('var(--sl-accent)', '#4e79a7');
   if (channel.type === 'quantitative') return luminanceColorScale(rows, channel, d3);
   // Use story-level registry for consistent key→color mapping across scenes.
-  const fieldRegistry = !channel.range && _storyColorRegistry?.get(channel.field);
+  const fieldRegistry = !channel.range && context.colors?.get(channel.field);
   if (fieldRegistry) {
     const fallback = cssColor('var(--sl-accent)', '#4e79a7');
     return (row) => fieldRegistry.get(String(row[channel.field])) ?? fallback;
@@ -332,7 +334,7 @@ export function colorScale(rows, channel, d3) {
   return (row) => scale(row[channel.field]);
 }
 
-export function drawXAxis(chart, scale, title, d3, transition = chart.transition.base) {
+function drawXAxis(chart, scale, title, d3, transition = chart.transition.base) {
   if (!scale) {
     markAxisInactive(chart.scene.xAxis);
     chart.scene.xAxis.transition(transition).style('opacity', 0);
@@ -370,7 +372,7 @@ export function drawXAxis(chart, scale, title, d3, transition = chart.transition
   }
 }
 
-export function drawYAxis(chart, scale, title, d3, transition = chart.transition.base) {
+function drawYAxis(chart, scale, title, d3, transition = chart.transition.base) {
   if (!scale) {
     markAxisInactive(chart.scene.yAxis);
     chart.scene.yAxis.transition(transition).style('opacity', 0);
@@ -403,11 +405,11 @@ export function drawYAxis(chart, scale, title, d3, transition = chart.transition
   }
 }
 
-export function drawGrid(chart, y, d3, transition = chart.transition.base) {
+function drawGrid(chart, y, d3, transition = chart.transition.base) {
   updateGrid(chart, y, d3, transition);
 }
 
-export function updateGrid(chart, y, d3, transition = chart.transition.base) {
+function updateGrid(chart, y, d3, transition = chart.transition.base) {
   if (!y) {
     markAxisInactive(chart.scene.grid);
     chart.scene.grid.transition(transition).style('opacity', 0);
@@ -418,7 +420,7 @@ export function updateGrid(chart, y, d3, transition = chart.transition.base) {
   grid.transition(transition).style('opacity', 1);
 }
 
-export function drawLegend(chart, rows, channel, d3) {
+function drawLegend(chart, rows, channel, d3) {
   const colorRows = chart.domainRows?.length ? chart.domainRows : rows;
   channel = resolveColorChannel(colorRows, channel);
   if (!channel || channel.value || (!channel.field && !channel.hue && !channel.luminance)) {
@@ -431,7 +433,7 @@ export function drawLegend(chart, rows, channel, d3) {
     ? quantitativeLegendDomain(colorRows, legendChannel, d3)
     : channelDomain(colorRows, legendChannel);
   const fieldRegistry = !channel.range && !channel.hue && !channel.luminance && !quantitativeLegend
-    ? _storyColorRegistry?.get(legendChannel.field)
+    ? context.colors?.get(legendChannel.field)
     : null;
   const scale = channel.hue || channel.luminance
     ? compositeColorScale(channel, d3)
@@ -457,34 +459,34 @@ export function drawLegend(chart, rows, channel, d3) {
   items.exit().transition(chart.transition.base).style('opacity', 0).remove();
 }
 
-export function bindTooltip(selection, spec, tooltip) {
+function bindTooltip(selection, spec, tooltip) {
   selection
     .on('mouseenter', (event, row) => { const html = tooltipHtml(row, spec.encoding?.tooltip); if (html) showTooltip(tooltip, event, html); })
     .on('mousemove', (event) => moveTooltip(tooltip, event))
     .on('mouseleave', () => hideTooltip(tooltip));
 }
 
-export function showTooltip(tooltip, event, html) {
+function showTooltip(tooltip, event, html) {
   tooltip.innerHTML = html;
   tooltip.style.opacity = '1';
   moveTooltip(tooltip, event);
 }
 
-export function moveTooltip(tooltip, event) {
+function moveTooltip(tooltip, event) {
   tooltip.style.left = `${event.clientX + 14}px`;
   tooltip.style.top = `${event.clientY + 14}px`;
 }
 
-export function hideTooltip(tooltip) { tooltip.style.opacity = '0'; }
+function hideTooltip(tooltip) { tooltip.style.opacity = '0'; }
 
-export function markAxisInactive(axisGroup) {
+function markAxisInactive(axisGroup) {
   const node = axisGroup.node();
   if (!node) return;
   node.__scrollyLiteAxisActive = false;
 }
 
 function applyXAxisClip(chart) {
-  const id = `sl-x-axis-clip-${chart.scene.node.dataset.viewId || 'main'}`;
+  const id = `sl-x-axis-clip-${chart.scene.clipIdentity}`;
   ensureClipRect(chart.scene, id, { x: -28, y: -8, width: chart.innerWidth + 56, height: 72 });
   chart.scene.xAxis.attr('clip-path', `url(#${id})`);
 }
@@ -579,7 +581,7 @@ function luminanceColorScale(rows, channel, d3) {
 function themeColor([name, fallback] = []) {
   if (!name) return fallback;
   if (typeof document === 'undefined') return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  return getComputedStyle(context.root ?? document.documentElement).getPropertyValue(name).trim() || fallback;
 }
 
 function colorRange(range = []) {
@@ -593,7 +595,7 @@ function cssColor(color, fallback = '#4e79a7') {
   if (typeof document === 'undefined') return fallback;
   const name = value.match(/^var\(\s*(--[^,\s)]+)/)?.[1];
   if (!name) return fallback;
-  const resolved = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const resolved = getComputedStyle(context.root ?? document.documentElement).getPropertyValue(name).trim();
   const inlineFallback = value.match(/,\s*([^)]+)\)$/)?.[1]?.trim();
   return resolved || inlineFallback || fallback;
 }
@@ -650,3 +652,9 @@ function tooltipHtml(row, tooltipSpec) {
     .map((item) => `<strong>${escapeHtml(item.title || titleize(item.field))}</strong>: ${escapeHtml(source[item.field])}`)
     .join('<br>');
 }
+
+return { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, curveFor, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive };
+}
+
+// Context-free utilities and compatibility imports retain their old signatures.
+export const { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, curveFor, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive } = createMarkHelpers();

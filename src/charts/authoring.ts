@@ -1,7 +1,7 @@
-import { compileViewSpec } from '../transitions/index.js';
 import { externalizeScrollyViewSpec } from '../scrolly-meta.js';
 import { ViewState, cloneState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
+import { normalizeFilter } from '../data/filter.js';
 import type {
   ChannelSpec,
   ChannelType,
@@ -50,11 +50,22 @@ function isDataUrl(s: string): boolean {
 
 export class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   override toSpec(): Omit<S, '__grammar'> {
-    return compileAuthoredView(super.toSpec() as ViewSpec) as Omit<S, '__grammar'>;
+    return compileAuthoredView(
+      this.compileSpec(externalizeScrollyViewSpec(super.toSpec() as ViewSpec))
+    ) as Omit<S, '__grammar'>;
+  }
+
+  /** Idiom subclasses override this without importing the global chart manifest. */
+  protected compileSpec(spec: ViewSpec): ViewSpec {
+    return spec;
   }
 
   data(data: unknown): this {
-    return this.with({ data } as Partial<S>);
+    // A data binding replaces the old source (including URL/inline metadata).
+    const spec = cloneState(this.state);
+    (spec as ViewSpec).data = normalizeDataSource(data) as ViewSpec['data'];
+    const Ctor = this.constructor as new (state: S) => this;
+    return new Ctor(spec as S);
   }
 
   x(field: string | ChannelSpec, options: Partial<ChannelSpec> = {}): this {
@@ -132,6 +143,10 @@ export class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   }
 }
 
+function compileAuthoredView(spec: ViewSpec): ViewSpec {
+  return pruneAuthoringSpec(spec) as ViewSpec;
+}
+
 // ─── Channel factories ────────────────────────────────────────────────────────
 
 export function channelFrom(
@@ -166,14 +181,15 @@ export function colorFrom(
 export function selectorFrom(
   selector: string | Record<string, unknown> | FilterSpec = {}
 ): FocusSpec {
+  if (typeof selector === 'string') return normalizeFilter(selector);
   const sel = selector as Record<string, unknown>;
-  if (sel.field) return cloneState(sel) as FocusSpec;
+  if (sel.field) return cloneState(normalizeFilter(sel));
   const entries = Object.entries(sel);
   if (entries.length === 1) {
     const [field, equal] = entries[0];
     return { field, equal };
   }
-  return cloneState(sel) as FocusSpec;
+  throw new Error('Use a single field comparison for this idiom selector.');
 }
 
 // ─── Spec pruning ─────────────────────────────────────────────────────────────

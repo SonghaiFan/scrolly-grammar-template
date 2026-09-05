@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScrollyLite · Two states, one transition</title>
+<link rel="stylesheet" href="../../dist/scrollylite.css">
+<style>
+  body { margin: 0; padding: 32px 20px; background: #fafafa; color: #222; font: 16px/1.6 system-ui, sans-serif; }
+  main { max-width: 840px; margin: auto; }
+  h1 { font-size: clamp(24px, 5vw, 36px); margin-bottom: 8px; }
+  .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+  button, select { font: inherit; padding: 6px 12px; }
+  input { flex: 1; min-width: 150px; }
+  output { font-variant-numeric: tabular-nums; min-width: 4ch; }
+  pre { overflow: auto; padding: 20px; border: 1px solid #ddd; background: white; font-size: 14px; }
+  .sl-transition-root .sl-chart-figure { min-height: 0; margin: 0; }
+  #error { color: #a02020; }
+</style>
+<main>
+  <h1>Two states, one transition</h1>
+  <p>Derive a new bar from an existing bar. Play the change, or choose any frame.</p>
+  <label>Change <select id="scenario">
+    <option value="measure">Sales → profit</option>
+    <option value="filter">Filter to Europe</option>
+    <option value="highlight">Highlight Australia</option>
+    <option value="flip">Change orientation</option>
+    <option value="data">Update values</option>
+  </select></label>
+  <div id="chart"></div>
+  <div class="controls">
+    <button id="play">Play</button>
+    <button id="pause">Pause</button>
+    <label for="progress">Progress</label>
+    <input id="progress" type="range" min="0" max="1" step="0.01" value="0">
+    <output id="value" for="progress">0.00</output>
+  </div>
+  <pre><code>const bar1 = sl.bar().data(rows)
+  .x("country").y("sales").key("country");
+
+const bar2 = bar1.y("profit");
+const change = await sl.transition(bar1, bar2, {
+  target: "#chart", d3, aq
+});
+
+change.play({ duration: 800 });
+change.progress(0.37);</code></pre>
+  <p id="error" role="alert"></p>
+</main>
+<!-- Local dependencies make this demo and its browser tests work offline after npm install. -->
+<script src="../../node_modules/d3/dist/d3.min.js"></script>
+<script src="../../node_modules/arquero/dist/arquero.min.js"></script>
+<script type="module">
+  import { bar } from '../../dist/bar.js';
+  import { transition } from '../../dist/transition-entry.js';
+  const rows = [
+    { country: 'Australia', region: 'Pacific', sales: 80, profit: 30 },
+    { country: 'France', region: 'Europe', sales: 60, profit: 40 },
+    { country: 'Germany', region: 'Europe', sales: 100, profit: 25 },
+    { country: 'Japan', region: 'Asia', sales: 70, profit: 55 }
+  ];
+  const bar1 = bar().data(rows).x('country').y('sales').key('country');
+  const targets = {
+    measure: bar1.y('profit'),
+    filter: bar1.where({ region: 'Europe' }),
+    highlight: bar1.highlight({ country: 'Australia' }),
+    flip: bar1.flip(),
+    data: bar1.data(rows.map(row => ({ ...row, sales: row.profit * 2 })))
+  };
+  let change;
+  let requested = 0;
+  const slider = document.querySelector('#progress');
+  const output = document.querySelector('#value');
+  async function select() {
+    const request = ++requested;
+    change?.destroy();
+    change = null;
+    const target = targets[document.querySelector('#scenario').value];
+    try {
+      const next = await transition(bar1, target, { target: '#chart', d3, aq, height: 400 });
+      if (request !== requested) { next.destroy(); return; }
+      change = next;
+      document.querySelector('#error').textContent = '';
+    } catch (error) { document.querySelector('#error').textContent = error.message; }
+  }
+  document.querySelector('#scenario').onchange = select;
+  document.querySelector('#play').onclick = () => change?.play();
+  document.querySelector('#pause').onclick = () => change?.pause();
+  slider.oninput = () => change?.progress(Number(slider.value));
+  function sync() {
+    if (change) { slider.value = String(change.value); output.value = change.value.toFixed(2); }
+    requestAnimationFrame(sync);
+  }
+  await select();
+  sync();
+</script>
+</html>

@@ -1,4 +1,6 @@
 import type { FilterSpec, TransformSpec } from '../types/index.js';
+import { filterPredicate } from './filter.js';
+import { validateTransforms } from './validate.js';
 
 interface ArqueroTable {
   objects(): Record<string, unknown>[];
@@ -68,10 +70,13 @@ export function applyTransforms(
   transforms: TransformSpec[] = [],
   aq: Arquero
 ): Record<string, unknown>[] {
+  validateTransforms(transforms);
+  if (!transforms.length) return source.map((row) => ({ ...row }));
   if (!aq) {
-    throw new Error('ScrollyLite data transforms require Arquero. Pass { aq } to createStory().');
+    throw new Error('ScrollyLite data transforms require Arquero. Pass { aq } to the runtime.');
   }
-  let table = aq.from(source.map((row) => ({ ...row })));
+  const fields = [...new Set(source.flatMap(row => Object.keys(row)))];
+  let table = aq.from(source.map(row => Object.fromEntries(fields.map(field => [field, row[field]]))));
 
   transforms.forEach((transform) => {
     const t = transform as Record<string, unknown>;
@@ -81,7 +86,7 @@ export function applyTransforms(
     if (t['bin']) table = binRows(table, t['bin'] as BinTransform, aq);
     if (t['aggregate']) table = aggregateRows(table, t['aggregate'] as AggregateTransform, aq);
     if (t['sort']) table = sortRows(table, t['sort'] as SortTransformSpec, aq);
-    if (t['limit']) table = table.slice(0, t['limit'] as number);
+    if ('limit' in t) table = table.slice(0, t['limit'] as number);
   });
 
   return table.objects();
@@ -89,7 +94,6 @@ export function applyTransforms(
 
 function timeUnitRows(table: ArqueroTable, timeUnit: TimeUnitTransform, aq: Arquero): ArqueroTable {
   const as = timeUnit.as || `${timeUnit.field}_${timeUnit.unit}`;
-  if (timeUnit.unit !== 'month') return table;
   return table.derive({
     [as]: aq.escape((row: Record<string, unknown>) => monthLabel(row[timeUnit.field]))
   });
@@ -102,7 +106,7 @@ function monthLabel(value: unknown): string {
 }
 
 function filterRows(table: ArqueroTable, filter: FilterSpec, aq: Arquero): ArqueroTable {
-  return table.filter(aq.escape((row: Record<string, unknown>) => matchFilter(row, filter)));
+  return table.filter(aq.escape(filterPredicate(filter)));
 }
 
 function foldRows(table: ArqueroTable, fold: FoldTransform, aq: Arquero): ArqueroTable {
@@ -128,22 +132,26 @@ function binRows(table: ArqueroTable, bin: BinTransform, aq: Arquero): ArqueroTa
   const startAs = `${as}_start`;
   const endAs = `${as}_end`;
   const rows = table.objects();
-  const values = rows.map((row) => Number(row[bin.field])).filter(Number.isFinite);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const step = bin.step || Math.ceil((max - min) / (bin.maxbins || 10));
+  const numeric = (value: unknown) => value == null || value === '' || typeof value === 'boolean' ? NaN : Number(value);
+  const values = rows.map((row) => numeric(row[bin.field])).filter(Number.isFinite);
+  const min = values.length ? values.reduce((a, b) => Math.min(a, b)) : 0;
+  const max = values.length ? values.reduce((a, b) => Math.max(a, b)) : 0;
+  const step = bin.step ?? Math.max(1, Math.ceil((max - min) / (bin.maxbins ?? 10)));
 
   return table.derive({
     [startAs]: aq.escape((row: Record<string, unknown>) => {
-      const value = Number(row[bin.field]);
+      const value = numeric(row[bin.field]);
+      if (!Number.isFinite(value)) return null;
       return Math.floor((value - min) / step) * step + min;
     }),
     [endAs]: aq.escape((row: Record<string, unknown>) => {
-      const value = Number(row[bin.field]);
+      const value = numeric(row[bin.field]);
+      if (!Number.isFinite(value)) return null;
       return Math.floor((value - min) / step) * step + min + step;
     }),
     [as]: aq.escape((row: Record<string, unknown>) => {
-      const value = Number(row[bin.field]);
+      const value = numeric(row[bin.field]);
+      if (!Number.isFinite(value)) return null;
       const start = Math.floor((value - min) / step) * step + min;
       return `${start}-${start + step}`;
     })
@@ -170,7 +178,8 @@ function aggregateExpression(fieldSpec: AggregateFieldSpec, aq: Arquero): unknow
   if (op === 'min') return aq.op.min(field);
   if (op === 'max') return aq.op.max(field);
   if (op === 'median') return aq.op.median(field);
-  return aq.op.sum(field);
+  if (op === 'sum') return aq.op.sum(field);
+  throw new Error(`Unsupported aggregate operator: ${op}`);
 }
 
 function sortRows(table: ArqueroTable, sort: SortTransformSpec, aq: Arquero): ArqueroTable {
@@ -184,44 +193,4 @@ function sortField(sort: string | { field?: string; order?: string }, aq: Arquer
   if (typeof sort === 'string') return sort;
   if (sort.order === 'descending') return aq.desc(sort.field || '');
   return sort.field;
-}
-
-function matchFilter(row: Record<string, unknown>, filter: FilterSpec | string): boolean {
-  if (typeof filter === 'string') return matchFilterExpression(row, filter);
-  const value = row[filter.field];
-  if ('equal' in filter) return value === filter.equal;
-  if ('notEqual' in filter) return value !== filter['notEqual'];
-  if ('oneOf' in filter) return (filter.oneOf as unknown[]).includes(value);
-  if ('gte' in filter && (value as number) < (filter.gte as number)) return false;
-  if ('gt' in filter && (value as number) <= (filter.gt as number)) return false;
-  if ('lte' in filter && (value as number) > (filter.lte as number)) return false;
-  if ('lt' in filter && (value as number) >= (filter.lt as number)) return false;
-  return true;
-}
-
-function matchFilterExpression(row: Record<string, unknown>, expression: string): boolean {
-  const match = String(expression).trim().match(/^datum\.([A-Za-z_$][\w$]*)\s*(==|===|!=|!==|>=|>|<=|<)\s*(.+)$/);
-  if (!match) return true;
-  const [, field, operator, rawValue] = match;
-  const left = row[field];
-  const right = parseFilterLiteral(rawValue);
-  if (operator === '==' || operator === '===') return left === right;
-  if (operator === '!=' || operator === '!==') return left !== right;
-  if (operator === '>=') return (left as number) >= (right as number);
-  if (operator === '>') return (left as number) > (right as number);
-  if (operator === '<=') return (left as number) <= (right as number);
-  if (operator === '<') return (left as number) < (right as number);
-  return true;
-}
-
-function parseFilterLiteral(value: string): string | number {
-  const trimmed = String(value).trim();
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-  const number = Number(trimmed);
-  return Number.isNaN(number) ? trimmed : number;
 }

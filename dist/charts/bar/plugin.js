@@ -4,6 +4,7 @@ import { createBarIdiom } from './idiom.js';
 import { createBarSpecCompiler } from './compile.js';
 export const plugin = defineChartIdiom({
     key: 'bar',
+    transitionEvaluation: 'cached',
     scenes: ['focus', 'guide', 'granularity', 'observation'],
     createIdiom: createBarIdiom,
     createSpecCompiler: createBarSpecCompiler

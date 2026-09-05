@@ -34,7 +34,7 @@ export function createDemoSpec({
 } = {}) {
   const layout = layoutCopy[layoutPreset] || layoutCopy.textOverVis;
   // Explicit actionMode override takes priority; otherwise fall back to the
-  // layout's natural default (floatToText → stepper, textOverVis → scroller).
+  // layout's natural default (floatToText -> step, textOverVis -> scroll).
   const resolvedActionMode = actionMode || layout.actionMode;
 
   const storyKey = STORY_REGISTRY[storyId] ? storyId : "bar";

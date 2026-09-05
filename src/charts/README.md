@@ -16,7 +16,7 @@ src/charts/<idiom>/
 The folder becomes a plugin when it exposes:
 
 ```text
-src/charts/<idiom>/plugin.js
+src/charts/<idiom>/plugin.ts
 ```
 
 That file should export:
@@ -68,14 +68,17 @@ the plugin metadata is the contract.
 
 ## CDN-Compatible Registration
 
-The runtime imports:
+The Story composition runtime imports the generated manifest (source is
+TypeScript; import specifiers and dist output use `.js`):
 
 ```js
 import { chartModules } from "./charts/manifest.js";
 ```
 
 `manifest.js` is static ESM so it can be served directly from a CDN. It is
-generated from folders that expose `plugin.js`.
+generated from folders that expose `plugin.ts` (or JavaScript plugins).
+Standalone transitions instead use the lazy loader map in
+`src/runtime/chart-registry.ts` and load only their selected idiom.
 
 After adding or removing an idiom folder, run:
 
@@ -83,8 +86,8 @@ After adding or removing an idiom folder, run:
 node scripts/sync-chart-manifest.mjs
 ```
 
-Then publish or serve the updated source. The browser never scans directories;
-the manifest is the CDN-safe list of built-in modules.
+Update the lazy loader map as well, then run `npm run manifest:check` and build.
+The check requires both inventories to agree. The browser never scans directories.
 
 ## Bar Ground Truth
 
@@ -141,7 +144,7 @@ Keep the public chaining surface idiom-first:
 - `bar`: `x`, `y`, `where`, `breakdown`, `rollup`, `layout`, `guide`
 - `point`: `x`, `y`, `color`, `size`, `key`, `where`, `flip`, `rollup`,
   `breakdown`
-- `line`: `x`, `y`, `color`, `key`, `where`, `series`, `rollup`
+- `line`: `x`, `y`, `color`, `key`, `where`, `breakdown`, `rollup`
 - `unit`: `x`, `color`, `key`, `where`, `group`
 
 - shared: `x`, `y`, `channel`, `color`, `size`, `key`, `tooltip`, `sort`,

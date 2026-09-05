@@ -40,6 +40,7 @@ export interface EncodingSpec {
 export interface FilterSpec {
   field: string;
   equal?: unknown;
+  notEqual?: unknown;
   gt?: number;
   lt?: number;
   gte?: number;
@@ -66,7 +67,7 @@ export interface TimeUnitTransform {
 }
 
 export type TransformSpec =
-  | { filter: FilterSpec; [key: string]: unknown }
+  | { filter: FilterSpec | string; [key: string]: unknown }
   | { aggregate: AggregateTransform; [key: string]: unknown }
   | { sort: SortSpec & { field: string }; [key: string]: unknown }
   | { timeUnit: TimeUnitTransform; [key: string]: unknown }
@@ -503,6 +504,8 @@ export interface ChartDeps {
 
 export interface ChartIdiom<S extends ViewSpec = ViewSpec> {
   key: string;
+  /** Opt in only when all animated SVG properties can be captured and sought. */
+  transitionEvaluation?: 'cached' | 'reconstruct';
   renderer: Renderer<S>;
   prepareSpec(spec: S): S;
   resolveTransitionPlan(prev: S | null, next: S | null): TransitionPlan;
@@ -581,13 +584,21 @@ export interface ChartOptions extends RuntimeOptions {
   initialStep?: number;
 }
 
+export interface ScrollRuntime {
+  readonly type: 'native';
+  resize(): void;
+  refresh(): void;
+  scrollToStep(index: number, options?: { progress?: number; behavior?: 'instant' | 'smooth' | 'auto' }): number | null;
+  destroy(): void;
+}
+
 export interface StoryRuntime {
   spec: StorySpec;
   data: Record<string, unknown>;
   signature: Record<string, unknown>[];
   /** Programmatically jump to step `index` with a natural animated transition. */
   to(index: number): void;
-  scrollDriver: Record<string, unknown>;
+  scrollDriver: ScrollRuntime;
   destroy(): void;
 }
 

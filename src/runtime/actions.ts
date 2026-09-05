@@ -2,7 +2,7 @@ import { clamp } from './utils.js';
 import type { ActionToken, ActionType, Direction, NormalizedActionEvent, RawActionEvent } from '../types/index.js';
 
 export function hasScrollAction(stepOrAction: string[] | Element | Record<string, unknown> = {}): boolean {
-  if (stepOrAction instanceof Element) {
+  if (typeof Element !== 'undefined' && stepOrAction instanceof Element) {
     const actionAttr = (stepOrAction as HTMLElement).dataset?.action;
     return Boolean(actionAttr?.includes('scroll'));
   }
@@ -16,13 +16,7 @@ export function normalizeActionTokens(
   action: string | string[] = ['step', 'tooltip']
 ): ActionToken[] {
   const values = Array.isArray(action) ? action : [action];
-  return uniqueActionTokens(
-    values.flatMap((v): ActionToken[] => {
-      if (v === 'stepper') return ['step', 'tooltip'];
-      if (v === 'scroller') return ['scroll', 'tooltip'];
-      return [v as ActionToken];
-    })
-  );
+  return uniqueActionTokens(values as ActionToken[]);
 }
 
 export function normalizeActionEvent(
@@ -49,7 +43,7 @@ export function normalizeActionEvent(
   const stepIndex = firstDefined(source.step, source.index, options.step, options.index, fallbackIndex);
   const index = clamp(Number(stepIndex) || 0, 0, Math.max(0, (context.stepCount ?? 1) - 1));
   const action = normalizeActionTokens(
-    (source.action ?? options.action ?? (isProgress ? 'scroller' : 'stepper')) as string | string[]
+    (source.action ?? options.action ?? (isProgress ? ['scroll', 'tooltip'] : ['step', 'tooltip'])) as string | string[]
   );
 
   return {
@@ -118,13 +112,12 @@ function normalizeEventSource(event: RawActionEvent): SourceEvent {
   const target = domEvent.currentTarget ?? domEvent.target;
   if (target && typeof domEvent.type === 'string') {
     const el = target as HTMLInputElement & { dataset?: DOMStringMap };
+    const nearestStep = (el.closest?.('[data-step-index]') as HTMLElement | null)?.dataset?.stepIndex;
     return {
       type: domEvent.type,
       step: domEvent.step ?? domEvent.index ??
-        (el.dataset?.stepIndex ? Number(el.dataset.stepIndex) : undefined) ??
-        (el.closest?.('[data-step-index]') as HTMLElement | null)?.dataset?.stepIndex
-          ? Number((el.closest?.('[data-step-index]') as HTMLElement).dataset.stepIndex)
-          : undefined,
+        (el.dataset?.stepIndex !== undefined ? Number(el.dataset.stepIndex) : undefined) ??
+        (nearestStep !== undefined ? Number(nearestStep) : undefined),
       value: domEvent.value ?? domEvent.progress ?? targetValue(el),
       direction: domEvent.direction,
       action: domEvent.action,

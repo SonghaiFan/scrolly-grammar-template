@@ -40,23 +40,23 @@ export function setupScroll(
     onEnter: ({ index, direction }: ScrollEvent) => {
       if (!shouldAcceptScrollEvent(shell, index)) return;
       const stepEl = shell.steps[index];
-      const action = hasScrollAction(stepEl) ? 'scroller' : 'stepper';
+      const action = hasScrollAction(stepEl) ? ['scroll', 'tooltip'] : ['step', 'tooltip'];
       renderer.action({ type: 'enter', step: index, direction, action });
     },
     onExit: ({ index, direction }: ScrollEvent) => {
       if (!shouldAcceptScrollEvent(shell, index)) return;
       const stepEl = shell.steps[index];
-      // Stepper steps: exit is silent — the adjacent step's onEnter drives the next transition.
-      // Scroller steps: snap transition progress to its terminal value (1 going down, 0 going up).
+      // Step-driven steps: exit is silent; the adjacent step's onEnter drives the next transition.
+      // Scroll-driven steps: snap transition progress to its terminal value (1 going down, 0 going up).
       if (!hasScrollAction(stepEl)) return;
-      renderer.action({ type: 'exit', step: index, value: direction === 'down' ? 1 : 0, direction, action: 'scroller' });
+      renderer.action({ type: 'exit', step: index, value: direction === 'down' ? 1 : 0, direction, action: ['scroll', 'tooltip'] });
     },
     onProgress: ({ index, progress, direction }: ScrollEvent) => {
       if (!shouldAcceptScrollEvent(shell, index)) return;
-      // Stepper steps are driven by enter/exit events, not scroll position.
+      // Step-driven steps are driven by enter/exit events, not scroll position.
       // Only route progress events for scroll-bound steps.
       if (!hasScrollAction(shell.steps[index])) return;
-      renderer.action({ type: 'progress', step: index, value: progress, direction, action: 'scroller' });
+      renderer.action({ type: 'progress', step: index, value: progress, direction, action: ['scroll', 'tooltip'] });
     }
   }) as ScrollDriver;
 
@@ -69,12 +69,21 @@ export function setupNav(
   shell: Shell,
   renderer: Renderer,
   scrollDriver: ScrollDriver
-): void {
-  shell.navButtons.forEach((button, index) => {
-    button.addEventListener('click', () => {
+): () => void {
+  const cleanups = shell.navButtons.map((button, index) => {
+    const click = () => {
       lockRenderStep(shell, renderer, scrollDriver, index);
-    });
+    };
+    button.addEventListener('click', click);
+    return () => button.removeEventListener('click', click);
   });
+  return () => {
+    cleanups.forEach(cleanup => cleanup());
+    clearNavigationTimers(shell);
+    delete shell.story.dataset.navTargetIndex;
+    delete shell.story.dataset.navLockToken;
+    delete shell.story.__scrollyLiteScrollDriver;
+  };
 }
 
 export function setupResize(renderer: Renderer, scrollDriver: ScrollDriver): () => void {
@@ -90,14 +99,18 @@ export function restoreHashPosition(
   shell: Shell,
   renderer: Renderer,
   scrollDriver: ScrollDriver
-): void {
-  if (!window.location.hash) return;
-  window.requestAnimationFrame(() => {
-    const target = document.querySelector(window.location.hash);
+): () => void {
+  if (!window.location.hash) return () => {};
+  let id: string;
+  try { id = decodeURIComponent(window.location.hash.slice(1)); }
+  catch { return () => {}; }
+  const frame = window.requestAnimationFrame(() => {
+    const target = shell.steps.find(step => step.id === id);
     if (!target) return;
     const index = Number((target as HTMLElement).dataset.stepIndex);
     if (Number.isFinite(index)) lockRenderStep(shell, renderer, scrollDriver, index, target as HTMLElement);
   });
+  return () => window.cancelAnimationFrame(frame);
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
@@ -171,7 +184,9 @@ function waitForNavigationScroll(
 }
 
 function navigationRenderOptions(step: HTMLElement): Record<string, unknown> {
-  return hasScrollAction(step) ? { force: true, scrollProgress: 1 } : { force: true };
+  return hasScrollAction(step)
+    ? { force: true, scrollProgress: 1, action: ['scroll', 'tooltip'] }
+    : { force: true, action: ['step', 'tooltip'] };
 }
 
 function beginNavigationLock(shell: Shell, renderer: Renderer, index: number): string {

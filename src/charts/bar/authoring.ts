@@ -1,8 +1,10 @@
-import { compileViewSpec } from '../../transitions/index.js';
 import { externalizeScrollyViewSpec } from '../../scrolly-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
+import { normalizeFilter } from '../../data/filter.js';
 import { labelFromValue, titleize } from '../../labels.js';
 import { IdiomState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
+import { compileViewWithCompiler } from '../compile-view.js';
+import { createBarSpecCompiler } from './compile.js';
 import type {
   BarLayout,
   ChannelSpec,
@@ -23,9 +25,11 @@ export interface BarViewState extends ViewSpec {
   semanticKey?: SemanticKey | null;
 }
 
-export function bar(data: unknown): BarState {
+export function bar(data?: unknown): BarState {
   return new BarState({ data: normalizeDataSource(data), mark: 'bar', encoding: {} } as BarViewState);
 }
+
+const BAR_SPEC_COMPILER = createBarSpecCompiler();
 
 export class BarState extends IdiomState<BarViewState> {
   override toSpec(): Omit<BarViewState, '__grammar'> {
@@ -50,7 +54,7 @@ export class BarState extends IdiomState<BarViewState> {
     if (spec.semanticKey == null) delete spec.semanticKey;
 
     return pruneAuthoringState(
-      compileViewSpec(externalizeScrollyViewSpec(spec as ViewSpec), { scene: [] })
+      compileViewWithCompiler(externalizeScrollyViewSpec(spec as ViewSpec), { scene: [] }, BAR_SPEC_COMPILER)
     ) as Omit<BarViewState, '__grammar'>;
   }
 
@@ -370,8 +374,9 @@ function aggregateBarState(
 function normalizeSelectors(
   selector: string | Record<string, unknown> | FilterSpec
 ): FilterSpec[] {
+  if (typeof selector === 'string') return [normalizeFilter(selector)];
   const sel = selector as Record<string, unknown>;
-  if (sel.field) return [cloneState(sel) as FilterSpec];
+  if (sel.field) return [cloneState(normalizeFilter(sel))];
   return Object.entries(sel).map(([field, equal]) => ({ field, equal }));
 }
 

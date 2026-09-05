@@ -1,0 +1,179 @@
+import { test, expect } from '@playwright/test';
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/examples/transition/');
+  await page.waitForSelector('rect.sl-bar');
+  await page.evaluate(async () => {
+    window.sl = await import('/dist/scrollylite.esm.js');
+    document.body.innerHTML = '<div id="cached" style="width:800px"></div><div id="reference" style="width:800px"></div>';
+    window.rows = [
+      { id: 'A', value: 10, other: 30, group: 'one' },
+      { id: 'B', value: 20, other: 5, group: 'two' },
+      { id: 'C', value: 30, other: 20, group: 'one' }
+    ];
+    window.base = sl.bar().data(rows).x('id').y('value').key('id');
+    window.options = target => ({ target, d3, aq, height: 400 });
+    window.geometry = selector => [...document.querySelector(selector).querySelectorAll('rect.sl-bar')].map(node => ({
+      key: node.dataset.key,
+      x: Number(node.getAttribute('x')), y: Number(node.getAttribute('y')),
+      width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')),
+      opacity: Number(node.style.opacity), fill: d3.color(node.getAttribute('fill'))?.formatRgb()
+    })).sort((a, b) => a.key.localeCompare(b.key));
+  });
+});
+
+test('seek and play reuse nodes without unnecessary transforms, scales or D3 schedules', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const calls = { data: 0, scales: 0, transitions: 0 };
+    const measuredD3 = { ...d3,
+      scaleLinear(...args) { calls.scales++; return d3.scaleLinear(...args); },
+      scaleBand(...args) { calls.scales++; return d3.scaleBand(...args); },
+      transition(...args) { calls.transitions++; return d3.transition(...args); }
+    };
+    const measuredAq = { ...aq, from(...args) { calls.data++; return aq.from(...args); } };
+    const change = await sl.transition(base, base.y('other'), { ...options('#cached'), d3: measuredD3, aq: measuredAq });
+    const initialized = { ...calls };
+    const svg = change.view.querySelector('svg');
+    const marks = [...change.view.querySelectorAll('rect.sl-bar')];
+    let clicks = 0;
+    d3.select(marks[0]).on('click.consumer', () => clicks++);
+    let reused = true;
+    for (const p of [0.37, 0.8, 0.02, 1, 0, 0.55]) {
+      change.progress(p);
+      reused &&= svg === change.view.querySelector('svg') && marks.every(mark => mark.isConnected && change.view.contains(mark));
+    }
+    change.play({ duration: 120 });
+    await new Promise(resolve => setTimeout(resolve, 250));
+    change.pause();
+    const afterPlay = { ...calls };
+    marks[0].dispatchEvent(new MouseEvent('click'));
+    change.progress(0.37);
+    document.querySelector('#cached').style.width = '600px';
+    change.resize();
+    const afterResize = { ...calls };
+    change.progress(0.4);
+    return { initialized, afterPlay, afterResize, final: { ...calls }, reused, clicks,
+      resized: change.view.querySelector('svg') !== svg,
+      schedules: [...change.view.querySelectorAll('*')].some(node => node.__transition) };
+  });
+  expect(result.initialized.data).toBe(0);
+  expect(result.initialized.scales).toBeGreaterThan(0);
+  expect(result.afterPlay).toEqual(result.initialized);
+  expect(result.afterResize.data).toBe(0);
+  expect(result.afterResize.scales).toBeGreaterThan(result.initialized.scales);
+  expect(result.final).toEqual(result.afterResize);
+  expect(result.reused).toBe(true);
+  expect(result.resized).toBe(true);
+  expect(result.schedules).toBe(false);
+  expect(result.clicks).toBe(1);
+});
+
+for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip', 'split', 'merge', 'grouped-split', 'grouped-merge']) {
+  test(`${scenario}: cached mark geometry matches reconstruction`, async ({ page }) => {
+    const samples = await page.evaluate(async scenario => {
+      const { createTransitionSurface } = await import('/dist/scrollylite.js');
+      const segmented = sl.bar().data([
+        { id: 'A', group: 'one', value: 10 }, { id: 'A', group: 'two', value: 20 },
+        { id: 'B', group: 'one', value: 30 }, { id: 'B', group: 'two', value: 15 }
+      ]).x('id').y('value').key('id').breakdown('group');
+      const source = scenario.includes('split') ? segmented.rollup()
+        : scenario === 'merge' ? segmented
+        : scenario === 'grouped-merge' ? segmented.layout('grouped') : base;
+      const target = {
+        measure: base.y('other'), filter: base.where({ group: 'one' }),
+        highlight: base.highlight({ id: 'B' }), color: base.color('#cc6633'),
+        sort: base.sort('value', 'descending'), flip: base.flip(),
+        split: segmented, merge: segmented.rollup(),
+        'grouped-split': segmented.layout('grouped'), 'grouped-merge': segmented.rollup()
+      }[scenario];
+      const cached = await sl.transition(source, target, options('#cached'));
+      // Test the old deterministic renderer bridge, not another cached pair.
+      const reference = createTransitionSurface(source.toSpec(), target.toSpec(), { ...options('#reference'), reconstruct: true });
+      const results = [];
+      for (const p of [0, 0.07, 0.37, 0.8, 1, 0.2]) {
+        cached.progress(p); reference.progress(p);
+        results.push({ p, actual: geometry('#cached'), expected: geometry('#reference') });
+      }
+      reference.destroy(); cached.destroy();
+      return results;
+    }, scenario);
+    for (const { actual, expected } of samples) {
+      expect(actual.map(mark => mark.key)).toEqual(expected.map(mark => mark.key));
+      actual.forEach((mark, i) => {
+        for (const field of ['x', 'y', 'width', 'height', 'opacity']) expect(mark[field]).toBeCloseTo(expected[i][field], 5);
+        expect(mark.fill).toBe(expected[i].fill);
+      });
+    }
+  });
+}
+
+test('exit nodes are detached and restored by identity; endpoint tooltip data follows the endpoint', async ({ page }) => {
+  await page.evaluate(async () => {
+    const start = base.tooltip('value');
+    window.change = await sl.transition(start, start.where({ group: 'one' }).tooltip('other'), options('#cached'));
+    window.exiting = [...change.view.querySelectorAll('rect.sl-bar')].find(node => node.__data__.id === 'B');
+    change.progress(1);
+  });
+  expect(await page.evaluate(() => exiting.isConnected)).toBe(false);
+  await page.locator('#cached rect.sl-bar').first().hover();
+  expect(await page.locator('#cached .sl-tooltip').innerText()).toContain('Other');
+  await page.evaluate(() => change.progress(0));
+  expect(await page.evaluate(() => exiting.isConnected && change.view.contains(exiting))).toBe(true);
+  await expect(page.locator('#cached .sl-tooltip')).toHaveCSS('opacity', '0');
+  await page.mouse.move(1, 1);
+  await page.locator('#cached rect.sl-bar').first().hover();
+  expect(await page.locator('#cached .sl-tooltip').innerText()).toContain('Value');
+});
+
+test('delayed property tracks can jump back before their start without retaining later values', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const start = base.transition({ duration: 600, ease: 'linear', stagger: { step: 180, max: 600 } });
+    const a = await sl.transition(start, start.y('other'), options('#cached'));
+    const b = await sl.transition(start, start.y('other'), options('#reference'));
+    a.progress(0.02);
+    b.progress(0.95).progress(1).progress(0.02);
+    return { a: geometry('#cached'), b: geometry('#reference') };
+  });
+  expect(result.a).toEqual(result.b);
+});
+
+test('successive stages on the same property initialize from preceding endpoints', async ({ page }) => {
+  const frames = await page.evaluate(async () => {
+    const { createSceneTransitionProgress } = await import('/dist/transition-progress.js');
+    const root = d3.select('#cached').append('svg');
+    const rect = root.append('rect').attr('x', 0);
+    rect.transition('property-contract').duration(100).ease(d3.easeLinear).attr('x', 10)
+      .transition().duration(100).ease(d3.easeLinear).attr('x', 30);
+    const schedules = createSceneTransitionProgress({ node: root.node() }, { transitionName: 'property-contract' });
+    const plan = schedules.compile();
+    schedules.destroy({ finish: false });
+    return [0.75, 0.25, 1, 0.5, 0, 0.1].map(p => {
+      plan.progress(p);
+      return Number(rect.attr('x'));
+    });
+  });
+  expect(frames).toEqual([20, 5, 30, 10, 0, 2]);
+});
+
+test('resize recompiles changed theme at the same progress; inspection cannot mutate endpoints', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const change = await sl.transition(base, base.y('other'), options('#cached'));
+    change.progress(0.37);
+    const before = geometry('#cached');
+    const initialRadius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    change.delta.previous.encoding.y.field = 'missing';
+    change.from.encoding.y.field = 'missing';
+    document.documentElement.style.setProperty('--sl-bar-radius', '9');
+    change.progress(0.37);
+    const cachedRadius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    change.resize();
+    const radius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    const after = geometry('#cached');
+    document.documentElement.style.removeProperty('--sl-bar-radius');
+    return { initialRadius, cachedRadius, radius, value: change.value, before, after };
+  });
+  expect(result.cachedRadius).toBe(result.initialRadius);
+  expect(result.radius).toBe('9');
+  expect(result.value).toBe(0.37);
+  expect(result.after).toEqual(result.before);
+});

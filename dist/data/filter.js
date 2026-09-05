@@ -1,0 +1,72 @@
+const operators = ['equal', 'notEqual', 'oneOf', 'gt', 'gte', 'lt', 'lte'];
+/** A small comparison grammar, deliberately not JavaScript evaluation. */
+export function normalizeFilter(value) {
+    if (typeof value === 'string') {
+        const match = value.trim().match(/^datum\.([A-Za-z_$][\w$]*)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)$/);
+        if (!match)
+            throw new Error('Invalid filter expression. Use datum.field <operator> literal.');
+        const [, field, operator, text] = match;
+        let literal;
+        const raw = text.trim();
+        if (/^'(?:[^'\\]|\\['\\])*'$/.test(raw))
+            literal = raw.slice(1, -1).replace(/\\(['\\])/g, '$1');
+        else {
+            try {
+                literal = JSON.parse(raw);
+            }
+            catch {
+                throw new Error('Invalid filter literal: quote strings; use finite numbers, booleans, or null.');
+            }
+        }
+        if (literal !== null && !['string', 'number', 'boolean'].includes(typeof literal)) {
+            throw new Error('Filter expressions accept scalar literals only.');
+        }
+        const key = { '===': 'equal', '==': 'equal', '!==': 'notEqual', '!=': 'notEqual',
+            '>': 'gt', '>=': 'gte', '<': 'lt', '<=': 'lte' }[operator];
+        return normalizeFilter({ field, [key]: literal });
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('Filter must be an object or comparison expression.');
+    const filter = value;
+    if (typeof filter.field !== 'string' || !filter.field.trim())
+        throw new Error('Filter requires a non-empty field.');
+    if (Object.keys(filter).some(key => key !== 'field' && !operators.includes(key)))
+        throw new Error('Unsupported filter operator.');
+    if (!operators.some(key => key in filter))
+        throw new Error('Filter requires a comparison operator.');
+    if ('oneOf' in filter && !Array.isArray(filter.oneOf))
+        throw new Error('Filter oneOf must be an array.');
+    for (const key of ['gt', 'gte', 'lt', 'lte']) {
+        if (key in filter && !Number.isFinite(filter[key]))
+            throw new Error(`Filter ${key} must be a finite number.`);
+    }
+    return filter;
+}
+export function filterPredicate(input) {
+    const filter = normalizeFilter(input);
+    return row => matchesFilter(row, filter);
+}
+/** Evaluate a normalized predicate; shared by filtering, highlighting and crop. */
+export function matchesFilter(row, filter) {
+    const value = row[filter.field];
+    if ('equal' in filter && value !== filter.equal)
+        return false;
+    if ('notEqual' in filter && value === filter['notEqual'])
+        return false;
+    if ('oneOf' in filter && !filter.oneOf.includes(value))
+        return false;
+    const hasRange = ['gt', 'gte', 'lt', 'lte'].some(key => key in filter);
+    if (hasRange && (value == null || value === '' || typeof value === 'boolean' || !Number.isFinite(Number(value))))
+        return false;
+    // Positive comparisons exclude missing/NaN values instead of letting them
+    // pass through the inverse comparisons previously used here.
+    if ('gte' in filter && !(value >= filter.gte))
+        return false;
+    if ('gt' in filter && !(value > filter.gt))
+        return false;
+    if ('lte' in filter && !(value <= filter.lte))
+        return false;
+    if ('lt' in filter && !(value < filter.lt))
+        return false;
+    return true;
+}

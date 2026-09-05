@@ -12,7 +12,7 @@ import type {
   ViewSpec
 } from '../types/index.js';
 
-type ViewLike = ViewSpec | { toSpec(): ViewSpec; operations(): string[] };
+type ViewLike = ViewSpec | { toSpec(): ViewSpec };
 
 export function story(initialSpec: Partial<StorySpec> = {}): StoryBuilder {
   return new StoryBuilder(initialSpec);

@@ -1,1 +1,1 @@
-export declare function createUnitRenderer(deps: any): (chart: import("../../types/index.js").ChartContext, rows: unknown[], spec: import("../../types/index.js").ViewSpec, tooltip: unknown, d3: import("../../types/index.js").D3Lib) => void;
+export declare function createUnitRenderer(deps: any): (chart: import("../../types/index.js").ChartContext, rows: unknown[], spec: import("../../core.js").ViewSpec, tooltip: unknown, d3: import("../../types/index.js").D3Lib) => void;

@@ -32,6 +32,7 @@ export interface EncodingSpec {
 export interface FilterSpec {
     field: string;
     equal?: unknown;
+    notEqual?: unknown;
     gt?: number;
     lt?: number;
     gte?: number;
@@ -54,7 +55,7 @@ export interface TimeUnitTransform {
     as: string;
 }
 export type TransformSpec = {
-    filter: FilterSpec;
+    filter: FilterSpec | string;
     [key: string]: unknown;
 } | {
     aggregate: AggregateTransform;
@@ -216,9 +217,8 @@ export interface ViewSpec {
     margin?: Partial<MarginSpec>;
     [field: string]: unknown;
 }
-export type StepActionAlias = 'stepper' | 'scroller';
 export type StepActionToken = 'step' | 'scroll' | 'tooltip' | 'enter';
-export type StepActionInput = StepActionToken | StepActionAlias | string;
+export type StepActionInput = StepActionToken | string;
 export interface StepDefinition {
     title?: string;
     body?: string;
@@ -226,8 +226,6 @@ export interface StepDefinition {
         toSpec(): ViewSpec;
     };
     action?: StepActionInput | StepActionInput[];
-    authoringCode?: string;
-    authoring?: string;
     code?: string;
 }
 export interface StepSpec {
@@ -240,7 +238,7 @@ export interface StepSpec {
     action?: StepActionToken[];
     views?: Record<string, ViewSpec>;
     inspector?: {
-        authoringCode: string;
+        code: string;
     };
 }
 export interface LayoutSpec {
@@ -304,10 +302,10 @@ export interface BarSemanticState {
 }
 export interface GrammarMeta {
     operations?: string[];
-    lastWhere?: {
-        selectors: FilterSpec[];
-        fields: string[];
-    };
+    /** Per-idiom scene capabilities (e.g. bar opts out of `observation`). */
+    capabilities?: Record<string, boolean>;
+    /** Field declared via bar's `.measure()` — drives identity/title inference in `.where()`. */
+    measureField?: string;
     measureSelector?: {
         title: string;
         fields: string[];
@@ -446,6 +444,8 @@ export interface ChartDeps {
 }
 export interface ChartIdiom<S extends ViewSpec = ViewSpec> {
     key: string;
+    /** Opt in only when all animated SVG properties can be captured and sought. */
+    transitionEvaluation?: 'cached' | 'reconstruct';
     renderer: Renderer<S>;
     prepareSpec(spec: S): S;
     resolveTransitionPlan(prev: S | null, next: S | null): TransitionPlan;
@@ -503,13 +503,23 @@ export interface ChartOptions extends RuntimeOptions {
     viewId?: string;
     initialStep?: number;
 }
+export interface ScrollRuntime {
+    readonly type: 'native';
+    resize(): void;
+    refresh(): void;
+    scrollToStep(index: number, options?: {
+        progress?: number;
+        behavior?: 'instant' | 'smooth' | 'auto';
+    }): number | null;
+    destroy(): void;
+}
 export interface StoryRuntime {
     spec: StorySpec;
     data: Record<string, unknown>;
     signature: Record<string, unknown>[];
     /** Programmatically jump to step `index` with a natural animated transition. */
     to(index: number): void;
-    scrollDriver: Record<string, unknown>;
+    scrollDriver: ScrollRuntime;
     destroy(): void;
 }
 export interface PageRuntime {
