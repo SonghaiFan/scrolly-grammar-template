@@ -1,25 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bar, line, point, unit, story } from '../dist/index.js';
-
-test('documented Story view forms configure main or an explicitly named view', () => {
-  const spec = story().view({ title: 'Main', height: 400 }).view('detail', { height: 240 }).toSpec();
-  assert.deepEqual(spec.views, { main: { title: 'Main', height: 400 }, detail: { height: 240 } });
-  const seeded = story({ views: { main: { height: 400 }, detail: { height: 240 } } }).toSpec();
-  assert.equal(seeded.views.detail.height, 240);
-});
-
-test('Story defers compilation until toSpec and uses the final default action', () => {
-  let compiled = 0;
-  const view = { toSpec() { compiled++; return bar([{ x: 'A', y: 2 }]).x('x').y('y').toSpec(); } };
-  const builder = story().add('First', view).add('Second', view).action(['scroll']);
-  assert.equal(compiled, 0);
-  const spec = builder.toSpec();
-  assert.ok(compiled > 0);
-  assert.deepEqual(spec.steps[0].action, ['scroll', 'enter']);
-  assert.deepEqual(spec.steps[1].action, ['scroll']);
-  assert.equal(spec.steps[1].transition, undefined);
-});
+import { bar, line, point, unit } from '../dist/index.js';
 
 test('documented filtering uses where, not a nonexistent filter method', () => {
   for (const factory of [bar, line, point, unit]) {
@@ -41,7 +22,4 @@ test('color is an explicit encoding, including for bar breakdowns', () => {
     field: 'type', type: 'nominal'
   });
   assert.equal(base.breakdown('type').color('type').rollup().toSpec().encoding.color, undefined);
-  assert.deepEqual(base.breakdown('type', { color: ['#112233', '#445566'] }).toSpec().encoding.color, {
-    field: 'type', type: 'nominal', range: ['#112233', '#445566']
-  });
 });

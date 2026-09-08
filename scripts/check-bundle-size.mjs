@@ -67,7 +67,7 @@ let gzipBytes = 0;
 for (const path of loaded) {
   gzipBytes += gzipSync(files.get(resolve(root, path))).byteLength;
   for (const source of Object.keys(outputs[path].inputs)) {
-    if (/src\/(scrollylite|story|seq)\.ts$|src\/charts\/manifest\.ts$|src\/charts\/(line|point|unit)\/|src\/runtime\/(shell|navigation|spec)\.ts$|src\/scroll-drivers\//.test(source)) {
+    if (/src\/composition\.ts$|src\/charts\/manifest\.ts$|src\/charts\/(line|point|unit)\/|scrollytelling\//.test(source)) {
       throw new Error(`Focused bar transition pulled in unrelated code: ${source}`);
     }
   }

@@ -1,95 +1,33 @@
-import { readFile, stat } from "node:fs/promises";
-import { dirname, join, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createDemoSpec, availableStories } from "../examples/weather/specs/demo.js";
-import { compileSpec } from "../dist/runtime/spec.js";
+import { readFile, stat } from 'node:fs/promises';
+import { dirname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const exampleDir = join(root, "examples", "weather");
-const htmlPath = join(exampleDir, "index.html");
-const html = await readFile(htmlPath, "utf8");
-const minimalDir = join(root, "examples", "minimal");
-const minimalHtml = await readFile(join(minimalDir, "index.html"), "utf8");
+const exampleDir = join(root, 'examples', 'transition');
+const html = await readFile(join(exampleDir, 'index.html'), 'utf8');
 
-await assertHtmlLocalAssets(html, exampleDir);
-await assertHtmlLocalAssets(minimalHtml, minimalDir);
-assertPublicApiImports(html);
-assertMinimalEsmExample(minimalHtml);
-await assertCompiledStoryDataUrls();
+await assertLocalAssets(html, exampleDir);
+assertPublicImports(html);
 
-console.log("Example invariants ok.");
+console.log('Focused transition example invariants ok.');
 
-async function assertHtmlLocalAssets(source, baseDir) {
+async function assertLocalAssets(source, baseDir) {
   const attrs = [...source.matchAll(/\s(?:href|src)="([^"]+)"/g)]
-    .map((match) => match[1])
-    .filter((value) =>
-      value &&
-      !value.startsWith("http://") &&
-      !value.startsWith("https://") &&
-      !value.startsWith("?") &&
-      !value.startsWith("#")
-    );
+    .map(match => match[1])
+    .filter(value => value && !/^(?:https?:|\?|#)/.test(value));
   const moduleImports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)]
-    .map((match) => match[1])
-    .filter((value) => value.startsWith("."));
+    .map(match => match[1])
+    .filter(value => value.startsWith('.'));
 
   for (const value of [...attrs, ...moduleImports]) {
-    await assertFile(resolveExamplePath(value, baseDir), `Example asset does not exist: ${value}`);
+    const path = normalize(join(baseDir, value.split('#')[0].split('?')[0]));
+    const info = await stat(path).catch(() => null);
+    if (!info?.isFile()) throw new Error(`Example asset does not exist: ${value}`);
   }
 }
 
-function assertPublicApiImports(source) {
-  const imports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)].map((match) => match[1]);
-  const badImport = imports.find((value) => value.startsWith("../../src/"));
-  if (badImport) {
-    throw new Error(`Example must import library code only through the built public API, got ${badImport}`);
-  }
-}
-
-function assertMinimalEsmExample(source) {
-  if (!source.includes('type="module"')) {
-    throw new Error("Minimal example must use a module script.");
-  }
-  if (!source.includes(`from "https://cdn.jsdelivr.net/npm/scrollylite@${version}/dist/scrollylite.esm.js"`)) {
-    throw new Error("Minimal example must import the candidate's packaged ESM file.");
-  }
-  if (!source.includes('from "https://cdn.jsdelivr.net/npm/d3@7/+esm"')) {
-    throw new Error("Minimal example must import D3 from jsDelivr +esm.");
-  }
-  if (!source.includes('from "https://cdn.jsdelivr.net/npm/arquero@8/+esm"')) {
-    throw new Error("Minimal example must import Arquero from jsDelivr +esm.");
-  }
-  if (!source.includes("d3, aq")) {
-    throw new Error("Minimal example must pass d3 and aq explicitly to createStory.");
-  }
-  if (
-    source.includes("dist/scrollylite.global.js") ||
-    source.includes("window.ScrollyLite") ||
-    source.includes("= ScrollyLite")
-  ) {
-    throw new Error("Minimal example must not use the global script build.");
-  }
-  if (source.includes("stroy")) {
-    throw new Error("Minimal example contains a misspelled story variable.");
-  }
-}
-
-async function assertCompiledStoryDataUrls() {
-  for (const { id } of availableStories()) {
-    const compiled = compileSpec(createDemoSpec({ storyId: id }));
-    for (const source of Object.values(compiled.data || {})) {
-      if (!source?.url) continue;
-      await assertFile(resolveExamplePath(source.url, exampleDir), `Story "${id}" data file does not exist: ${source.url}`);
-    }
-  }
-}
-
-function resolveExamplePath(value, baseDir) {
-  return normalize(join(baseDir, value.split("#")[0].split("?")[0]));
-}
-
-async function assertFile(path, message) {
-  const info = await stat(path).catch(() => null);
-  if (!info?.isFile()) throw new Error(message);
+function assertPublicImports(source) {
+  const imports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)].map(match => match[1]);
+  const privateImport = imports.find(value => value.includes('/src/'));
+  if (privateImport) throw new Error(`Example imports private source: ${privateImport}`);
 }

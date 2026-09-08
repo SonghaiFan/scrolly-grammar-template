@@ -1,10 +1,4 @@
 import * as core from './index.js';
 import type { Visualization, TransitionOptions } from './transition.js';
-import type { ChartOptions, RuntimeOptions } from './types.js';
-export { availableChartIdioms, bar, delta, diffViewStates, defineChartIdiom, line, point, registerChartIdiom, registerChartModule, story, unit, visualizationSpec, seq, Seq, createPage, page } from './index.js';
-type BrowserOptions = Partial<RuntimeOptions> & Record<string, unknown>;
+export { availableChartIdioms, bar, delta, diffViewStates, defineChartIdiom, line, point, registerChartIdiom, registerChartModule, unit, visualizationSpec } from './index.js';
 export declare function transition(from: Visualization, to: Visualization, options?: Partial<TransitionOptions>): Promise<core.VisualizationTransition>;
-export declare function createStory(spec: Parameters<typeof core.createStory>[0], options?: BrowserOptions): Promise<core.StoryRuntime>;
-export declare function createChart(spec: Parameters<typeof core.createChart>[0], options?: Partial<ChartOptions>): Promise<core.ChartRuntime>;
-export declare function chart(spec: Parameters<typeof core.chart>[0], options?: BrowserOptions): Promise<core.ChartRuntime>;
-export declare function render(spec: Parameters<typeof core.render>[0], options?: BrowserOptions): Promise<core.StoryRuntime>;

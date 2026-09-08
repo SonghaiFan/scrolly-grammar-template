@@ -1,0 +1,930 @@
+:root {
+  color-scheme: light;
+
+  /* ════════════════════════════════════════════════════════════════════════
+     SEMANTIC TOKEN LAYER  (DESIGN.md spec)
+     Themes override these.  Component tokens below cascade from them.
+     Default values embody the ScrollyLite editorial light theme.
+     ════════════════════════════════════════════════════════════════════════ */
+
+  /* — Color roles ————————————————————————————————————————————————————————— */
+  --sl-color-primary:          #4e79a7;  /* accent, interactive chrome      */
+  --sl-color-surface:          #ffffff;  /* chart SVG background             */
+  --sl-color-bg:               #f8f8f7;  /* page / figure wrapper            */
+  --sl-color-on-surface:       #1f2328;  /* primary text                     */
+  --sl-color-muted:            #66707a;  /* secondary text, axis labels      */
+  --sl-color-border:           #dde1e6;  /* borders, dividers                */
+  --sl-color-outline:          #aeb4bb;  /* axis paths and tick marks        */
+  --sl-color-outline-variant:  #eceff2;  /* grid lines (nearly invisible)    */
+  /* Categorical series palette — Tableau 10 by default */
+  --sl-color-series-1:  #4e79a7;
+  --sl-color-series-2:  #f28e2b;
+  --sl-color-series-3:  #e15759;
+  --sl-color-series-4:  #76b7b2;
+  --sl-color-series-5:  #59a14f;
+  --sl-color-series-6:  #edc948;
+  --sl-color-series-7:  #b07aa1;
+  --sl-color-series-8:  #ff9da7;
+  --sl-color-series-9:  #9c755f;
+  --sl-color-series-10: #bab0ac;
+
+  /* — Shape scale ————————————————————————————————————————————————————————— */
+  --sl-rounded-sm:  2;     /* legend swatches                                 */
+  --sl-rounded-md:  3;     /* bar marks                                       */
+  --sl-rounded-lg:  6;     /* figures, cards (used as px in border-radius)    */
+
+  /* — Typography —————————————————————————————————————————————————————————— */
+  --sl-type-family:        Inter, ui-sans-serif, system-ui, -apple-system,
+                           BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sl-type-label-size:    11px;
+  --sl-type-label-weight:  500;
+  --sl-type-body-size:     14px;
+
+  /* — Spacing (8 px base grid) ———————————————————————————————————————————— */
+  --sl-space-xs:  4px;
+  --sl-space-sm:  8px;
+  --sl-space-md:  16px;
+  --sl-space-lg:  32px;
+  --sl-space-xl:  48px;
+
+  /* ════════════════════════════════════════════════════════════════════════
+     COMPONENT TOKEN LAYER  (cascade from semantic)
+     CSS rules and renderers read these.  Override directly for one-off
+     tweaks, or change the semantic tokens above to retheme in bulk.
+     ════════════════════════════════════════════════════════════════════════ */
+
+  /* Color aliases (legacy names kept for CSS-rule compatibility) */
+  --sl-bg:          var(--sl-color-bg);
+  --sl-surface:     var(--sl-color-surface);
+  --sl-fg:          var(--sl-color-on-surface);
+  --sl-muted:       var(--sl-color-muted);
+  --sl-border:      var(--sl-color-border);
+  --sl-accent:      var(--sl-color-primary);
+  --sl-grid:        var(--sl-color-outline-variant);
+  --sl-axis:        var(--sl-color-outline);
+  --sl-font-family: var(--sl-type-family);
+  --sl-shadow:      0 1px 2px rgba(31, 35, 40, 0.05);
+  /* Series aliases */
+  --sl-series-1:    var(--sl-color-series-1);
+  --sl-series-2:    var(--sl-color-series-2);
+  --sl-series-3:    var(--sl-color-series-3);
+  --sl-series-4:    var(--sl-color-series-4);
+  --sl-series-5:    var(--sl-color-series-5);
+  --sl-series-6:    var(--sl-color-series-6);
+  --sl-series-7:    var(--sl-color-series-7);
+  --sl-series-8:    var(--sl-color-series-8);
+  --sl-series-9:    var(--sl-color-series-9);
+  --sl-series-10:   var(--sl-color-series-10);
+
+  /* ── Mark geometry ───────────────────────────────────────────────────────
+     Read at render time via themeValue(). Override via .theme() or CSS.   */
+  --sl-bar-radius:          var(--sl-rounded-md);    /* rx, unitless          */
+  --sl-line-width:          3;                        /* stroke-width, unitless */
+  --sl-mark-stroke:         var(--sl-color-surface); /* circle outline color  */
+  --sl-point-stroke-width:  1.5;                      /* unitless              */
+  --sl-unit-stroke-width:   0.5;                      /* tight packing         */
+  --sl-line-point-size:     4.5;                      /* dot radius, unitless  */
+  --sl-dim-opacity:         0.22;                     /* non-highlighted marks */
+
+  /* ── Axis & grid ─────────────────────────────────────────────────────────*/
+  --sl-axis-font-size:    var(--sl-type-label-size); /* tick + title text     */
+  --sl-axis-label-offset: 48;                         /* px from axis to label */
+  --sl-tick-count:        6;                          /* preferred tick count  */
+  --sl-grid-width:        1px;                        /* grid stroke-width     */
+
+  /* ── Legend ──────────────────────────────────────────────────────────────*/
+  --sl-legend-swatch-size:   9;                       /* swatch w/h, unitless  */
+  --sl-legend-swatch-radius: var(--sl-rounded-sm);   /* swatch rx, unitless   */
+  --sl-legend-font-size:     var(--sl-type-label-size);
+
+  /* ════════════════════════════════════════════════════════════════════════
+     CARD TOKENS  — figure (chart) card and step (text) card are styled
+     separately. Themes give them distinct visual roles.
+     ════════════════════════════════════════════════════════════════════════ */
+
+  /* — Figure (chart) card — */
+  --sl-figure-bg:           var(--sl-color-surface);
+  --sl-figure-blur:         0px;   /* e.g. 24px for glass themes */
+  --sl-figure-radius:       calc(var(--sl-rounded-lg) * 1px);
+  --sl-figure-border:       1px solid var(--sl-color-border);
+  --sl-figure-shadow:       var(--sl-shadow);
+
+  /* — Step (text / narrative) card — */
+  --sl-step-bg:             var(--sl-color-surface);
+  --sl-step-bg-active:      var(--sl-color-surface);
+  --sl-step-blur:           0px;
+  --sl-step-radius:         calc(var(--sl-rounded-lg) * 1px);
+  --sl-step-border:         1px solid var(--sl-color-border);
+  --sl-step-shadow:         var(--sl-shadow);
+
+  font-family: var(--sl-font-family);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sl-bg);
+  color: var(--sl-fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.demo-toolbar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 60;
+  width: min(960px, calc(100% - 32px));
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 12px 10px 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--sl-border);
+  border-radius: 8px;
+  box-shadow: var(--sl-shadow);
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.demo-toolbar-kicker {
+  margin: 0 0 2px;
+  color: var(--sl-accent);
+  font-size: 0.72rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.demo-toolbar h1 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.demo-layout-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.demo-layout-switcher a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  color: var(--sl-fg);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 720;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.demo-layout-switcher a:hover {
+  border-color: var(--sl-border);
+}
+
+.demo-layout-switcher a.is-active {
+  color: white;
+  background: var(--sl-accent);
+  border-color: var(--sl-accent);
+}
+
+.sl-root {
+  min-height: 100vh;
+}
+
+.sl-chart-root {
+  width: 100%;
+  color: var(--sl-fg);
+  font-family: var(--sl-font-family);
+}
+
+.sl-chart-root .sl-chart-figure {
+  margin: 0;
+}
+
+.sl-intro {
+  min-height: 86vh;
+  display: grid;
+  align-items: end;
+  padding: clamp(48px, 8vw, 96px) clamp(20px, 6vw, 84px);
+  background: var(--sl-bg);
+  border-bottom: 1px solid var(--sl-border);
+}
+
+.sl-intro-inner {
+  max-width: 920px;
+}
+
+.sl-kicker {
+  margin: 0 0 16px;
+  color: var(--sl-accent);
+  font-size: 0.85rem;
+  font-weight: 760;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.sl-title {
+  margin: 0;
+  max-width: 880px;
+  font-size: clamp(3rem, 9vw, 7.5rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.sl-description {
+  max-width: 720px;
+  margin: 24px 0 0;
+  color: var(--sl-muted);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.55;
+}
+
+.sl-story {
+  width: min(1520px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(210px, 0.5fr) minmax(300px, 0.82fr) minmax(0, 1.72fr);
+  gap: clamp(20px, 3vw, 44px);
+  padding: 72px 0 96px;
+}
+
+.sl-steps {
+  --sl-step-gap: 36px;
+  --sl-step-min-height: 68vh;
+  grid-column: 1 / span 2;
+  display: grid;
+  gap: var(--sl-step-gap);
+  padding-bottom: max(44vh, 320px);
+}
+
+.sl-step {
+  min-height: var(--sl-step-min-height);
+  display: flex;
+  align-items: center;
+  opacity: 0.42;
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease;
+}
+
+.sl-step.is-active {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.sl-step-stack {
+  --sl-step-column-gap: clamp(16px, 2vw, 28px);
+  --sl-transition-anchor: calc(36.2319% + 18px);
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(210px, 0.5fr) minmax(300px, 0.88fr);
+  gap: var(--sl-step-column-gap);
+  align-items: center;
+}
+
+.sl-step-card {
+  grid-column: 2;
+  width: 100%;
+  border-left: 3px solid transparent;
+  padding: 18px 0 18px 28px;
+}
+
+.sl-step.is-active .sl-step-card {
+  border-left-color: var(--sl-accent);
+}
+
+.sl-step-number {
+  color: var(--sl-accent);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.sl-step h2 {
+  margin: 10px 0 12px;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.sl-step p {
+  margin: 0;
+  color: var(--sl-muted);
+  font-size: 1.02rem;
+  line-height: 1.68;
+}
+
+.sl-step-inspector {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sl-border);
+}
+
+.sl-transition-inspector {
+  grid-column: 1;
+  padding: 12px 20px 12px 0;
+  border-right: 3px solid var(--sl-accent);
+  opacity: 0.82;
+}
+
+.sl-step.is-active .sl-transition-inspector {
+  opacity: 1;
+}
+
+.sl-step-inspector summary {
+  cursor: pointer;
+  color: var(--sl-accent);
+  font-size: 0.78rem;
+  font-weight: 760;
+  list-style-position: outside;
+}
+
+.sl-compiled-spec {
+  margin-top: 2px;
+}
+
+.sl-compiled-spec .sl-code-panel {
+  margin-top: 10px;
+}
+
+.sl-transition-inspector summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  color: var(--sl-muted);
+  font-size: 0.76rem;
+  font-weight: 720;
+}
+
+.sl-transition-inspector summary strong {
+  color: var(--sl-accent);
+  font-weight: 800;
+}
+
+.sl-step-inspector-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.sl-code-panel {
+  min-width: 0;
+}
+
+.sl-code-panel h3 {
+  margin: 0 0 6px;
+  color: var(--sl-muted);
+  font-size: 0.7rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.sl-code-panel pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  color: var(--sl-fg);
+  background: #f3f4f5;
+  border: 1px solid var(--sl-border);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.sl-code-panel code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sl-figure-wrap {
+  grid-column: 3;
+  grid-row: 1;
+  position: sticky;
+  top: 28px;
+  align-self: start;
+  min-height: calc(100vh - 56px);
+  display: grid;
+  align-items: center;
+}
+
+.sl-figure {
+  background: var(--sl-figure-bg);
+  -webkit-backdrop-filter: blur(var(--sl-figure-blur));
+  backdrop-filter: blur(var(--sl-figure-blur));
+  border: var(--sl-figure-border);
+  box-shadow: var(--sl-figure-shadow);
+  border-radius: var(--sl-figure-radius);
+  overflow: hidden;
+}
+
+.sl-figure-header {
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--sl-border);
+}
+
+.sl-figure-title {
+  margin: 0;
+  color: var(--sl-fg);
+  font-size: clamp(1.12rem, 1.8vw, 1.42rem);
+  line-height: 1.12;
+  font-weight: 740;
+  letter-spacing: 0;
+}
+
+.sl-mark-name {
+  color: var(--sl-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  opacity: 0.72;
+  max-width: 42%;
+  text-align: right;
+  white-space: normal;
+}
+
+.sl-view {
+  width: 100%;
+  min-height: 420px;
+}
+
+.sl-view svg {
+  display: block;
+  width: 100%;
+}
+
+.sl-axis path,
+.sl-axis line {
+  stroke: var(--sl-axis);
+  shape-rendering: crispEdges;
+}
+
+.sl-axis text {
+  fill: var(--sl-muted);
+  font-size: var(--sl-axis-font-size);
+}
+
+.sl-axis-label {
+  fill: var(--sl-muted);
+  font-size: var(--sl-axis-font-size);
+  font-weight: 700;
+}
+
+.sl-grid line {
+  stroke: var(--sl-grid);
+  stroke-width: var(--sl-grid-width);
+  shape-rendering: crispEdges;
+}
+
+.sl-grid path {
+  display: none;
+}
+
+.sl-bar-grouped {
+  stroke: var(--sl-surface);
+  stroke-width: 1px;
+}
+
+.sl-bar-seam {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+
+.sl-bar,
+.sl-point,
+.sl-line,
+.sl-line-point,
+.sl-unit {
+  shape-rendering: geometricPrecision;
+}
+
+.sl-scene-layer {
+  pointer-events: none;
+}
+
+.sl-guide-rule {
+  stroke: var(--sl-accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 5 6;
+}
+
+.sl-guide-dot {
+  fill: var(--sl-accent);
+  stroke: var(--sl-surface);
+  stroke-width: 2px;
+}
+
+.sl-tooltip {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  max-width: 260px;
+  padding: 10px 12px;
+  background: rgba(31, 35, 40, 0.94);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  transition: opacity 120ms ease;
+}
+
+.sl-legend {
+  font-size: var(--sl-legend-font-size);
+  fill: var(--sl-muted);
+  font-weight: 500;
+}
+
+.sl-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 30;
+  background: rgba(31, 35, 40, 0.08);
+}
+
+.sl-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--sl-accent);
+  transition: width 180ms ease;
+}
+
+.sl-nav {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  z-index: 25;
+  display: grid;
+  gap: 10px;
+  transform: translateY(-50%);
+}
+
+.sl-nav button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid var(--sl-accent);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sl-nav button.is-active {
+  background: var(--sl-accent);
+}
+
+.sl-empty {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+  color: var(--sl-muted);
+  font-size: 0.95rem;
+}
+
+.sl-text-board {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  padding: 34px;
+}
+
+.sl-text-board ul {
+  width: min(560px, 100%);
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  list-style: none;
+}
+
+.sl-text-board li {
+  border: 1px solid var(--sl-border);
+  border-radius: 8px;
+  background: white;
+  padding: 18px;
+  font-weight: 760;
+  text-align: center;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-story {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-steps,
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-figure-wrap {
+  grid-area: 1 / 1;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-figure-wrap {
+  top: 0;
+  min-height: 100vh;
+  height: 100vh;
+  z-index: 1;
+  padding: clamp(18px, 4vw, 56px);
+  pointer-events: auto;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-figure {
+  width: min(1180px, calc(100vw - 48px));
+  min-width: 0;
+  margin: auto;
+  background: var(--sl-figure-bg);
+  border: var(--sl-figure-border);
+  -webkit-backdrop-filter: blur(var(--sl-figure-blur));
+  backdrop-filter: blur(var(--sl-figure-blur));
+  box-shadow: var(--sl-figure-shadow);
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-steps {
+  --sl-step-min-height: 86vh;
+  position: relative;
+  z-index: 2;
+  width: min(84ch, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 22vh 0 38vh;
+  pointer-events: none;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step-stack {
+  grid-template-columns: minmax(220px, 0.65fr) minmax(360px, 48ch);
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step {
+  min-height: 86vh;
+  opacity: 0.16;
+  transform: none;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step:first-child {
+  padding-top: 10vh;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step:last-child {
+  padding-bottom: 12vh;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step.is-active {
+  opacity: 1;
+  transform: none;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step-card {
+  padding: 18px 20px 18px 28px;
+  background: var(--sl-step-bg);
+  border: var(--sl-step-border);
+  border-left: 3px solid transparent;
+  border-radius: var(--sl-step-radius);
+  -webkit-backdrop-filter: blur(var(--sl-step-blur));
+  backdrop-filter: blur(var(--sl-step-blur));
+  box-shadow: var(--sl-step-shadow);
+  pointer-events: auto;
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-transition-inspector {
+  padding: 12px 16px;
+  background: var(--sl-step-bg);
+  border: var(--sl-step-border);
+  border-right: 3px solid var(--sl-accent);
+  border-radius: var(--sl-step-radius);
+  -webkit-backdrop-filter: blur(var(--sl-step-blur));
+  backdrop-filter: blur(var(--sl-step-blur));
+  box-shadow: var(--sl-step-shadow);
+  pointer-events: auto;
+}
+
+@media (min-width: 881px) {
+  .sl-transition-inspector {
+    position: absolute;
+    top: calc(50% - (var(--sl-step-min-height) / 2) - (var(--sl-step-gap) / 2));
+    right: calc(100% - var(--sl-transition-anchor));
+    z-index: 3;
+    width: var(--sl-transition-anchor);
+    transform: translateY(-50%);
+    pointer-events: auto;
+  }
+
+  .sl-transition-inspector[open] {
+    width: min(320px, calc(var(--sl-transition-anchor) + 40px), calc(100vw - 48px));
+  }
+
+  .sl-transition-inspector .sl-step-inspector-grid {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .sl-transition-inspector .sl-code-panel {
+    min-width: 0;
+  }
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step.is-active .sl-step-card {
+  border-left-color: var(--sl-accent);
+  background: var(--sl-step-bg-active);
+}
+
+:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step-card::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-bottom: 14px;
+  background: var(--sl-border);
+}
+
+@media (max-width: 880px) {
+  .demo-toolbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    transform: none;
+  }
+
+  .demo-layout-switcher {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sl-intro {
+    min-height: 72vh;
+  }
+
+  /* ── Both layouts switch to text-over-vis on mobile ─────────────────────── *
+   * Chart fills ~52 vh at the top (sticky), text cards scroll over it.        *
+   * This matches the text-over-vis idiom so all layouts feel consistent on    *
+   * small screens regardless of what the author configured for desktop.        */
+  .sl-story {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0;
+  }
+
+  .sl-steps,
+  .sl-figure-wrap {
+    grid-area: 1 / 1;
+  }
+
+  .sl-figure-wrap {
+    position: sticky;
+    top: 0;
+    height: 52vh;
+    min-height: 220px;
+    max-height: 360px;
+    z-index: 1;
+    padding: clamp(8px, 2vw, 16px);
+    align-items: stretch;
+    pointer-events: auto;
+  }
+
+  .sl-figure {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sl-view {
+    min-height: 0 !important;
+    flex: 1;
+  }
+
+  .sl-steps {
+    --sl-step-min-height: 60vh;
+    position: relative;
+    z-index: 2;
+    width: min(52ch, calc(100% - 28px));
+    margin: 52vh auto 0;
+    min-height: 0;
+    padding-bottom: 30vh;
+    pointer-events: none;
+  }
+
+  .sl-step {
+    min-height: var(--sl-step-min-height);
+    opacity: 0.18;
+    transform: none;
+  }
+
+  .sl-step.is-active {
+    opacity: 1;
+    transform: none;
+  }
+
+  .sl-step-stack {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .sl-step-card {
+    grid-column: 1;
+    pointer-events: auto;
+    padding: 16px 18px 16px 22px;
+    background: var(--sl-step-bg);
+    border: var(--sl-step-border);
+    border-left: 3px solid transparent;
+    border-radius: var(--sl-step-radius);
+    -webkit-backdrop-filter: blur(var(--sl-step-blur));
+    backdrop-filter: blur(var(--sl-step-blur));
+    box-shadow: var(--sl-step-shadow);
+  }
+
+  .sl-step.is-active .sl-step-card {
+    border-left-color: var(--sl-accent);
+  }
+
+  .sl-transition-inspector {
+    grid-column: 1;
+    position: static;
+    width: auto;
+    transform: none;
+    pointer-events: auto;
+    background: var(--sl-step-bg);
+    border: var(--sl-step-border);
+    border-right: 3px solid var(--sl-accent);
+    border-radius: var(--sl-step-radius);
+    box-shadow: var(--sl-step-shadow);
+  }
+
+  .sl-nav {
+    display: none;
+  }
+
+  .sl-text-board ul {
+    grid-template-columns: 1fr;
+  }
+
+  /* text-over-vis preset: same overlay behaviour, no changes needed on mobile */
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-story {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-steps {
+    width: min(52ch, calc(100% - 28px));
+    margin: 52vh auto 0;
+    padding-bottom: 30vh;
+  }
+
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step-stack {
+    grid-template-columns: 1fr;
+  }
+
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-figure-wrap {
+    height: 52vh;
+    min-height: 220px;
+    max-height: 360px;
+    padding: clamp(8px, 2vw, 16px);
+  }
+
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-figure {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+  }
+
+  :is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-steps {
+    padding: 0 0 30vh;
+  }
+}

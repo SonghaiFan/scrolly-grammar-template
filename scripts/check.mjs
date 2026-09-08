@@ -55,8 +55,6 @@ for (const file of textFiles.sort()) {
     throw new Error(`Forbidden stale reference "${forbidden}" in ${file}`);
   }
 }
-await assertDebugInspectorGate();
-
 console.log(`Checked ${files.length} JavaScript modules.`);
 
 async function collect(dir) {
@@ -87,19 +85,5 @@ async function collectText(path) {
     } else if (/\.(css|html|js|md|mjs|ts)$/.test(entry.name)) {
       textFiles.push(childPath);
     }
-  }
-}
-
-async function assertDebugInspectorGate() {
-  const shell = await readFile(join(root, "src", "runtime", "shell.ts"), "utf8");
-  const runtime = await readFile(join(root, "src", "scrollylite.ts"), "utf8");
-  if (!shell.includes("options.debug ? renderStepInspector(step) : \"\"")) {
-    throw new Error("Step inspector must be gated behind createStory({ debug: true }).");
-  }
-  if (!shell.includes("options.debug ? renderStepTransitionInspector(spec.steps, index, options) : \"\"")) {
-    throw new Error("Transition inspector must be gated behind createStory({ debug: true }).");
-  }
-  if (!runtime.includes("debug: options.debug === true")) {
-    throw new Error("createStory must pass an explicit boolean debug option to renderShell.");
   }
 }

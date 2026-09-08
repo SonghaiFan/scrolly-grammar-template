@@ -1,7 +1,7 @@
 {
   "name": "scrollylite",
   "version": "0.2.0",
-  "description": "Declarative visualization states and seekable animated transitions for browser ESM.",
+  "description": "Declarative visualization states and seekable animated transitions for the browser.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -50,9 +50,9 @@
       "types": "./dist/plugins.d.ts",
       "import": "./dist/plugins.js"
     },
-    "./story": {
-      "types": "./dist/story.d.ts",
-      "import": "./dist/story.js"
+    "./composition": {
+      "types": "./dist/composition.d.ts",
+      "import": "./dist/composition.js"
     },
     "./style.css": "./dist/scrollylite.css",
     "./themes/default.css": "./dist/themes/default.css",
@@ -101,7 +101,8 @@
     }
   },
   "keywords": [
-    "scrollytelling",
+    "animated-transition",
+    "seekable-animation",
     "visualization",
     "d3",
     "grammar",

@@ -32,9 +32,9 @@ const publicExports = {
     types: "./dist/plugins.d.ts",
     import: "./dist/plugins.js"
   },
-  "./story": {
-    types: "./dist/story.d.ts",
-    import: "./dist/story.js"
+  "./composition": {
+    types: "./dist/composition.d.ts",
+    import: "./dist/composition.js"
   },
   "./style.css": "./dist/scrollylite.css",
   "./themes/default.css": "./dist/themes/default.css",
@@ -54,8 +54,8 @@ const requiredFiles = [
   "dist/core.js",
   "dist/index.d.ts",
   "dist/index.js",
-  "dist/story.d.ts",
-  "dist/story.js",
+  "dist/composition.d.ts",
+  "dist/composition.js",
   "dist/transition-entry.d.ts",
   "dist/transition-entry.js",
   "dist/scrollylite.browser.js",
