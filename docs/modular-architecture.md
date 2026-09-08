@@ -1,6 +1,6 @@
 # Module boundaries and remaining cleanup
 
-This describes the 0.2.0 candidate in this checkout, not the 0.1.1 package.
+This describes the current 0.2.0 candidate in this checkout.
 
 ## Public entry points
 

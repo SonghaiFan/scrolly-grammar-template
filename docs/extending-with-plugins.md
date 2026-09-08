@@ -92,7 +92,7 @@ their frame on seek. Validate parity, random reverse seeking, entry/exit,
 
 ## Contributing a built-in idiom
 
-See [the chart folder contract](../src/charts/README.md) and the TypeScript
+See [the chart folder contract](https://github.com/SonghaiFan/scrollylite/blob/main/src/charts/README.md) and the TypeScript
 implementations under `src/charts/{bar,line,point,unit}/`.
 Story uses the static manifest; standalone transitions use the lazy loader map
 in `src/runtime/chart-registry.ts`. A new built-in must be wired into both.

@@ -121,7 +121,7 @@ src/
 Each built-in chart idiom lives in `src/charts/<idiom>/` and exports a
 `plugin.js` built with `defineChartIdiom`, plus an `authoring.js` exposing a
 chainable builder (`bar()`, `line()`, …). See
-[`src/charts/README.md`](../src/charts/README.md) for the exact folder
+[`src/charts/README.md`](https://github.com/SonghaiFan/scrollylite/blob/main/src/charts/README.md) for the exact folder
 contract, and [Extending with Plugins](./extending-with-plugins.md) for how to
 build a new one (the built-ins use the *same* public plugin API — nothing is
 special-cased).
@@ -161,11 +161,8 @@ http://localhost:5510/examples/weather/      # full demo: 4 idioms, 2 layouts, s
 ```
 
 The weather demo accepts query params for quick exploration, e.g.
-`?layout=textOverVis&story=line&action=scroll` — see
-[`examples/weather/index.html`](../examples/weather/index.html) for how it
-wires `createStory` to the URL, and
-[`examples/weather/specs/`](../examples/weather/specs/) for real authored
-story specs across all four idioms.
+`?layout=textOverVis&story=line&action=scroll`. The [live syntax examples](/examples)
+keep executable grammar, output, errors, progress, and delta together in the docs.
 
 ## 8. Release flow (maintainers)
 

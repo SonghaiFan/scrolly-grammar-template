@@ -1,9 +1,10 @@
 # Transition scenes and endpoint semantics
 
 ScrollyLite describes visualization states and evaluates changes between them.
-A **delta** records differences between endpoints; a **transition scene** is a
-legacy classification used by idiom compilers/renderers to choose animation
-behavior. A scene is not a Story step, nor a serialized animation plan.
+A **delta** records differences between endpoints; a **transition scene** is an
+internal planning classification used by idiom compilers and renderers to choose
+animation behavior. It is not a second authoring grammar. A scene is not a Story
+step, nor a serialized animation plan.
 
 ## Endpoint-only inference
 

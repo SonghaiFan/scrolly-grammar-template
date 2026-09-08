@@ -36,6 +36,7 @@ function createBarDraw(deps) {
     const renderer = renderers[isSegmentedLayout(bar.layout, bar.segmentField) ? bar.layout : 'simple'];
 
     fadeNonBarShapes(chart);
+    if (renderer !== renderers.stacked) kit.renderBarSeams({ chart });
 
     if (renderer === renderers.simple) {
       const duplicate = duplicateCategory(rows, barCategoryChannel(spec.encoding || {}));

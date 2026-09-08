@@ -501,9 +501,19 @@ body {
   display: none;
 }
 
-.sl-bar-segment {
+.sl-bar-grouped {
   stroke: var(--sl-surface);
   stroke-width: 1px;
+}
+
+.sl-bar-seam {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+  mix-blend-mode: difference;
+  pointer-events: none;
 }
 
 .sl-bar,

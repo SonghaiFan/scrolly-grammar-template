@@ -51,6 +51,8 @@ bar("rows").x({ field: "decade", title: "By Decade" })   // explicit override
 bar("rows").y("count", "Total count")                    // shorthand: string 2nd arg → { title }
 ```
 
+<SyntaxPlayground initial="measure" compact />
+
 ### `.channel(name, field, options?)`
 
 Generic escape hatch for binding any encoding channel by name — useful for
@@ -119,6 +121,8 @@ title, format, … }`).
 
 ### `.sort(field, order?)`
 
+Sorting changes the rendered row/category order, not the automatic color mapping or legend order. Automatic domains are inferred from the source after data-shaping transforms (such as fold and aggregate), excluding sort, filter, and limit. Explicit color `domain` and `range` still take precedence; declaring a different color mapping can intentionally change colors during a sort transition.
+
 Appends a `{ sort: { field, order } }` transform. `order` is `"ascending"`
 (default) or `"descending"`. Multiple `.sort()` calls accumulate in the
 transform pipeline, applied in order.
@@ -134,7 +138,7 @@ Overrides transition timing for this view. `timing` merges into the spec's
 `transition` block:
 
 ```js
-.transition({ duration: 1200, delay: 100, stagger: { mode: "indexed", amount: 40, max: 600 } })
+.transition({ duration: 1200, ease: "cubicInOut", stagger: { step: 40, max: 600 } })
 ```
 
 ### `.where(selector)`
@@ -152,6 +156,8 @@ For low-level filtering, use `{ filter: ... }` entries in a raw view spec.
 .where(null)                                            // clear the filter (bar only — see below)
 ```
 
+<SyntaxPlayground initial="filter" compact />
+
 ### `.highlight(selector, options?)`
 
 On **bar**, keeps all rows rendered but visually de-emphasizes (fades) the
@@ -162,6 +168,8 @@ but do not render selective opacity; do not rely on it for line/point/unit:
 .highlight({ type: "Cold days" })                       // default fade opacity
 .highlight({ type: "Cold days" }, { opacity: 0.15 })    // custom faded opacity
 ```
+
+<SyntaxPlayground initial="highlight" compact />
 
 Internally this sets `state.focus = { mode: "highlight", filter: selector,
 opacity? }` and infers a `focus` scene.
@@ -230,7 +238,7 @@ Swaps the bars from vertical to horizontal (rotates the guide). Infers a
 .flip()
 .flip({ domain: ["Cold days", "Hot days"] })               // pin the flipped axis's domain
 .flip({ order: ["x", "y"] })                                // reverse the staging order
-.flip({ stage: { duration: 600, stagger: 30 } })            // customize stage timing
+.flip({ staging: { duration: 600, stagger: { step: 30, max: 300 } } }) // customize timing
 ```
 
 `options`:
@@ -241,14 +249,30 @@ Swaps the bars from vertical to horizontal (rotates the guide). Infers a
 | `order` / `stage` / `staging.order` | Staging order, default `["y", "x"]` |
 | (staging timing via `staging`/`stage` object) | `{ duration, stagger }` |
 
+<SyntaxPlayground initial="flip" compact />
+
 ### `.breakdown(segment?, options?)`
 
 Splits one aggregate bar per category into **segments** by another field —
 the canonical "granularity increase" move (one bar → stacked/grouped
 segments). Infers a `granularity` scene.
 
+This changes geometry and grain only. It does not implicitly encode the
+segment field with color: add `.color("type")` or pass an explicit `color`
+option when color carries meaning. Without a color declaration, all segments
+are black and no legend is drawn. The compiled spec keeps
+the grouping field in `encoding.detail`, independently of `encoding.color`.
+
+The stacked split transition establishes the final segment geometry first. A
+1px contrast-aware seam draws outward from each internal boundary, then the
+segment fills reveal over the fading aggregate bar. The seam derives its
+visible contrast from the pixels behind it, so it remains legible over black or
+explicitly encoded colors. With no color encoding, the seams distinguish the
+otherwise-black segments.
+
 ```js
-base.breakdown()                  // segment = "type" (default), op = "sum", layout = "stacked"
+base.breakdown()                  // geometry only; black fill, no legend
+base.breakdown("type").color("type") // explicitly encode the segment field
 base.breakdown("type", { layout: "grouped", op: "mean" })
 base.breakdown("type", { color: TEMPERATURE_HUE, tooltip: [...] })
 ```
@@ -264,6 +288,8 @@ base.breakdown("type", { color: TEMPERATURE_HUE, tooltip: [...] })
 | `title` | titleized `value`, or `false` to skip retitling | Y-axis title |
 | `color` | — | Color encoding for segments |
 | `tooltip` | — | Tooltip config |
+
+<SyntaxPlayground initial="split" compact />
 
 ### `.rollup(groupby?, options?)`
 
@@ -313,7 +339,7 @@ after `.breakdown()`/`.segment()`). Infers a `guide` scene.
 
 ```js
 base.breakdown("type").layout("grouped")
-base.breakdown("type").layout("grouped", { stage: { duration: 500 } })
+base.breakdown("type").layout("grouped", { staging: { duration: 500 } })
 ```
 
 ### `.stage(order, options?)`
@@ -327,8 +353,6 @@ base.stage(["x", "y"], { duration: 700, stagger: 40 })
 ```
 
 ### Bar example progression
-
-(Adapted from [examples/weather/specs/bar-story.js](../examples/weather/specs/bar-story.js))
 
 ```js
 const base = bar("weatherDays").x("decade").y("count").sort("year");
@@ -355,6 +379,8 @@ A line chart for trends over an ordered axis. Defaults: `mark: "line"`,
 ```js
 const base = line("weather").x("decade").y("hot_days").key("decade");
 ```
+
+<SyntaxPlayground initial="line" compact />
 
 ### `.curve(value)`
 
@@ -408,8 +434,6 @@ base.breakdown("period").rollup({ color: "#536a9e" })
 
 ### Line example progression
 
-(Adapted from [examples/weather/specs/line-story.js](../examples/weather/specs))
-
 ```js
 const base = line("weather").x("decade").y("hot_days").key("decade");
 const cold = base.y("cold_days").color(COLD_COLOR);
@@ -434,6 +458,8 @@ A scatterplot. Defaults: `mark: "point"`, `.x()`/`.y()` type
 ```js
 const base = point("weather").x("tmin").y("tmax").key("decade");
 ```
+
+<SyntaxPlayground initial="point" compact />
 
 ### `.pointSize(value)` / `.radius(value)`
 
@@ -482,8 +508,6 @@ base.breakdown({ detail: "year", key: "period" })
 
 ### Point example progression
 
-(Adapted from [examples/weather/specs/point-story.js](../examples/weather/specs))
-
 ```js
 const base = point("weather").x("tmin").y("tmax").key("decade");
 
@@ -508,6 +532,8 @@ Defaults: `mark: "unit"`.
 const base = unit("weather").x("year").y("hot_days").key("decade")
   .value("hot_days").label("decade");
 ```
+
+<SyntaxPlayground initial="unit" compact />
 
 ### `.value(field, options?)`
 
@@ -569,8 +595,6 @@ base.dodge("year")
 > call replaces the unit chart's guide layout with its own.
 
 ### Unit example progression
-
-(Adapted from [examples/weather/specs/unit-story.js](../examples/weather/specs))
 
 ```js
 const base = unit("weather").x("year").y("hot_days").key("decade")

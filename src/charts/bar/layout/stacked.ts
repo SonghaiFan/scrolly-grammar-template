@@ -22,7 +22,7 @@ export function createStackedBarRenderer(deps, kit) {
     const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
     const color = colorScale(domainRows, enc.color, d3);
     const key = barKeyAccessor(chart, spec, [categoryField, segmentField]);
-    const splitLineage = kit.splitLineage(chart, categoryField);
+    const splitLineage = kit.splitLineage(chart);
     const stackBaseEnter = kit.baselineEnterPlan(chart, 'stack-base');
     const stackBaseExit = kit.baselineExitPlan(chart, 'stack-base');
 
@@ -61,17 +61,39 @@ export function createStackedBarRenderer(deps, kit) {
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, updatePlan, geometry
     });
+
+    const seamRows = stackedInternalSeams(stackedRows, categoryField);
+    kit.renderBarSeams({
+      chart,
+      path: stackedSeamPath(seamRows, geom),
+      startPath: stackedSeamPath(seamRows, geom, true),
+      draw: Boolean(splitLineage)
+    });
   };
 }
 
 function stackedSegmentGeometryContract(geom, splitLineage, stackBaseEnter, stackBaseExit, sourceBaselineExit) {
+  const target = stackedSegmentGeometry(geom);
   return {
-    start: (d) => splitLineage?.start(d) || stackedSegmentEnterGeometry(d, geom, stackBaseEnter),
-    target: stackedSegmentGeometry(geom),
+    // When an aggregate parent splits, establish the final child boundaries
+    // immediately. The render kit reveals the child fills over the old parent,
+    // so the motion reads as a cut instead of two rectangles shrinking inward.
+    start: (d) => splitLineage ? materializeRect(target, d) : stackedSegmentEnterGeometry(d, geom, stackBaseEnter),
+    target,
     applyX: (selection) => applyStackedSegmentX(selection, geom),
     applyY: (selection) => applyStackedSegmentY(selection, geom),
     apply: (selection) => applyStackedSegmentGeometry(selection, geom),
     exit: splitLineage ? null : (selection) => applyStackedSegmentExitGeometry(selection, geom, stackBaseExit, sourceBaselineExit)
+  };
+}
+
+function materializeRect(geometry, datum) {
+  const value = (property) => typeof property === 'function' ? property(datum) : property;
+  return {
+    x: value(geometry.x),
+    y: value(geometry.y),
+    width: value(geometry.width),
+    height: value(geometry.height)
   };
 }
 
@@ -158,6 +180,26 @@ function stackBarRows(rows, categoryField, segmentField, valueField, segments) {
     offsets.set(category, end);
     return { ...row, __stack0: start, __stack1: end };
   });
+}
+
+function stackedInternalSeams(rows, categoryField) {
+  return rows.filter((row, index) => {
+    const next = rows[index + 1];
+    const sign = (d) => d.__stack0 < 0 || d.__stack1 < 0;
+    return next && row[categoryField] === next[categoryField] && sign(row) === sign(next);
+  });
+}
+
+function stackedSeamPath(rows, geom, collapsed = false) {
+  const { x, y, categoryField, horizontal } = geom;
+  return rows.map((d) => {
+    if (horizontal) {
+      const edge = x(d.__stack1), start = y(d[categoryField]), middle = start + y.bandwidth() / 2;
+      return `M${edge},${collapsed ? middle : start}V${collapsed ? middle : start + y.bandwidth()}`;
+    }
+    const edge = y(d.__stack1), start = x(d[categoryField]), middle = start + x.bandwidth() / 2;
+    return `M${collapsed ? middle : start},${edge}H${collapsed ? middle : start + x.bandwidth()}`;
+  }).join('');
 }
 
 function stackedValueDomain(rows, measureChannel = {}, d3) {

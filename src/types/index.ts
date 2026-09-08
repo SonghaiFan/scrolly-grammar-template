@@ -27,6 +27,8 @@ export interface EncodingSpec {
   x?: ChannelSpec;
   y?: ChannelSpec;
   color?: ChannelSpec;
+  /** Declares grouping/detail identity without assigning a visual property. */
+  detail?: ChannelSpec;
   size?: ChannelSpec;
   xOffset?: ChannelSpec;
   yOffset?: ChannelSpec;

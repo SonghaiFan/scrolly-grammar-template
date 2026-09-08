@@ -129,6 +129,14 @@ export class BarState extends IdiomState {
             as: options.as ?? value,
             op: options.op ?? 'sum'
         });
+        if (!color) {
+            const next = cloneState(nextState.state);
+            const colorFields = channelFields(next.encoding?.color);
+            if (colorFields.some((field) => !fields.includes(field))) {
+                delete next.encoding?.color;
+                nextState = new BarState(next);
+            }
+        }
         if (title)
             nextState = nextState.y(value, { title });
         if (color)
@@ -196,6 +204,15 @@ export class BarState extends IdiomState {
             }
         }, 'guide');
     }
+}
+function channelFields(channel) {
+    if (!channel)
+        return [];
+    return [
+        channel.field,
+        channel.hue?.field,
+        channel.luminance?.field
+    ].filter((field) => typeof field === 'string' && field.length > 0);
 }
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 function aggregateBarState(view, config) {

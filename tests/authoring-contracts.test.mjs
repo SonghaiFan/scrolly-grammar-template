@@ -28,3 +28,20 @@ test('documented filtering uses where, not a nonexistent filter method', () => {
     assert.doesNotThrow(() => declaration.where('datum.y >= 2').toSpec());
   }
 });
+
+test('color is an explicit encoding, including for bar breakdowns', () => {
+  const rows = [
+    { category: 'A', type: 'one', value: 10 },
+    { category: 'A', type: 'two', value: 20 }
+  ];
+  const base = bar(rows).x('category').y('value').key('category');
+  assert.equal(base.toSpec().encoding.color, undefined);
+  assert.equal(base.breakdown('type').toSpec().encoding.color, undefined);
+  assert.deepEqual(base.breakdown('type').color('type').toSpec().encoding.color, {
+    field: 'type', type: 'nominal'
+  });
+  assert.equal(base.breakdown('type').color('type').rollup().toSpec().encoding.color, undefined);
+  assert.deepEqual(base.breakdown('type', { color: ['#112233', '#445566'] }).toSpec().encoding.color, {
+    field: 'type', type: 'nominal', range: ['#112233', '#445566']
+  });
+});

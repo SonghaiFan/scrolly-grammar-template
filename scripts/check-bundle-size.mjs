@@ -72,6 +72,7 @@ for (const path of loaded) {
     }
   }
 }
-const budget = 35_000;
+// Includes the seekable, contrast-aware seam used by semantic bar splits.
+const budget = 35_500;
 if (gzipBytes > budget) throw new Error(`Focused bar transition exceeds ${budget} bytes gzip: ${gzipBytes}`);
 console.log(`bar + transition (entry, shared chunks, bar plugin): ${gzipBytes} bytes gzip (budget ${budget}; excludes D3, optional Arquero, CSS).`);

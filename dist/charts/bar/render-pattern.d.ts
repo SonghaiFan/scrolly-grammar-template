@@ -5,6 +5,12 @@ export declare function createBarRenderKit(deps: any): {
     barFocusOpacity: typeof barFocusOpacity;
     collapseLineage: typeof collapseLineage;
     renderBarJoin: (options: any) => void;
+    renderBarSeams: ({ chart, path, startPath, draw }: {
+        chart: any;
+        path?: string | undefined;
+        startPath?: any;
+        draw?: boolean | undefined;
+    }) => void;
     setRectGeometry: typeof setRectGeometry;
     splitLineage: typeof splitLineage;
     sourceBaselineExit: typeof sourceBaselineExit;
@@ -21,9 +27,7 @@ export declare function setRectGeometry(selection: any, geometry: any): void;
 export declare function collapseLineage(chart: any, parentField: any): {
     start(d: any): any;
 } | null;
-export declare function splitLineage(chart: any, parentField: any): {
-    start(d: any): any;
-} | null;
+export declare function splitLineage(chart: any): boolean;
 export declare function baselineEnterPlan(chart: any, from: any): any;
 export declare function baselineExitPlan(chart: any, to: any): any;
 export declare function sourceBaselineExit(selection: any, { horizontal, plan, value }?: {

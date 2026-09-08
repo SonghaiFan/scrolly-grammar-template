@@ -36,7 +36,7 @@ export function barLayoutState(spec, state = semanticStateFromSpec(spec), aggreg
         return stateLayout;
     if (enc.xOffset?.field || enc.yOffset?.field)
         return 'grouped';
-    if (enc.color?.field && aggregate)
+    if ((enc.detail?.field || enc.color?.field) && aggregate)
         return 'stacked';
     return 'simple';
 }
@@ -80,6 +80,7 @@ export function barSegmentField(spec, state = semanticStateFromSpec(spec)) {
     const sceneState = state.sceneState ?? {};
     return (sceneState.granularity?.segmentField ??
         state.granularity?.segmentField ??
+        spec.encoding?.detail?.field ??
         spec.encoding?.xOffset?.field ??
         spec.encoding?.yOffset?.field ??
         spec.encoding?.color?.field ??

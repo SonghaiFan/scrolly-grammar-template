@@ -8,8 +8,6 @@ into narrated steps with sticky visualizations and scroll interaction.
 This checkout prepares **0.2.0**. Versioned install/CDN snippets below target
 that candidate and become available after publication. For pre-release testing,
 build locally or install a locally packed tarball; no npm publication is implied.
-See the [release acceptance record](docs/release-0.2.0.md) and
-[migration notes](docs/migrating-to-0.2.md).
 
 ```js
 const spec = story()
@@ -27,7 +25,7 @@ You write *what* each step looks like — ScrollyLite diffs consecutive steps,
 infers what changed (filter? re-orientation? aggregation level? encoded
 field?), and animates the transition for you.
 
-📖 **[Read the full documentation →](docs/getting-started.md)**
+📖 **[Open the interactive reference](docs/reference.md)**
 
 ## Standalone visualization transitions
 
@@ -50,7 +48,6 @@ No Story or Step is required.
 The runtime loads only the selected chart idiom; `scrollylite/plugins` supports
 custom registration without importing Story. See [module boundaries and remaining
 cleanup](docs/modular-architecture.md) for measured sizes and current limitations.
-This API requires 0.2.0; it is not part of 0.1.1.
 Built-in bar transitions compile and cache interpolation tracks once; playback
 and progress reuse SVG nodes. Call `change.resize()` after changing size or theme.
 See [Visualization Transitions](docs/visualization-transitions.md) for the contract,
@@ -182,8 +179,8 @@ import {
 
 Type definitions ship with the package at `dist/index.d.ts`. For the full
 reference — every chainable method, every config option, the runtime object
-shape, scene-inference rules, and how to plug in your own chart idiom — see
-**[the docs](docs/getting-started.md)**.
+shape, delta semantics, transition planning, and plugin boundaries, see the
+**[interactive reference](docs/reference.md)**.
 
 ## Development
 
@@ -271,15 +268,16 @@ npm publish
 git push --follow-tags
 ```
 
-Before publication, finalize the candidate's version/date and migration notes,
+Before publication, finalize the candidate's version/date and maintainer notes,
 review and commit the intended files, then create the matching version tag.
 Do not bump 0.2.0 again merely to publish this prepared candidate. `npm publish` runs
 `npm run release:check` automatically, including real-browser regressions and an
 installed tarball consumer check. On a development machine with Chrome already
 installed, `SCROLLYLITE_CHROME_PATH` can point to its executable instead of
 installing Playwright's Chromium. Choose the version bump deliberately: the
-API additions and stricter validation are not merely a docs patch. See the
-[0.2 migration notes](docs/migrating-to-0.2.md) for changed behavior and limits.
+API additions and stricter validation are not merely a docs patch. Historical
+migration and release acceptance files are maintainer records, not the public
+language reference.
 
 jsDelivr can serve npm packages with:
 
@@ -300,14 +298,42 @@ run the build step for you.
 
 ## Docs
 
-Pick the guide that matches how you're using ScrollyLite:
+The documentation site is built with [VitePress](https://vitepress.dev/). Start
+the local authoring server with:
+
+```sh
+npm run docs:dev
+```
+
+VitePress prints the local URL in the terminal. Build and inspect the exact
+static output with:
+
+```sh
+npm run docs:build
+npm run docs:preview
+```
+
+Set `DOCS_BASE=/scrollylite/` when building for a subpath deployment such as
+GitHub Pages. Without an override, the generated site is also reachable from
+the repository homepage when this checkout is served by a plain static server.
+
+Start with the **[language framework and roadmap](docs/language-framework.md)**.
+It is the source of truth for ontology, grammar families, idiom coverage,
+implementation status, missing capabilities, and development order.
+
+Then use the **[interactive reference](docs/reference.md)**. It is the
+canonical public map of the 0.2 language and includes a live seekable runtime,
+code, delta inspection, complete public method tables, lifecycle contracts, and
+current limitations.
+
+Then pick the focused guide that matches how you're using ScrollyLite:
 
 - [`docs/for-cdn-users.md`](docs/for-cdn-users.md): **browser ESM, no build tools** — paste a module script into any page and go. Start here if you're not running npm/bundlers.
 - [`docs/for-developers.md`](docs/for-developers.md): **npm/bundler projects & contributors** — install, architecture, scripts, release flow, extending the library.
 - [`llms.txt`](llms.txt): **AI agents / LLMs** — a dense, single-file reference covering the entire grammar and API, written for machine consumption.
 
-Or start at [`docs/getting-started.md`](docs/getting-started.md), which links
-to everything below in reading order:
+The written guides below expand individual areas. They use the same current
+grammar as the interactive reference:
 
 - [`docs/getting-started.md`](docs/getting-started.md): package-manager install, browser ESM CDN usage, a full working example, and what `createStory` does.
 - [`docs/concepts.md`](docs/concepts.md): the mental model — Story, Step, View, Idiom, Scene, semantic identity (`key`).

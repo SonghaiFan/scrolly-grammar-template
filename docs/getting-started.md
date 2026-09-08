@@ -1,5 +1,9 @@
 # Getting Started
 
+For the complete public language, controller contracts, and runnable browser
+workbench, open the [interactive reference](./reference.md). This page keeps
+the shortest path from installation to a first Story.
+
 For a standalone pair of chainable visualization instances with click or progress
 control, see [Visualization Transitions](./visualization-transitions.md).
 This guide targets the **0.2.0 candidate**. Until it is published, use a local
@@ -197,6 +201,5 @@ http://localhost:5510/examples/weather/      # Full demo: 4 idioms, 2 layouts, s
 ```
 
 The weather demo accepts query parameters — try
-`?layout=textOverVis&story=line&action=scroll`. See
-[examples/weather/index.html](../examples/weather/index.html) for how the demo
-wires `createStory` to the URL.
+`?layout=textOverVis&story=line&action=scroll`. To change grammar and see the
+result without leaving the documentation, use the [live syntax examples](/examples).

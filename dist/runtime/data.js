@@ -32,8 +32,12 @@ export function viewRows(dataSpec, datasets) {
     return name ? (datasets[name] || []) : [];
 }
 export function domainTransforms(transforms = []) {
+    // Domain inference uses the full, unsorted data lineage. Display-only
+    // filtering/limiting/sorting must not reassign categorical palette slots or
+    // reorder the legend. Marks still use the complete transform pipeline.
+    // Keep fold/bin/timeUnit/aggregate: these define the values being encoded.
     return transforms.filter((transform) => {
         const t = transform;
-        return !t['filter'] && !t['limit'];
+        return !('filter' in t) && !('limit' in t) && !('sort' in t);
     });
 }

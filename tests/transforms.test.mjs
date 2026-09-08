@@ -2,10 +2,36 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as aq from 'arquero';
 import { applyTransforms } from '../dist/data/transforms.js';
+import { domainTransforms } from '../dist/runtime/data.js';
 import { bar, line, point, unit } from '../dist/index.js';
 
 const rows = [{ id: 'A', value: 0 }, { id: 'B', value: 2 }, { id: 'C', value: 4 }];
 const run = (transforms, source = rows) => applyTransforms(source, transforms, aq);
+
+test('domain inference ignores display order and subsets while mark rows still sort', () => {
+  const source = [
+    { category: 'A', value: 10, type: 'one' },
+    { category: 'B', value: 30, type: 'two' },
+    { category: 'C', value: 20, type: 'one' }
+  ];
+  const transforms = [{ sort: { field: 'value', order: 'descending' } }];
+  assert.deepEqual(run(transforms, source).map(row => row.category), ['B', 'C', 'A']);
+  assert.deepEqual(run(domainTransforms(transforms), source), source);
+  assert.deepEqual(domainTransforms([...transforms, { filter: { field: 'type', equal: 'two' } }, { limit: 0 }]), []);
+});
+
+test('domain inference preserves data-shaping transforms and explicit execution order', () => {
+  const shape = [
+    { timeUnit: { field: 'date', unit: 'month', as: 'month' } },
+    { fold: { fields: ['sales', 'profit'], as: ['measure', 'value'] } },
+    { bin: { field: 'value', as: 'bucket', step: 10 } },
+    { aggregate: { groupby: ['measure'], fields: [{ op: 'sum', field: 'value', as: 'total' }] } }
+  ];
+  const transforms = [shape[0], { sort: { field: 'date' } }, ...shape.slice(1), { sort: { field: 'total' } }];
+  const before = structuredClone(transforms);
+  assert.deepEqual(domainTransforms(transforms), shape);
+  assert.deepEqual(transforms, before);
+});
 
 test('zero limit is empty; transforms run in declared order without mutating input', () => {
   assert.deepEqual(run([{ limit: 0 }]), []);

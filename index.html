@@ -1033,8 +1033,8 @@
         <a href="#showcase">Sequence</a>
         <a href="#modes">Drivers</a>
         <a href="#features">Capabilities</a>
-        <a href="./examples/weather/">Demo</a>
-        <a href="./docs/getting-started.md">Docs</a>
+        <a href="./examples/transition/">Bar lab</a>
+        <a href="./docs/.vitepress/dist/reference.html">Reference</a>
         <a href="./llms.txt">llms.txt</a>
         <a href="https://github.com/SonghaiFan/scrollylite">GitHub</a>
       </div>
@@ -1054,7 +1054,7 @@
             </p>
             <div class="hero-actions">
               <a class="btn-primary" href="#modes">Run the transition</a>
-              <a class="btn-ghost" href="./docs/getting-started.md">Read the docs</a>
+              <a class="btn-ghost" href="./docs/.vitepress/dist/reference.html">Open the reference</a>
             </div>
 
             <div class="install-block">
@@ -1365,7 +1365,7 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
             <div class="feature-card">
               <div class="feature-icon">CSS</div>
               <h3>Tokens and plugins</h3>
-              <p>Custom runtime idioms register with <code>registerChartModule({ plugin })</code>. Package theme entries include Default, Dark, and Paper. Warm remains a legacy source alias.</p>
+              <p>Custom runtime idioms register with <code>registerChartModule({ plugin })</code>. Public package theme entries include Default, Dark, and Paper.</p>
             </div>
           </div>
         </div>
@@ -1377,7 +1377,7 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
       <div class="wrap footer-inner">
         <span>ScrollyLite · MIT license</span>
         <div class="footer-links">
-          <a href="./docs/getting-started.md">Docs</a>
+          <a href="./docs/.vitepress/dist/reference.html">Interactive reference</a>
           <a href="./examples/weather/">Demo</a>
           <a href="./llms.txt">llms.txt</a>
           <a href="https://github.com/SonghaiFan/scrollylite">GitHub</a>
@@ -1445,21 +1445,21 @@ slider<span class="tok-p">.</span>oninput <span class="tok-p">= () =></span>
         },
         {
           label: "Granularity: breakdown",
-          snippet: `base\n  .breakdown("type")`,
+          snippet: `base\n  .breakdown("type")\n  .color("type")`,
           desc: "Granularity splits each decade bar into hot and cold segments. One aggregate becomes two.",
-          chart: base.breakdown("type"),
+          chart: base.breakdown("type").color("type"),
         },
         {
           label: "Focus: highlight",
-          snippet: `base\n  .breakdown("type")\n  .highlight({ type: "Cold days" })`,
+          snippet: `base\n  .breakdown("type")\n  .color("type")\n  .highlight({ type: "Cold days" })`,
           desc: "Focus highlights cold segments by fading hot ones. Shape is preserved while emphasis shifts.",
-          chart: base.breakdown("type").highlight({ type: "Cold days" }),
+          chart: base.breakdown("type").color("type").highlight({ type: "Cold days" }),
         },
         {
           label: "Guide: grouped layout",
-          snippet: `base\n  .breakdown("type")\n  .layout("grouped")\n  .flip()`,
+          snippet: `base\n  .breakdown("type")\n  .color("type")\n  .layout("grouped")\n  .flip()`,
           desc: "Guide changes stacked → grouped and flips orientation. Three semantic changes, one smooth transition.",
-          chart: base.breakdown("type").layout("grouped").flip(),
+          chart: base.breakdown("type").color("type").layout("grouped").flip(),
         },
       ];
 

@@ -28,6 +28,10 @@ theory.
 
 ## Categorical color (nominal / ordinal data)
 
+With no color channel, every data mark is black and no legend is shown. Color
+enters the visualization only through an explicit constant, field, or composite
+color declaration.
+
 Use a `color` channel with a nominal or ordinal field:
 
 ```js

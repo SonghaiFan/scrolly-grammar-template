@@ -60,8 +60,7 @@ async function createStory(spec: object, options: CreateStoryOptions): Promise<S
 - `d3` is missing — `"ScrollyLite requires D3. Pass { d3 } to createStory()."`
 - `aq` is missing — `"ScrollyLite data transforms
   require Arquero. Pass { aq } to createStory()."`
-- `target` doesn't resolve to an element — `"ScrollyLite target not found:
-  <selector>"`
+- `target` doesn't resolve to an element: `ScrollyLite target not found: selector`
 - `spec` isn't an object — `"ScrollyLite requires a story spec object."`
 
 Always `await createStory(...)` (or `.catch()` the promise) so these surface

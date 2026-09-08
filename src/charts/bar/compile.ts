@@ -149,16 +149,19 @@ function compileBarAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, _c
   }
 
   const layout = (granularitySpec['layout'] as string) || 'stacked';
+  const color = explicitGranularityColor(
+    granularitySpec['color'],
+    (encoding['color'] as ChannelSpec | undefined),
+    segmentField,
+    segmentDomain,
+    granularitySpec['range'] as string[] | undefined
+  );
   const newEncoding: Encoding = {
     ...cloneEncoding(spec.encoding) as Encoding,
     x: channelFromField(categoryField, (granularitySpec['categoryTitle'] as string) || (encoding['x'] as ChannelSpec)?.title || null, 'nominal'),
     y: channelFromField(valueField, (granularitySpec['valueTitle'] as string) || (encoding['y'] as ChannelSpec)?.title || null, 'quantitative'),
-    color: (granularitySpec['color'] as ChannelSpec) || {
-      field: segmentField,
-      type: 'nominal',
-      ...(segmentDomain.length ? { domain: segmentDomain } : {}),
-      range: (granularitySpec['range'] as string[]) || ['var(--sl-series-1)', 'var(--sl-series-2)']
-    }
+    detail: { field: segmentField, type: 'nominal' },
+    ...(color ? { color } : {})
   };
 
   if (layout === 'grouped') {
@@ -187,6 +190,42 @@ function compileBarAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, _c
       valueField
     }
   });
+}
+
+function explicitGranularityColor(
+  requested: unknown,
+  inherited: ChannelSpec | undefined,
+  segmentField: string,
+  segmentDomain: string[],
+  range: string[] | undefined
+): ChannelSpec | undefined {
+  if (requested === false) return undefined;
+  if (Array.isArray(requested)) {
+    return {
+      field: segmentField,
+      type: 'nominal',
+      ...(segmentDomain.length ? { domain: segmentDomain } : {}),
+      range: requested as string[]
+    };
+  }
+  if (requested && typeof requested === 'object') {
+    const channel = requested as ChannelSpec;
+    return {
+      ...(!channel.field && !channel.value && !channel.hue && !channel.luminance
+        ? { field: segmentField, type: 'nominal' as const }
+        : {}),
+      ...channel
+    };
+  }
+  if (range?.length) {
+    return {
+      field: segmentField,
+      type: 'nominal',
+      ...(segmentDomain.length ? { domain: segmentDomain } : {}),
+      range
+    };
+  }
+  return inherited;
 }
 
 function withDefaultBarSemanticKey(spec: ViewSpec): ViewSpec {

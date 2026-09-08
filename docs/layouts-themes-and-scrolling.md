@@ -23,11 +23,11 @@ story().layout("floatToText")
 story().layout("textOverVis")
 ```
 
-Set the preset via `.layout(name)`, `.layout(name, { runtime: {...} })`, or a
-raw config object — see [Story Builder → `.layout()`](./story-builder.md#layoutpresetorconfig-options).
-You can also register your own preset at the layout registry level with
-`registerLayout(name, { classes: [...] })` (exported from
-`src/layouts/index.js`) and pair it with matching CSS.
+Set the preset via `.layout(name)`, `.layout(name, { offset, nav, ... })`, or a
+raw config object. Options passed with the preset are merged directly into
+`spec.layout`; there is no `layout.runtime` wrapper. See
+[Story Builder: `.layout()`](./story-builder.md#layoutpresetorconfig-options).
+Custom layout registration is currently internal and is not a public package API.
 
 ## `layout` config reference
 
@@ -274,8 +274,8 @@ replacement) supplies the color palette on top.
 
 ```js
 story()
-  .layout("floatToText", { runtime: { offset: 0.6, nav: true, progress: true,
-    scroll: { navigation: { behavior: "smooth", progress: 0.95 } } } })
+  .layout("floatToText", { offset: 0.6, nav: true, progress: true,
+    scroll: { navigation: { behavior: "smooth", progress: 0.95 } } })
   .data(/* … */)
   .view("main", { title: "Melbourne Weather", height: 540 })
   .action(["scroll", "tooltip"])

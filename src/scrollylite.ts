@@ -313,9 +313,6 @@ function updateStoryProgress(shell, spec, index, progress = 0) {
 
 
 
-// Preferred field names for auto-inferred color channel (mirrors defaultColorField in marks.ts).
-const COLOR_INFER_PREFERRED = ['type', 'kind', 'category', 'group', 'series', 'period'];
-
 // Resolve the CSS variable for a series slot (e.g. "var(--sl-series-1)" → actual hex/rgb).
 function resolveSeriesVar(value: string, root: Element): string {
   if (!value?.startsWith('var(')) return value;
@@ -341,7 +338,7 @@ function resolveThemePalette(root: Element): string[] {
 // Strategy per scene (highest-priority first):
 //   1. Idiom-compiled explicit domain + explicit range → use that ordering directly.
 //   2. Explicit color.field with no range → collect union of values across scenes.
-//   3. No color.field → infer from preferred field names present in the data.
+//   3. No color channel → no registry entry; undeclared color is black.
 //
 // Final assignment is always sequential (series-1, series-2, …) in the order
 // keys are first encountered, so the Nth distinct key always maps to series-N —
@@ -389,8 +386,7 @@ function buildColorRegistry(
       if (colorChannel?.type === 'quantitative' || colorChannel?.value) continue;
       if (colorChannel?.hue || colorChannel?.luminance) continue;
 
-      const field: string | undefined = colorChannel?.field as string | undefined
-        ?? (colorChannel ? undefined : COLOR_INFER_PREFERRED.find(f => rows.some(r => (r as AnyRecord)[f] != null)));
+      const field: string | undefined = colorChannel?.field as string | undefined;
       if (!field) continue;
 
       // If the encoding has an explicit domain + parallel range, use that ordering.

@@ -7,7 +7,9 @@ test('focused bar transition loads no Story runtime or unrelated idioms', async 
     if (url.pathname.startsWith('/dist/')) modules.push(url.pathname);
   });
   await page.goto('/examples/transition/');
-  await expect(page.locator('rect.sl-bar')).toHaveCount(4);
+  await expect(page.locator('#status')).toHaveText('Ready');
+  // The lab uses the A/B/C fixture shared by the transition scenarios.
+  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
   await page.locator('#progress').fill('0.37');
   await expect(page.locator('#value')).toHaveText('0.37');
   expect(modules).toContain('/dist/charts/bar/plugin.js');

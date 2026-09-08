@@ -326,8 +326,6 @@ function updateStoryProgress(shell, spec, index, progress = 0) {
         : ((index + clamp(progress, 0, 1)) / denominator) * 100;
     shell.progressFill.style.width = `${Math.min(100, pct)}%`;
 }
-// Preferred field names for auto-inferred color channel (mirrors defaultColorField in marks.ts).
-const COLOR_INFER_PREFERRED = ['type', 'kind', 'category', 'group', 'series', 'period'];
 // Resolve the CSS variable for a series slot (e.g. "var(--sl-series-1)" → actual hex/rgb).
 function resolveSeriesVar(value, root) {
     if (!value?.startsWith('var('))
@@ -355,7 +353,7 @@ function resolveThemePalette(root) {
 // Strategy per scene (highest-priority first):
 //   1. Idiom-compiled explicit domain + explicit range → use that ordering directly.
 //   2. Explicit color.field with no range → collect union of values across scenes.
-//   3. No color.field → infer from preferred field names present in the data.
+//   3. No color channel → no registry entry; undeclared color is black.
 //
 // Final assignment is always sequential (series-1, series-2, …) in the order
 // keys are first encountered, so the Nth distinct key always maps to series-N —
@@ -398,8 +396,7 @@ function buildColorRegistry(compiled, datasets, aq, root, idioms) {
                 continue;
             if (colorChannel?.hue || colorChannel?.luminance)
                 continue;
-            const field = colorChannel?.field
-                ?? (colorChannel ? undefined : COLOR_INFER_PREFERRED.find(f => rows.some(r => r[f] != null)));
+            const field = colorChannel?.field;
             if (!field)
                 continue;
             // If the encoding has an explicit domain + parallel range, use that ordering.

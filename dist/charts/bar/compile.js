@@ -114,16 +114,13 @@ function compileBarAggregate(spec, granularitySpec = {}, _context = {}) {
         });
     }
     const layout = granularitySpec['layout'] || 'stacked';
+    const color = explicitGranularityColor(granularitySpec['color'], encoding['color'], segmentField, segmentDomain, granularitySpec['range']);
     const newEncoding = {
         ...cloneEncoding(spec.encoding),
         x: channelFromField(categoryField, granularitySpec['categoryTitle'] || encoding['x']?.title || null, 'nominal'),
         y: channelFromField(valueField, granularitySpec['valueTitle'] || encoding['y']?.title || null, 'quantitative'),
-        color: granularitySpec['color'] || {
-            field: segmentField,
-            type: 'nominal',
-            ...(segmentDomain.length ? { domain: segmentDomain } : {}),
-            range: granularitySpec['range'] || ['var(--sl-series-1)', 'var(--sl-series-2)']
-        }
+        detail: { field: segmentField, type: 'nominal' },
+        ...(color ? { color } : {})
     };
     if (layout === 'grouped') {
         newEncoding['xOffset'] = { field: segmentField, type: 'nominal' };
@@ -151,6 +148,36 @@ function compileBarAggregate(spec, granularitySpec = {}, _context = {}) {
             valueField
         }
     });
+}
+function explicitGranularityColor(requested, inherited, segmentField, segmentDomain, range) {
+    if (requested === false)
+        return undefined;
+    if (Array.isArray(requested)) {
+        return {
+            field: segmentField,
+            type: 'nominal',
+            ...(segmentDomain.length ? { domain: segmentDomain } : {}),
+            range: requested
+        };
+    }
+    if (requested && typeof requested === 'object') {
+        const channel = requested;
+        return {
+            ...(!channel.field && !channel.value && !channel.hue && !channel.luminance
+                ? { field: segmentField, type: 'nominal' }
+                : {}),
+            ...channel
+        };
+    }
+    if (range?.length) {
+        return {
+            field: segmentField,
+            type: 'nominal',
+            ...(segmentDomain.length ? { domain: segmentDomain } : {}),
+            range
+        };
+    }
+    return inherited;
 }
 function withDefaultBarSemanticKey(spec) {
     if (narrativeSemanticKey(spec))

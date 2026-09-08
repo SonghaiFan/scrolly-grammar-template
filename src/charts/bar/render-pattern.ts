@@ -58,6 +58,7 @@ export function createBarRenderKit(deps) {
     barFocusOpacity,
     collapseLineage,
     renderBarJoin,
+    renderBarSeams,
     setRectGeometry,
     splitLineage,
     sourceBaselineExit,
@@ -121,6 +122,20 @@ export function createBarRenderKit(deps) {
         }
       );
   }
+
+  function renderBarSeams({ chart, path = '', startPath = path, draw = false }) {
+    const seams = chart.g.selectAll('path.sl-bar-seam').data(path ? [path] : []);
+    seams.exit().transition(chart.transition.base).style('opacity', 0).remove();
+    seams.enter().append('path')
+      .attr('class', 'sl-bar-seam')
+      .style('opacity', draw ? 1 : 0)
+      .attr('d', startPath)
+      .merge(seams)
+      .transition(chart.transition.base)
+      .duration(draw ? Math.max(1, chart.transition.duration * 0.32) : chart.transition.duration)
+      .style('opacity', 1)
+      .attr('d', (d) => d);
+  }
 }
 
 export function setRectGeometry(selection, geometry) {
@@ -148,19 +163,9 @@ export function collapseLineage(chart, parentField) {
   return { start(d) { return bounds.get(String(d[parentField])) || null; } };
 }
 
-export function splitLineage(chart, parentField) {
+export function splitLineage(chart) {
   const enterPlan = chart.transitionPlan?.enter;
-  if (enterPlan?.mode !== 'parent-child-lineage' || enterPlan.from !== 'parent-bounds' || !parentField) return null;
-  const bounds = new Map();
-  chart.g.selectAll('rect.sl-bar:not(.sl-bar-segment)').each(function() {
-    const node = this;
-    const parent = node.dataset.category || node.dataset.key;
-    const box = rectGeometry(node);
-    if (!parent || !box) return;
-    bounds.set(parent, box);
-  });
-  if (!bounds.size) return null;
-  return { start(d) { return bounds.get(String(d[parentField])) || null; } };
+  return enterPlan?.mode === 'parent-child-lineage' && enterPlan.from === 'parent-bounds';
 }
 
 export function baselineEnterPlan(chart, from) {

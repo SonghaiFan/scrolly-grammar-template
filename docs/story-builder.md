@@ -22,12 +22,13 @@ const spec = story()
 
 Creates a new builder. `initialSpec`, if given, seeds the internal spec object
 (deep-cloned) — useful for extending an existing spec or sharing common
-boilerplate (see `story.demo()` pattern in
-[examples/weather/specs/shared.js](../examples/weather/specs/shared.js)).
+boilerplate across multiple narratives.
 
 ```js
 const base = story({ data: { rows: { url: "./data.csv", type: "csv" } } });
 ```
+
+<SyntaxPlayground initial="story" compact />
 
 ## Metadata
 
@@ -67,10 +68,9 @@ from a chart idiom builder: `bar("weatherDays")`.
 Two call forms:
 
 ```js
-// Preset shorthand — sets `layout.preset` and merges `options.runtime`
-// (or `options.layout`) on top
+// Preset shorthand sets `layout.preset` and merges options directly
 .layout("floatToText")
-.layout("floatToText", { runtime: { offset: 0.58, nav: true, progress: true } })
+.layout("floatToText", { offset: 0.58, nav: true, progress: true })
 
 // Raw config object — merged directly into `layout`
 .layout({ preset: "textOverVis", offset: 0.6, nav: true })

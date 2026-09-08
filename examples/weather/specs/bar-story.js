@@ -56,26 +56,26 @@ export function createBarStory({ actionMode = ["step", "tooltip"] } = {}) {
     )
     .add(
       "Granularity: hot/cold stacked segments",
-      base.breakdown("type"),
+      base.breakdown("type").color("type"),
       {
         body: "Granularity splits each decade bar into hot and cold segments — one aggregate becomes two.",
-        code: 'base.breakdown("type")'
+        code: 'base.breakdown("type").color("type")'
       }
     )
     .add(
       "Focus: highlight cold days",
-      base.breakdown("type").highlight({ type: "Cold days" }),
+      base.breakdown("type").color("type").highlight({ type: "Cold days" }),
       {
         body: "Focus highlights cold segments by fading the hot ones — shape is preserved, emphasis changes.",
-        code: 'base.breakdown("type").highlight({ type: "Cold days" })'
+        code: 'base.breakdown("type").color("type").highlight({ type: "Cold days" })'
       }
     )
     .add(
       "Guide: stacked → grouped layout",
-      base.breakdown("type").layout("grouped").flip(),
+      base.breakdown("type").color("type").layout("grouped").flip(),
       {
         body: "Guide changes the segment layout from stacked to side-by-side, then flips orientation.",
-        code: 'base.breakdown("type").layout("grouped").flip()'
+        code: 'base.breakdown("type").color("type").layout("grouped").flip()'
       }
     )
     .add(

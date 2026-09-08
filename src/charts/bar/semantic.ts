@@ -67,7 +67,7 @@ export function barLayoutState(
 
   if (stateLayout) return stateLayout;
   if (enc.xOffset?.field || enc.yOffset?.field) return 'grouped';
-  if (enc.color?.field && aggregate) return 'stacked';
+  if ((enc.detail?.field || enc.color?.field) && aggregate) return 'stacked';
   return 'simple';
 }
 
@@ -137,6 +137,7 @@ export function barSegmentField(
   return (
     sceneState.granularity?.segmentField ??
     (state as { granularity?: GranularitySpec }).granularity?.segmentField ??
+    (spec.encoding as Record<string, ChannelSpec | undefined>)?.detail?.field ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.xOffset?.field ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.yOffset?.field ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.color?.field ??

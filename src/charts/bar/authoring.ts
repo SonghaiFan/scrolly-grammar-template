@@ -205,6 +205,14 @@ export class BarState extends IdiomState<BarViewState> {
       as: options.as ?? value,
       op: options.op ?? 'sum'
     });
+    if (!color) {
+      const next = cloneState(nextState.state) as BarViewState;
+      const colorFields = channelFields(next.encoding?.color);
+      if (colorFields.some((field) => !fields.includes(field))) {
+        delete next.encoding?.color;
+        nextState = new BarState(next);
+      }
+    }
     if (title) nextState = nextState.y(value, { title }) as BarState;
     if (color) nextState = nextState.color(color as string | ChannelSpec) as BarState;
     return nextState as unknown as this;
@@ -298,6 +306,15 @@ export class BarState extends IdiomState<BarViewState> {
       } as GuideSpec
     } as Partial<BarViewState>, 'guide');
   }
+}
+
+function channelFields(channel: ChannelSpec | undefined): string[] {
+  if (!channel) return [];
+  return [
+    channel.field,
+    (channel.hue as ChannelSpec | undefined)?.field,
+    (channel.luminance as ChannelSpec | undefined)?.field
+  ].filter((field): field is string => typeof field === 'string' && field.length > 0);
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────

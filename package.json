@@ -76,7 +76,10 @@
     "bundle:check": "node scripts/check-bundle-size.mjs",
     "check": "node scripts/check.mjs",
     "examples:check": "node scripts/check-examples.mjs",
-    "docs:check": "node scripts/check-release-docs.mjs",
+    "docs:check": "node scripts/check-release-docs.mjs && vitepress build docs",
+    "docs:dev": "npm run build && vitepress dev docs --host 127.0.0.1",
+    "docs:build": "npm run build && vitepress build docs",
+    "docs:preview": "vitepress preview docs --host 127.0.0.1",
     "clean:check": "node scripts/check-clean-install.mjs",
     "manifest:check": "node scripts/check-chart-manifest.mjs",
     "pack:check": "node scripts/check-pack-consumer.mjs",
@@ -109,6 +112,7 @@
     "arquero": "^8.0.0",
     "d3": "^7.0.0",
     "esbuild": "^0.28.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitepress": "^1.6.4"
   }
 }

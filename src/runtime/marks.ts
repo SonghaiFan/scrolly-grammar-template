@@ -47,6 +47,7 @@ const DEFAULT_PALETTE = [
   ['--sl-series-10', '#bab0ac']
 ];
 const DEFAULT_LUMINANCE_BASE = ['--sl-accent', '#4e79a7'];
+const DEFAULT_MARK_COLOR = '#000000';
 
 // ─── Hue-maximisation helpers ─────────────────────────────────────────────────
 
@@ -317,16 +318,16 @@ function channelDomain(rows, channel = {}) {
 
 function colorScale(rows, channel, d3) {
   const resolved = resolveColorChannel(rows, channel);
-  if (!resolved) return () => cssColor('var(--sl-accent)', '#4e79a7');
+  if (!resolved) return () => DEFAULT_MARK_COLOR;
   channel = resolved;
   if (channel.value) return () => cssColor(channel.value, '#4e79a7');
   if (channel.hue || channel.luminance) return compositeColorScale(channel, d3);
-  if (!channel.field) return () => cssColor('var(--sl-accent)', '#4e79a7');
+  if (!channel.field) return () => DEFAULT_MARK_COLOR;
   if (channel.type === 'quantitative') return luminanceColorScale(rows, channel, d3);
   // Use story-level registry for consistent key→color mapping across scenes.
   const fieldRegistry = !channel.range && context.colors?.get(channel.field);
   if (fieldRegistry) {
-    const fallback = cssColor('var(--sl-accent)', '#4e79a7');
+    const fallback = DEFAULT_MARK_COLOR;
     return (row) => fieldRegistry.get(String(row[channel.field])) ?? fallback;
   }
   const domain = channelDomain(rows, channel);
@@ -440,7 +441,7 @@ function drawLegend(chart, rows, channel, d3) {
     : quantitativeLegend
       ? luminanceColorScale(colorRows, legendChannel, d3)
       : fieldRegistry
-        ? (d) => fieldRegistry.get(String(d)) ?? cssColor('var(--sl-accent)', '#4e79a7')
+        ? (d) => fieldRegistry.get(String(d)) ?? DEFAULT_MARK_COLOR
         : d3.scaleOrdinal(channel.range || categoricalRange(domain)).domain(domain);
   const legendRow = (value) => ({ [legendChannel.field]: value });
   const legend = chart.scene.legend.interrupt().style('opacity', 1)
@@ -529,6 +530,9 @@ function renderAxisWithGuard(axisGroup, axis, transition, kind) {
 
 function resolveColorChannel(rows, channel) {
   if (channel === false) return null;
+  // Color is a data encoding only when the author declares one. With no
+  // channel, renderers use the single theme accent and draw no legend.
+  if (!channel) return null;
   if (channel?.value) return channel;
   if (channel?.hue || channel?.luminance) {
     return {
@@ -538,19 +542,12 @@ function resolveColorChannel(rows, channel) {
     };
   }
   if (channel?.field) return { ...channel, type: channel.type || inferFieldType(rows, channel.field) };
-  const field = defaultColorField(rows);
-  if (!field) return null;
-  return { field, type: inferFieldType(rows, field), inferred: true };
+  return null;
 }
 
 function normalizeColorSubchannel(rows, channel = {}) {
   if (!channel.field) return channel;
   return { ...channel, type: channel.type || inferFieldType(rows, channel.field) };
-}
-
-function defaultColorField(rows) {
-  const preferred = ['type', 'kind', 'category', 'group', 'series', 'period'];
-  return preferred.find((field) => rows.some((row) => row[field] != null));
 }
 
 function inferFieldType(rows, field) {

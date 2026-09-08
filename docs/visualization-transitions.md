@@ -5,7 +5,7 @@ visualization preserves the previous one. Pass two same-idiom visualizations to
 `transition()` to display, play, or seek their animated change. No story, step
 sequence, or scroll listener is required.
 
-This API is introduced in the 0.2.0 candidate and is not available in 0.1.1.
+This is the canonical 0.2 pair-transition API.
 Until publication, build the checkout or install its local tarball to try it.
 
 ```js

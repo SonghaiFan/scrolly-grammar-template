@@ -223,7 +223,7 @@ For scalar expression syntax and missing-value rules see docs/data-transforms.md
 .key(fields)                      // semantic identity — "field" or ["field1","field2"]; CRITICAL for clean transitions
 .tooltip(items)                   // "field" | ["f1","f2"] | [{field,title,format}, "f2", …]
 .sort(field, order?)              // order: "ascending" (default) | "descending"; accumulates
-.transition(timing)               // { duration, delay, stagger: { mode, amount, max } }
+.transition(timing)               // { duration, ease, stagger: { step, max } }
 .where(selector)                  // scalar expression or field selector; null clear is bar-only; line crops range
 .highlight(selector, options?)    // visual fade only on bar; other idioms store metadata but do not apply selective opacity
 .guide(config)                    // raw guide escape hatch: { y: { scale: { type: "log" } } }, { flip, staging }
@@ -264,7 +264,7 @@ const base = bar("rows").x("decade").y("count").sort("year");
 
 ```js
 .flip(options?)        // vertical↔horizontal; 2-stage staged transition (guide scene)
-                       // options: { domain, scale, order: ["y","x"] (default), stage: {duration, stagger} }
+                       // options: { domain, scale, order: ["y","x"], staging: {duration, stagger:{step,max}} }
 .breakdown(segment?, options?)  // one bar → segments (granularity scene)
                        // options: { category, value, by: [cat,seg], layout: "stacked"|"grouped" (default stacked),
                        //           op: "sum"|"mean"|"count"|"min"|"max"|"median" (default sum), title, color, tooltip }
@@ -359,8 +359,8 @@ key-selection guidance): `docs/scenes-and-transitions.md`
 ```js
 story().layout("floatToText")   // default — two-column: chart floats beside scrolling text
 story().layout("textOverVis")   // chart fills sticky stage; text scrolls as overlay on top
-story().layout("floatToText", { runtime: { offset: 0.58, nav: true, progress: true,
-  scroll: { navigation: { behavior: "smooth", progress: 0.95 } } } })
+story().layout("floatToText", { offset: 0.58, nav: true, progress: true,
+  scroll: { navigation: { behavior: "smooth", progress: 0.95 } } })
 ```
 - `offset` (0–1 fraction, px number, or `"NNpx"`/`"NN%"`): viewport line at
   which a step activates; default `0.55`, sweet spot `0.5`–`0.65`.
@@ -482,4 +482,4 @@ size/theme without fetching data and retains progress. New data/configuration
 requires a new transition. Line/point/unit/custom renderers still reconstruct
 each frame. The bar compiler uses D3 schedule internals to extract interpolators
 at compile time. See docs/visualization-transitions.md.
-This addition is not present in 0.1.1.
+Use this pair API for current same-idiom standalone transitions.

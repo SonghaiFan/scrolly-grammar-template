@@ -20,7 +20,7 @@ export function createGroupedBarRenderer(deps, kit) {
         const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
         const color = colorScale(domainRows, enc.color, d3);
         const key = barKeyAccessor(chart, spec, [categoryField, segmentField]);
-        const splitLineage = kit.splitLineage(chart, categoryField);
+        const splitLineage = kit.splitLineage(chart);
         const zeroBaselineEnter = kit.baselineEnterPlan(chart, 'zero-baseline');
         const zeroBaselineExit = kit.baselineExitPlan(chart, 'zero-baseline');
         const categoryScale = d3.scaleBand().domain(categories)
@@ -63,7 +63,7 @@ export function createGroupedBarRenderer(deps, kit) {
 }
 function groupedSegmentGeometryContract(geom, splitLineage, zeroBaselineEnter, sourceBaselineExit, exitPlan) {
     return {
-        start: (d) => splitLineage?.start(d) || groupedSegmentEnterGeometry(d, geom, zeroBaselineEnter),
+        start: (d) => groupedSegmentEnterGeometry(d, geom, zeroBaselineEnter),
         target: groupedSegmentGeometry(geom),
         applyX: (selection) => applyGroupedSegmentX(selection, geom),
         applyY: (selection) => applyGroupedSegmentY(selection, geom),
