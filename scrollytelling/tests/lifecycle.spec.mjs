@@ -4,7 +4,7 @@ test('native driver is idle between events, coalesces refreshes, and stops after
   await page.route('**/driver-test', route => route.fulfill({ contentType: 'text/html', body: '<body style="margin:0"><section style="height:600px"></section><section style="height:600px"></section><section style="height:600px"></section><footer style="height:900px"></footer></body>' }));
   await page.goto('/driver-test');
   await page.evaluate(async () => {
-    const { createNativeScrollDriver } = await import('/dist/scroll-drivers/native.js');
+    const { createNativeScrollDriver } = await import('/scrollytelling/dist/scroll-drivers/native.js');
     window.stats = { raf: 0, interval: 0, reads: 0, progress: 0, last: null };
     const raf = window.requestAnimationFrame.bind(window);
     const interval = window.setInterval.bind(window);
@@ -47,9 +47,10 @@ test('native driver is idle between events, coalesces refreshes, and stops after
 });
 
 test('Story destroy removes navigation/hash callbacks and freezes its SVG', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/scrollytelling/tests/fixture.html');
   const result = await page.evaluate(async () => {
-    const { bar, story, createStory } = await import('/dist/index.js');
+    const { bar } = await import('/dist/index.js');
+    const { story, createStory } = await import('/scrollytelling/dist/index.js');
     const host = document.createElement('div'); document.body.append(host);
     const a = bar([{ category: 'A', value: 1, other: 3 }]).x('category').y('value');
     const spec = story().add('First', a).add('Second', a.y('other')).toSpec();
@@ -73,7 +74,7 @@ test('Story destroy removes navigation/hash callbacks and freezes its SVG', asyn
 });
 
 test('simultaneous transitions have distinct clipping resources', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/scrollytelling/tests/fixture.html');
   const result = await page.evaluate(async () => {
     const { bar } = await import('/dist/bar.js');
     const { transition } = await import('/dist/transition-entry.js');

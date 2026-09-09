@@ -1,7 +1,7 @@
 import DefaultTheme from 'vitepress/theme';
 import { defineAsyncComponent } from 'vue';
 import './custom.css';
-import '../../../dist/scrollylite.css';
+import '../../../dist/visdelta.css';
 
 export default {
   extends: DefaultTheme,

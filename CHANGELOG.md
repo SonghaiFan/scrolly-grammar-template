@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ScrollyLite are documented here.
+All notable changes to VisDelta are documented here.
 
 ## 0.2.0 - Unreleased
 
@@ -8,6 +8,14 @@ Release candidate in this checkout; not yet published. This minor release adds
 standalone visualization transitions and focused imports. Migration notes are
 in `docs/migrating-to-0.2.md`; unsupported transform syntax now throws instead
 of silently falling back.
+
+- Renamed the core package and browser identity to `visdelta` / `VisDelta`.
+  Generated entry files are now `visdelta.*`; the browser shorthand is `vd`.
+- Extracted Story, Seq, page layout, navigation, themes, and the native scroll
+  driver into the private `@visdelta/scrollytelling` workspace for later
+  integration into ScrollyTale.
+- Reduced the core stylesheet to visualization surfaces, tokens, marks, axes,
+  guides, legends, and tooltips; narrative layout CSS moved with scrollytelling.
 
 - Aligned package/lockfile/CDN examples for the 0.2.0 candidate. Added migration
   notes, version/path/link checks, and browser tests that execute documentation
@@ -52,7 +60,7 @@ of silently falling back.
 - Extracted standalone transition surfaces, shared view rendering, chart shells,
   and data utilities from the Story runtime. Pair transitions lazily load only
   their idiom and no longer import Story/navigation/scroll drivers.
-- Added `scrollylite/plugins`, per-pair idiom registry snapshots, registered
+- Added `visdelta/plugins`, per-pair idiom registry snapshots, registered
   plugin compiler support, and explicit `transitionEvaluation` cache capability.
 - Unified runtime declarations and browser wrappers; added installed-consumer
   TypeScript checks and actual-browser module-boundary/embedding tests. Failed
@@ -60,8 +68,8 @@ of silently falling back.
 - Added a full bar-plus-transition gzip budget including required shared/lazy
   chunks, and a consistency check between eager and lazy built-in manifests.
 
-- Split focused package entry points for `scrollylite/core`, `scrollylite/bar`,
-  `scrollylite/transition`, and `scrollylite/story`. Bar authoring no longer
+- Split focused package entry points for `visdelta/core`, `visdelta/bar`,
+  and `visdelta/transition`. Bar authoring no longer
   imports the global four-idiom compiler manifest.
 - Added the public `delta(from, to)` and `visualizationSpec()` core primitives.
 - Made Arquero optional when no data transforms are declared, and added enforced
@@ -92,7 +100,7 @@ Patch release for the D3-style ESM-first documentation and examples.
 - Updated README, docs, `llms.txt`, and the minimal example to recommend
   browser-native `+esm` CDN imports.
 - Kept the global bundle documented as a plain script fallback.
-- Updated pinned CDN examples to `scrollylite@0.1.1`.
+- Updated pinned CDN examples to `visdelta@0.1.1`.
 - Fixed the homepage install snippets so long CDN import lines do not cause
   horizontal page overflow on mobile.
 
@@ -101,7 +109,7 @@ Patch release for the D3-style ESM-first documentation and examples.
 Initial public package candidate.
 
 - Added the browser ESM runtime and CDN-ready `dist/` build.
-- Added a plain script-tag global build that exposes `ScrollyLite` for CDN use.
+- Added a plain script-tag global build that exposes `VisDelta` for CDN use.
 - Added the small public API: `createStory`, `story`, `bar`, `line`,
   `point`, `unit`, `defineChartIdiom`, `registerChartIdiom`,
   `registerChartModule`, and `availableChartIdioms`.

@@ -1,4 +1,4 @@
-import { point } from "../../../dist/index.js";
+import { point } from "../../../../dist/index.js";
 import { story } from "./shared.js";
 
 export function createPointStory({ actionMode = ["step", "tooltip"] } = {}) {

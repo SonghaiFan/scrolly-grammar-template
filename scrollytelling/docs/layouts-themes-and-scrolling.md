@@ -10,7 +10,7 @@ builder's `.layout(...)` or written directly into a hand-authored spec.
 
 ## Layout presets
 
-ScrollyLite ships two layout presets, each applying a CSS class that controls
+The extracted scrollytelling package ships two layout presets, each applying a CSS class that controls
 how the sticky chart figure and the scrolling narrative text are arranged:
 
 | Preset | Arrangement | CSS class |
@@ -184,7 +184,7 @@ story()
   })
 ```
 
-At `createStory()` time, ScrollyLite loads `theme.href` (or `theme.url`,
+At `createStory()` time, the scrollytelling runtime loads `theme.href` (or `theme.url`,
 `theme.css`, `theme.stylesheet`, and each item in `theme.stylesheets`) before
 rendering the story. If the stylesheet is already present on the page, it is
 reused. Concurrent instances wait for the same load. An inserted stylesheet is
@@ -253,7 +253,7 @@ theme typography affects the D3-rendered chart as well as the story shell.
 
 For the full color-encoding system — categorical hue selection, sequential
 intensity scales, hue+luminance composition, and colorblind guidance — see
-[Color in ScrollyLite](./color-guide.md).
+[Color in VisDelta](./color-guide.md).
 
 ### Building a custom theme
 
@@ -263,10 +263,10 @@ that targets `--sl-*` custom properties and the `.sl-*` structural classes
 …), and load it instead of (or alongside) `themes/default.css`:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scrollylite@0.2.0/dist/scrollylite.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/visdelta@0.2.0/dist/visdelta.css">
 ```
 
-`scrollylite.css` provides the structural layout rules every preset depends
+`visdelta.css` provides the structural layout rules every preset depends
 on — always load it. `themes/default.css` (or your `.theme("./my-theme.css")`
 replacement) supplies the color palette on top.
 

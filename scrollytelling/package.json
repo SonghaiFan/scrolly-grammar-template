@@ -1,8 +1,8 @@
 {
-  "name": "@scrollylite/scrollytelling",
+  "name": "@visdelta/scrollytelling",
   "version": "0.1.0",
   "private": true,
-  "description": "Temporary scrollytelling composition package extracted from ScrollyLite for later integration into ScrollyTale.",
+  "description": "Temporary scrollytelling composition package extracted from VisDelta for later integration into ScrollyTale.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,10 +20,11 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "npm run build && node --test tests/*.test.mjs"
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:browser": "npm run build && playwright test -c playwright.config.mjs"
   },
   "dependencies": {
-    "scrollylite": "file:.."
+    "visdelta": "file:.."
   },
   "peerDependencies": {
     "arquero": "^8.0.0",
@@ -35,6 +36,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "typescript": "^5.9.3"
   }
 }

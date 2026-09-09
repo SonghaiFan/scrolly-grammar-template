@@ -7,7 +7,7 @@ import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effecti
 import { domainTransforms, viewRows } from './data.js';
 import { applySceneTransitions, getScene, resetSceneToEmptySource, resizeScene } from './scene.js';
 import { clamp } from './utils.js';
-import { SCROLL_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
+import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
 import { createViewCompiler } from './view-compile.js';
 /** Per-instance rendering pipeline, shared by standalone transitions and stories. */
 export function createViewRenderer(idioms) {
@@ -18,7 +18,7 @@ export function createViewRenderer(idioms) {
         const scene = getScene(node, viewConfig, d3);
         scene.progressRoots = [
             node,
-            node.__scrollyLiteMarkName
+            node.__visDeltaMarkName
         ].filter(Boolean);
         if (!viewSpec || !viewSpec.mark) {
             clearVirtualScrollSequence(scene);
@@ -103,7 +103,7 @@ export function createViewRenderer(idioms) {
                 layer.transition(emptyTransition.base).style('opacity', 0);
             }
             if (scrollDriven) {
-                scene.transitionProgress = createSceneTransitionProgress(scene, { transitionName: SCROLL_TRANSITION_NAME });
+                scene.transitionProgress = createSceneTransitionProgress(scene, { transitionName: VISDELTA_TRANSITION_NAME });
             }
             scene.previousSpec = renderSpec;
             return;
@@ -129,7 +129,7 @@ export function createViewRenderer(idioms) {
             transitionPlan: idiom?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
             sceneTransition,
             scrollDriven,
-            scrollTransitionName: SCROLL_TRANSITION_NAME,
+            scrollTransitionName: VISDELTA_TRANSITION_NAME,
             sourceRows: source,
             domainRows
         };
@@ -151,7 +151,7 @@ export function createViewRenderer(idioms) {
         applySceneTransitions(chart, rows, renderSpec);
         if (scrollDriven) {
             scene.transitionProgress = createSceneTransitionProgress(scene, {
-                transitionName: SCROLL_TRANSITION_NAME
+                transitionName: VISDELTA_TRANSITION_NAME
             });
         }
         scene.previousSpec = renderSpec;
@@ -322,7 +322,7 @@ export function createViewRenderer(idioms) {
         scene.unitLabel.interrupt().text("").style("opacity", 0);
     }
     function applyScrollAction(node, viewSpec, progress, d3) {
-        const scene = node.__scrollyLiteScene;
+        const scene = node.__visDeltaScene;
         if (!scene || !viewSpec?.mark)
             return;
         const action = normalizeScrollAction(narrativeScroll(viewSpec));

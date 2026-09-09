@@ -4,7 +4,7 @@ type AnyRecord = Record<string, unknown>;
 
 export async function loadData(dataSpec: Record<string, unknown>, d3: AnyRecord): Promise<Record<string, unknown[]>> {
   if (!d3) {
-    throw new Error('ScrollyLite data loading requires D3. Pass { d3 } to createStory().');
+    throw new Error('VisDelta data loading requires D3. Pass { d3 } to transition() or the driver runtime.');
   }
   const entries = await Promise.all(
     Object.entries(dataSpec).map(async ([name, source]) => {

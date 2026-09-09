@@ -5,6 +5,7 @@ import { normalizeMarkRendererKey } from '../index.js';
 import type {
   BarLayout,
   BarOrientation,
+  CanonicalTransitionPair,
   GranularitySpec,
   IntermediateSpec,
   TransitionPlan,
@@ -186,6 +187,27 @@ export function barState(spec: ViewSpec | null | undefined): BarInternalState | 
     segmentField: semantic.segmentField,
     guideStaging: (semantic.guide as Record<string, unknown> | null)?.staging as Record<string, unknown> | null ?? null
   };
+}
+
+/**
+ * Parent -> child is the canonical granularity path. A child -> parent pair
+ * reuses that exact path with inverted progress so split and merge cannot
+ * acquire different seams, opacity tracks, staggering, or axis staging.
+ */
+export function canonicalBarTransitionPair<S extends ViewSpec>(
+  previousSpec: S,
+  nextSpec: S
+): CanonicalTransitionPair<S> {
+  const previous = barState(previousSpec);
+  const next = barState(nextSpec);
+  const isCollapse = Boolean(
+    previous?.hasGranularity &&
+    next?.hasAggregate &&
+    !next.hasGranularity
+  );
+  return isCollapse
+    ? { from: nextSpec, to: previousSpec, reverse: true }
+    : { from: previousSpec, to: nextSpec, reverse: false };
 }
 
 export function barCollapseIntermediateSpec(

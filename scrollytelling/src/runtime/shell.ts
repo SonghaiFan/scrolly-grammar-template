@@ -5,7 +5,7 @@ import {
   diffViewStates,
   escapeHtml,
   externalizeScrollyViewSpec
-} from 'scrollylite/composition';
+} from 'visdelta/composition';
 import { layoutClasses } from '../layouts/index.js';
 
 export function renderShell(target, spec, options = {}) {

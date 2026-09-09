@@ -1,5 +1,5 @@
 ---
-name: ScrollyLite Dark
+name: VisDelta Dark
 description: >
   Dark editorial theme for immersive data storytelling. Low-luminance
   backgrounds reduce eye strain in ambient-light reading environments while

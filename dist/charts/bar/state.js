@@ -140,6 +140,21 @@ export function barState(spec) {
         guideStaging: semantic.guide?.staging ?? null
     };
 }
+/**
+ * Parent -> child is the canonical granularity path. A child -> parent pair
+ * reuses that exact path with inverted progress so split and merge cannot
+ * acquire different seams, opacity tracks, staggering, or axis staging.
+ */
+export function canonicalBarTransitionPair(previousSpec, nextSpec) {
+    const previous = barState(previousSpec);
+    const next = barState(nextSpec);
+    const isCollapse = Boolean(previous?.hasGranularity &&
+        next?.hasAggregate &&
+        !next.hasGranularity);
+    return isCollapse
+        ? { from: nextSpec, to: previousSpec, reverse: true }
+        : { from: previousSpec, to: nextSpec, reverse: false };
+}
 export function barCollapseIntermediateSpec(previousSpec, nextSpec) {
     const plan = resolveBarTransitionPlan(previousSpec, nextSpec);
     if (plan.enter?.mode !== 'parent-child-lineage' || plan.enter.from !== 'child-bounds')

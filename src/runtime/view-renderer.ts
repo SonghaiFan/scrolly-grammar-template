@@ -8,7 +8,7 @@ import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effecti
 import { domainTransforms, viewRows } from './data.js';
 import { applySceneTransitions, getScene, resetSceneToEmptySource, resizeScene } from './scene.js';
 import { clamp } from './utils.js';
-import { SCROLL_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
+import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
 import { createViewCompiler } from './view-compile.js';
 import type { AnyRecord } from '../types.js';
 import type { ChartIdiomRegistry } from '../charts/index.js';
@@ -22,7 +22,7 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
   const scene = getScene(node, viewConfig, d3);
   scene.progressRoots = [
     node,
-    node.__scrollyLiteMarkName
+    node.__visDeltaMarkName
   ].filter(Boolean);
 
   if (!viewSpec || !viewSpec.mark) {
@@ -128,7 +128,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
       layer.transition(emptyTransition.base).style('opacity', 0);
     }
     if (scrollDriven) {
-      scene.transitionProgress = createSceneTransitionProgress(scene, { transitionName: SCROLL_TRANSITION_NAME });
+      scene.transitionProgress = createSceneTransitionProgress(scene, { transitionName: VISDELTA_TRANSITION_NAME });
     }
     scene.previousSpec = renderSpec;
     return;
@@ -156,7 +156,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     transitionPlan: idiom?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
     sceneTransition,
     scrollDriven,
-    scrollTransitionName: SCROLL_TRANSITION_NAME,
+    scrollTransitionName: VISDELTA_TRANSITION_NAME,
     sourceRows: source,
     domainRows
   };
@@ -182,7 +182,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   applySceneTransitions(chart, rows, renderSpec);
   if (scrollDriven) {
     scene.transitionProgress = createSceneTransitionProgress(scene, {
-      transitionName: SCROLL_TRANSITION_NAME
+      transitionName: VISDELTA_TRANSITION_NAME
     });
   }
   scene.previousSpec = renderSpec;
@@ -411,7 +411,7 @@ function hideUnitMetaLabel(scene) {
 }
 
 function applyScrollAction(node, viewSpec, progress, d3) {
-  const scene = node.__scrollyLiteScene;
+  const scene = node.__visDeltaScene;
   if (!scene || !viewSpec?.mark) return;
 
   const action = normalizeScrollAction(narrativeScroll(viewSpec)) as AnyRecord;

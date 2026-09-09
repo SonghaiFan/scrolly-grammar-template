@@ -1,4 +1,4 @@
-import type { LayoutSpec } from 'scrollylite/composition';
+import type { LayoutSpec } from 'visdelta/composition';
 
 interface LayoutPreset {
   name: string;

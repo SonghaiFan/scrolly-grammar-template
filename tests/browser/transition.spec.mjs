@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/tests/fixtures/runtime.html');
   await page.waitForSelector('rect.sl-bar');
   await page.evaluate(async () => {
-    window.sl = await import('/dist/scrollylite.esm.js');
+    window.sl = await import('/dist/visdelta.esm.js');
     document.body.innerHTML = '<div id="a" style="width:800px"></div><div id="b" style="width:800px"></div>';
     window.rows = [
       { category: 'A', value: 10, other: 35, type: 'one' },
@@ -22,6 +22,16 @@ test.beforeEach(async ({ page }) => {
           .sort((a, b) => a.name.localeCompare(b.name)).map(attr => [attr.name, attr.value]),
         text: node.children.length ? '' : node.textContent
       }));
+    window.reversibleSnapshot = selector => snapshot(selector).map(node => ({
+      ...node,
+      attrs: node.attrs.map(([name, value]) => [
+        name,
+        value.replace(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi, token => {
+          const number = Number(token);
+          return Number.isFinite(number) ? String(Math.round(number * 1e9) / 1e9) : token;
+        })
+      ])
+    }));
   });
 });
 
@@ -72,6 +82,33 @@ for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip
     await page.waitForTimeout(200);
     expect(await page.evaluate(() => JSON.stringify(snapshot('#b')) === still)).toBe(true);
     expect(errors).toEqual([]);
+  });
+}
+
+for (const layout of ['stacked', 'grouped']) {
+  test(`${layout} split and merge are the same transition in reverse`, async ({ page }) => {
+    const result = await page.evaluate(async layout => {
+      const detailed = sl.bar().data([
+        { category: 'A', type: 'one', value: 10 }, { category: 'A', type: 'two', value: 20 },
+        { category: 'B', type: 'one', value: 30 }, { category: 'B', type: 'two', value: 15 }
+      ]).x('category').y('value').key('category').breakdown('type').color('type').layout(layout);
+      const aggregate = detailed.rollup();
+      const split = await sl.transition(aggregate, detailed, opts('#a'));
+      const merge = await sl.transition(detailed, aggregate, opts('#b'));
+      const frames = [0, 0.1, 0.3, 0.5, 0.7, 0.9, 1].map(progress => {
+        split.progress(progress);
+        merge.progress(1 - progress);
+        return { progress, split: reversibleSnapshot('#a'), merge: reversibleSnapshot('#b') };
+      });
+      return {
+        frames,
+        authoredEndpointsPreserved:
+          JSON.stringify(merge.from) === JSON.stringify(detailed.toSpec()) &&
+          JSON.stringify(merge.to) === JSON.stringify(aggregate.toSpec())
+      };
+    }, layout);
+    expect(result.authoredEndpointsPreserved).toBe(true);
+    for (const frame of result.frames) expect(frame.merge).toEqual(frame.split);
   });
 }
 
@@ -155,6 +192,39 @@ test('a numeric midpoint interpolates geometry and endpoints contain only live m
   result.middle.forEach((height, index) => expect(height).toBeCloseTo((result.start[index] + result.end[index]) / 2, 5));
   expect(result.remaining).toBe(2);
   expect(result.restored).toBe(3);
+});
+
+test('flip crossfades incompatible axes instead of replacing them at the first frame', async ({ page }) => {
+  const frames = await page.evaluate(async () => {
+    const change = await sl.transition(base, base.flip(), opts('#a'));
+    const frame = progress => {
+      change.progress(progress);
+      const opacity = node => Number(getComputedStyle(node).opacity);
+      return {
+        progress,
+        x: opacity(change.view.querySelector('.sl-x-axis')),
+        y: opacity(change.view.querySelector('.sl-y-axis')),
+        ghostAxes: [...change.view.querySelectorAll('.sl-axis-ghost')].map(node => ({
+          opacity: opacity(node),
+          labels: [...node.querySelectorAll('.tick text')].map(label => label.textContent)
+        })),
+        ghostLabels: [...change.view.querySelectorAll('.sl-axis-label-ghost')].map(node => ({
+          opacity: opacity(node), text: node.textContent
+        }))
+      };
+    };
+    return [frame(0), frame(0.001), frame(0.5), frame(1)];
+  });
+  expect(frames[0].ghostAxes).toHaveLength(0);
+  expect(frames[1].ghostAxes).toHaveLength(2);
+  expect(frames[1].ghostAxes.every(axis => axis.opacity > 0.99)).toBe(true);
+  expect(frames[1].ghostAxes.some(axis => axis.labels.includes('A'))).toBe(true);
+  expect(frames[1].ghostLabels.map(label => label.text).sort()).toEqual(['Category', 'Value']);
+  expect(frames[2].ghostAxes.some(axis => axis.opacity < 0.99)).toBe(true);
+  expect(frames[3].ghostAxes).toHaveLength(0);
+  expect(frames[3].ghostLabels).toHaveLength(0);
+  expect(frames[3].x).toBe(1);
+  expect(frames[3].y).toBe(1);
 });
 
 test('URL data loads once, .data replacement is resolved, and later seeks do not reload', async ({ page }) => {

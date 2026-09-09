@@ -1,6 +1,6 @@
 # 0.2.0 release acceptance
 
-Scope: prepare the next distributable ScrollyLite version around immutable
+Scope: prepare the next distributable VisDelta version around immutable
 visualization declarations and same-idiom animated deltas, with Story/scrolling
 as optional composition. This is not a commitment to ship every future idiom,
 cross-chart morphing, or the whole long-term roadmap in 0.2.

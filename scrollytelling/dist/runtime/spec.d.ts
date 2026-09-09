@@ -1,4 +1,4 @@
-import type { LayoutSpec, StepSpec, StorySpec } from 'scrollylite/composition';
+import type { LayoutSpec, StepSpec, StorySpec } from 'visdelta/composition';
 type AnyRecord = Record<string, unknown>;
 interface CompiledSpec extends StorySpec {
     data: Record<string, unknown>;

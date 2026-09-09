@@ -1,6 +1,6 @@
 # Live syntax examples
 
-Every example on this page is editable in place. Change a method on the left and the real ScrollyLite output updates on the right. Each editor owns its own transition controller, error state, progress slider, playback, and computed delta; there is no separate source file to inspect.
+Every example on this page is editable in place. Change a method on the left and the real VisDelta output updates on the right. Each editor owns its own transition controller, error state, progress slider, playback, and computed delta; there is no separate source file to inspect.
 
 ## Encoding and immutable states
 
@@ -50,17 +50,11 @@ Edit unit count, columns, radius, label, or grouping.
 
 <SyntaxPlayground initial="unit" compact />
 
-## `seq()` composition
+## Scrollytelling examples
 
-Seq stores an ordered set of visualization snapshots. Here its first two entries become the editable transition endpoints.
-
-<SyntaxPlayground initial="seq" compact />
-
-## `story()` composition
-
-Story adds narrative metadata and layout composition. The preview extracts its two compiled step views so you can inspect the resulting transition directly.
-
-<SyntaxPlayground initial="story" compact />
+Story and Seq examples moved to the private `scrollytelling/` package. The live
+examples on this site exercise only the standalone visualization-transition
+library.
 
 ## Local development
 

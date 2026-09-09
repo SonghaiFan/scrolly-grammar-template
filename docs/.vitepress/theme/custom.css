@@ -254,7 +254,9 @@
 }
 .playground-editor:focus { outline: 2px solid var(--vp-c-brand-1); }
 .playground-contract { margin: 9px 2px 0 !important; color: var(--vp-c-text-3); font-size: 10px !important; line-height: 1.55 !important; }
-.playground-chart { min-height: 300px; overflow: hidden; background: var(--vp-c-bg); }
+.playground-chart { position: relative; min-height: 300px; overflow: hidden; background: var(--vp-c-bg); }
+.playground-candidate { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+.playground-description { margin: 0 !important; padding: 10px 14px; border-bottom: 1px solid var(--vp-c-divider); color: var(--vp-c-text-2); font-size: 12px !important; }
 .playground-chart .sl-view { min-height: 0 !important; }
 .playground-output-pane > input[type="range"] { width: 100%; margin-top: 12px; accent-color: var(--vp-c-brand-1); }
 .playground-output-actions { display: flex; gap: 6px; margin: 7px 0 12px; }

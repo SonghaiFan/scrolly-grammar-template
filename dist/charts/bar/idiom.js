@@ -1,6 +1,6 @@
 import { createBarRenderer } from './render.js';
 import { cloneSpec, uniqueTokens } from '../../runtime/utils.js';
-import { barCollapseIntermediateSpec, barIntermediateSpecs, barSplitIntermediateSpec, resolveBarTransitionPlan } from './state.js';
+import { barCollapseIntermediateSpec, canonicalBarTransitionPair, barIntermediateSpecs, barSplitIntermediateSpec, resolveBarTransitionPlan } from './state.js';
 export function createBarIdiom(deps) {
     const renderer = createBarRenderer(deps);
     return {
@@ -8,6 +8,7 @@ export function createBarIdiom(deps) {
         renderer,
         prepareSpec: prepareBarSpec,
         resolveTransitionPlan: resolveBarTransitionPlan,
+        canonicalTransitionPair: canonicalBarTransitionPair,
         intermediateSpecs: barIntermediateSpecs,
         intermediateSpec(previousSpec, nextSpec) {
             const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);

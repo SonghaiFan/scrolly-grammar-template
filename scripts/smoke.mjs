@@ -5,7 +5,7 @@ import {
   registerChartModules
 } from '../dist/charts/index.js';
 import * as sourceApi from '../dist/index.js';
-import * as distApi from '../dist/scrollylite.esm.js';
+import * as distApi from '../dist/visdelta.esm.js';
 
 const publicApi = [
   'availableChartIdioms',

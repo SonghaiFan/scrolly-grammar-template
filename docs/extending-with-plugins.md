@@ -10,7 +10,7 @@ registration arguments.
 The focused entry avoids importing Story and built-in renderers:
 
 ```js
-import { defineChartIdiom, registerChartModule } from "scrollylite/plugins";
+import { defineChartIdiom, registerChartModule } from "visdelta/plugins";
 
 const plugin = defineChartIdiom({
   key: "area",
@@ -24,7 +24,7 @@ registerChartModule({ plugin });
 ```
 
 `areaRenderer` and `areaCompiler` above stand for your implementations, not
-functions supplied by ScrollyLite. Renderer dependencies are injected helpers;
+functions supplied by VisDelta. Renderer dependencies are injected helpers;
 D3 and optional Arquero are supplied to the runtime when creating a visualization.
 Compiler context is separate from renderer dependencies.
 
@@ -45,7 +45,7 @@ A custom visualization can be a plain `ViewSpec`, or an object with
 `toSpec(): ViewSpec`. A chainable builder is optional:
 
 ```js
-import { transition } from "scrollylite/transition";
+import { transition } from "visdelta/transition";
 
 const from = {
   mark: "area",
@@ -65,7 +65,7 @@ const change = await transition(from, to, { target: "#chart", d3 });
 Both endpoints must resolve to the same idiom. Registering a plugin does not
 automatically create an `area()` builder, nor provide cross-idiom morphing.
 Internal authoring classes are implementation references, not public package
-subpaths; do not import `scrollylite/charts/authoring`.
+subpaths; do not import `visdelta/charts/authoring`.
 
 ## Compiler and transition contract
 

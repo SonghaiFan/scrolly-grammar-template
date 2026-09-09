@@ -1,4 +1,4 @@
-import type { AnyRecord } from 'scrollylite/composition';
+import type { AnyRecord } from 'visdelta/composition';
 
 interface StylesheetLease {
   link: HTMLLinkElement;
@@ -78,7 +78,7 @@ function acquireStylesheet(href: string) {
     if (!existing) {
       link.rel = 'stylesheet';
       link.href = key;
-      link.dataset.scrollyliteTheme = 'true';
+      link.dataset.scrollytellingTheme = 'true';
       document.head.append(link);
     }
   }

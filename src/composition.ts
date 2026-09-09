@@ -1,8 +1,8 @@
 /**
- * Integration surface for driver packages such as `@scrollylite/scrollytelling`.
+ * Integration surface for driver packages such as `@visdelta/scrollytelling`.
  *
- * End users should normally import `scrollylite`, `scrollylite/bar`, or
- * `scrollylite/transition`. This module intentionally exposes the lower-level
+ * End users should normally import `visdelta`, `visdelta/bar`, or
+ * `visdelta/transition`. This module intentionally exposes the lower-level
  * renderer contracts needed to build navigation, scroll, gesture, or route
  * orchestration without making those drivers part of the transition library.
  */
@@ -20,7 +20,8 @@ export {
   chartRegistry,
   registerChartIdiom,
   registerChartModule,
-  snapshotChartRegistry
+  snapshotChartRegistry,
+  transitionRegistry
 } from './runtime/chart-registry.js';
 export { renderChartShell } from './runtime/chart-shell.js';
 export { domainTransforms, loadData, viewRows } from './runtime/data.js';
@@ -30,7 +31,7 @@ export { clamp, dash, escapeHtml, uniqueTokens } from './runtime/utils.js';
 export {
   clearSceneTransitionProgress,
   installTransitionProgress,
-  SCROLL_TRANSITION_NAME
+  VISDELTA_TRANSITION_NAME
 } from './transition-progress.js';
 export {
   externalizeScrollyViewSpec,

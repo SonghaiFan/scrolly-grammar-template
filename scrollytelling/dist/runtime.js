@@ -1,5 +1,5 @@
-// @ts-nocheck — Story composition runtime built on ScrollyLite's driver surface.
-import { applyTransforms, availableChartIdioms, chartModules, chartRegistry as BUILT_IN_CHART_IDIOMS, clamp, clearSceneTransitionProgress, createChartRuntimeDeps, createViewRenderer, defaultScrollProgress, domainTransforms, hasScrollAction, installTransitionProgress, loadData, normalizeActionEvent, normalizeActionTokens, registerChartIdiom, registerChartModule, renderChartShell, SCROLL_TRANSITION_NAME, snapshotChartRegistry, viewRows } from 'scrollylite/composition';
+// @ts-nocheck — Story composition runtime built on VisDelta's driver surface.
+import { applyTransforms, availableChartIdioms, chartModules, chartRegistry as BUILT_IN_CHART_IDIOMS, clamp, clearSceneTransitionProgress, createChartRuntimeDeps, createViewRenderer, defaultScrollProgress, domainTransforms, hasScrollAction, installTransitionProgress, loadData, normalizeActionEvent, normalizeActionTokens, registerChartIdiom, registerChartModule, renderChartShell, VISDELTA_TRANSITION_NAME, snapshotChartRegistry, viewRows } from 'visdelta/composition';
 import { applyTheme } from './runtime/theme.js';
 import { restoreHashPosition, setupNav, setupResize, setupScroll } from './runtime/navigation.js';
 import { compileSpec, storySignature } from './runtime/spec.js';
@@ -210,7 +210,7 @@ function createRenderer(shell, spec, datasets, runtime) {
         Object.entries(shell.views).forEach(([viewId, node]) => {
             const viewConfig = spec.views[viewId] || {};
             const viewSpec = step.views[viewId] || step.views.main || {};
-            node.__scrollyLiteMarkName = shell.markName;
+            node.__visDeltaMarkName = shell.markName;
             const previousStep = bounded > 0 ? spec.steps[bounded - 1] : null;
             const previousViewSpec = previousStep
                 ? previousStep.views[viewId] || previousStep.views.main || null
@@ -286,15 +286,15 @@ function createRenderer(shell, spec, datasets, runtime) {
             resizeFrame = null;
             cancelScrollProgress();
             for (const node of Object.values(shell.views)) {
-                const scene = node.__scrollyLiteScene;
+                const scene = node.__visDeltaScene;
                 if (scene) {
                     if (scene.virtualRenderTimer)
                         window.clearTimeout(scene.virtualRenderTimer);
                     clearSceneTransitionProgress(scene, { finish: false });
                 }
-                d3.select(node).interrupt().interrupt(SCROLL_TRANSITION_NAME);
-                d3.select(node).selectAll('*').interrupt().interrupt(SCROLL_TRANSITION_NAME);
-                delete node.__scrollyLiteScene;
+                d3.select(node).interrupt().interrupt(VISDELTA_TRANSITION_NAME);
+                d3.select(node).selectAll('*').interrupt().interrupt(VISDELTA_TRANSITION_NAME);
+                delete node.__visDeltaScene;
             }
             if (shell.tooltip)
                 shell.tooltip.style.opacity = '0';
@@ -437,7 +437,7 @@ function resolveTarget(target) {
         return target;
     const node = document.querySelector(target);
     if (!node)
-        throw new Error(`ScrollyLite target not found: ${target}`);
+        throw new Error(`VisDelta target not found: ${target}`);
     return node;
 }
 function resolveRuntimeDependencies(options = {}) {

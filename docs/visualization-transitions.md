@@ -1,6 +1,6 @@
 # Visualization transitions
 
-ScrollyLite's visualization builders are chainable declarations. Deriving a new
+VisDelta's visualization builders are chainable declarations. Deriving a new
 visualization preserves the previous one. Pass two same-idiom visualizations to
 `transition()` to display, play, or seek their animated change. No story, step
 sequence, or scroll listener is required.
@@ -10,9 +10,9 @@ Until publication, build the checkout or install its local tarball to try it.
 
 ```js
 import * as d3 from 'd3';
-import { bar } from 'scrollylite/bar';
-import { transition } from 'scrollylite/transition';
-import 'scrollylite/style.css';
+import { bar } from 'visdelta/bar';
+import { transition } from 'visdelta/transition';
+import 'visdelta/style.css';
 
 const rows = [
   { country: 'Australia', sales: 80, profit: 30 },
@@ -46,6 +46,12 @@ change.play({ duration: 800 }); // replay from 0 to 1
 - `progress(0)` shows the source; `progress(1)` shows the target. Arbitrary orders
   such as `0.8 → 0.2 → 1 → 0.37` reconstruct the same frame as a direct `0.37`,
   for fixed data, container size, theme, and renderer configuration.
+- Bar aggregate/detail pairs use one canonical parent-to-child path. For both
+  stacked and grouped layouts, separately authored split and merge transitions
+  are exact reverses: `split.progress(p)` displays the same frame as
+  `merge.progress(1 - p)`. This includes cutlines, fills, opacity, staggering,
+  legends, axes, and x/y staging. The controller still exposes `from`, `to`,
+  and `delta` in the order the author declared.
 - Non-finite progress is rejected; finite values outside `[0, 1]` are clamped.
 - Different chart idioms are rejected. This API does not animate bar → line.
 
@@ -144,8 +150,9 @@ custom field animates.
 
 ## Local example and verification
 
-Build, serve the checkout, and open `examples/transition/`. The example loads D3
-and Arquero locally from `node_modules` and imports the built ESM package.
+Build the documentation and open the [Bar transition lab](./transition-lab.md).
+Its twelve editable scenarios run the built ESM package directly and form the
+public demonstration of the browser transition matrix.
 
 ```sh
 npm install
@@ -154,7 +161,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-To use an installed Chrome instead, set `SCROLLYLITE_CHROME_PATH` to its executable.
+To use an installed Chrome instead, set `VISDELTA_CHROME_PATH` to its executable.
 Browser checks cover random seek order, endpoint restoration, stationary frames,
 time playback, pause, resizing, destruction, and same-idiom validation. Cache
 checks also compare mark geometry against the original reconstruction path,

@@ -1,6 +1,6 @@
 # Contributing
 
-ScrollyLite keeps the public surface small. Before adding API, prefer making an
+VisDelta keeps the public surface small. Before adding API, prefer making an
 existing idiom, compiler helper, or plugin capability clearer.
 
 ## Local Checks
@@ -16,12 +16,12 @@ npm test
 npm run release:check
 ```
 
-`npm test` runs syntax checks, builds `dist/`, and compiles the built-in demo
-stories through the chart idiom registry.
+`npm test` runs syntax checks, builds `dist/`, and compiles the built-in chart
+idioms through the registry.
 `npm test` also checks size budgets, documentation paths/versions and unit tests.
 `npm run release:check` additionally runs real-browser behavior tests, executes
 the documentation's CDN HTML against the candidate tarball, and verifies installed
-consumer imports/types. Local Chrome can be selected with `SCROLLYLITE_CHROME_PATH`.
+consumer imports/types. Local Chrome can be selected with `VISDELTA_CHROME_PATH`.
 
 `npm run clean:check` copies current non-ignored Git workspace files into a
 temporary directory, omits dist/dependencies, runs `npm ci` and the full release

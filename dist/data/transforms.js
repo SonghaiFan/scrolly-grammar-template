@@ -5,7 +5,7 @@ export function applyTransforms(source, transforms = [], aq) {
     if (!transforms.length)
         return source.map((row) => ({ ...row }));
     if (!aq) {
-        throw new Error('ScrollyLite data transforms require Arquero. Pass { aq } to the runtime.');
+        throw new Error('VisDelta data transforms require Arquero. Pass { aq } to transition().');
     }
     const fields = [...new Set(source.flatMap(row => Object.keys(row)))];
     let table = aq.from(source.map(row => Object.fromEntries(fields.map(field => [field, row[field]]))));

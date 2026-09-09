@@ -9,8 +9,8 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 if (Number(process.versions.node.split('.')[0]) < 20) {
   throw new Error('Release tooling requires Node 20+ (Playwright). Node 18 package consumption is checked separately with pack:check.');
 }
-const target = await mkdtemp(join(tmpdir(), 'scrollylite-clean-release-'));
-const env = { ...process.env, CI: '1', npm_config_cache: join(tmpdir(), 'scrollylite-npm-cache') };
+const target = await mkdtemp(join(tmpdir(), 'visdelta-clean-release-'));
+const env = { ...process.env, CI: '1', npm_config_cache: join(tmpdir(), 'visdelta-npm-cache') };
 try {
   // Include current staged/unstaged/untracked source, not just HEAD. Exclude
   // generated dist so a successful run proves that the build recreates it.
@@ -26,7 +26,7 @@ try {
   }
   const server = createServer();
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  env.SCROLLYLITE_TEST_PORT = String(server.address().port);
+  env.VISDELTA_TEST_PORT = String(server.address().port);
   await new Promise(resolve => server.close(resolve));
   console.log(`Clean candidate workspace: ${target} (Node ${process.version})`);
   await run(['ci', '--ignore-scripts', '--no-audit', '--no-fund']);

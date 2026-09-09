@@ -1,4 +1,4 @@
-import { cloneState, externalizeScrollyViewSpec, inferTransition, withNarrative } from 'scrollylite/composition';
+import { cloneState, externalizeScrollyViewSpec, inferTransition, withNarrative } from 'visdelta/composition';
 export function story(initialSpec = {}) {
     return new StoryBuilder(initialSpec);
 }

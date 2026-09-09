@@ -1,6 +1,6 @@
 # Transition scenes and endpoint semantics
 
-ScrollyLite describes visualization states and evaluates changes between them.
+VisDelta describes visualization states and evaluates changes between them.
 A **delta** records differences between endpoints; a **transition scene** is an
 internal planning classification used by idiom compilers and renderers to choose
 animation behavior. It is not a second authoring grammar. A scene is not a Story
@@ -79,6 +79,13 @@ Bar flip/split/merge can contain several internal phases. Pure layout changes
 are guide changes, not changes in aggregation. Staging is renderer-specific:
 a scene name describes what changed, not an instruction to run every idiom
 through the same motion sequence.
+
+During a bar orientation flip, each axis changes scale kind (`band` and
+`continuous` exchange places). VisDelta does not pretend those incompatible tick
+sets have stable one-to-one identities. It retains the old axis as a temporary
+ghost and crossfades to the new axis inside that axis's x/y stage; the axis
+position and title follow the same timing. This avoids a first-frame replacement
+while keeping the staged bar geometry and guides synchronized.
 
 Custom plugins declare their supported scenes, state-operation compilers and
 optional intermediate phases. See [plugins](./extending-with-plugins.md).

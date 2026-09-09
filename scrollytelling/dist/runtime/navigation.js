@@ -1,5 +1,5 @@
 import { createScrollDriver } from '../scroll-drivers/index.js';
-import { hasScrollAction } from 'scrollylite/composition';
+import { hasScrollAction } from 'visdelta/composition';
 export function setupScroll(spec, shell, renderer) {
     const driver = createScrollDriver({
         steps: shell.steps,
@@ -35,7 +35,7 @@ export function setupScroll(spec, shell, renderer) {
         }
     });
     shell.story.dataset.scrollDriver = 'native';
-    shell.story.__scrollyLiteScrollDriver = driver;
+    shell.story.__visDeltaScrollDriver = driver;
     return driver;
 }
 export function setupNav(shell, renderer, scrollDriver) {
@@ -51,7 +51,7 @@ export function setupNav(shell, renderer, scrollDriver) {
         clearNavigationTimers(shell);
         delete shell.story.dataset.navTargetIndex;
         delete shell.story.dataset.navLockToken;
-        delete shell.story.__scrollyLiteScrollDriver;
+        delete shell.story.__visDeltaScrollDriver;
     };
 }
 export function setupResize(renderer, scrollDriver) {
@@ -165,15 +165,15 @@ function isCurrentNavigation(shell, token) {
     return shell.story?.dataset.navLockToken === token;
 }
 function clearNavigationTimers(shell) {
-    const timers = shell.story.__scrollyLiteNavTimers ?? [];
+    const timers = shell.story.__visDeltaNavTimers ?? [];
     timers.forEach((t) => window.clearTimeout(t));
-    shell.story.__scrollyLiteNavTimers = [];
-    const cleanups = shell.story.__scrollyLiteNavCleanups ?? [];
+    shell.story.__visDeltaNavTimers = [];
+    const cleanups = shell.story.__visDeltaNavCleanups ?? [];
     cleanups.forEach((c) => c());
-    shell.story.__scrollyLiteNavCleanups = [];
+    shell.story.__visDeltaNavCleanups = [];
 }
 function addNavigationCleanup(shell, cleanup) {
-    const cleanups = shell.story.__scrollyLiteNavCleanups ?? [];
+    const cleanups = shell.story.__visDeltaNavCleanups ?? [];
     cleanups.push(cleanup);
-    shell.story.__scrollyLiteNavCleanups = cleanups;
+    shell.story.__visDeltaNavCleanups = cleanups;
 }

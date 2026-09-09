@@ -1,6 +1,6 @@
 # Security Policy
 
-ScrollyLite is pre-1.0. Security fixes target the latest release line.
+VisDelta is pre-1.0. Security fixes target the latest release line.
 
 ## Reporting
 

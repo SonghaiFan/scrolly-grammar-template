@@ -15,8 +15,8 @@ for (const idiom of ['bar', 'line', 'point', 'unit']) {
     test(`${idiom} / ${layout}: every weather step renders through real navigation`, async ({ page }) => {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      await page.goto(`/examples/weather/?story=${idiom}&layout=${layout}&theme=dark`);
-      await page.waitForFunction(() => Boolean(window.__scrollyLiteStory));
+      await page.goto(`/scrollytelling/examples/weather/?story=${idiom}&layout=${layout}&theme=dark`);
+      await page.waitForFunction(() => Boolean(window.__scrollytellingStory));
       const buttons = page.locator('.sl-nav button');
       const count = await buttons.count();
       expect(count).toBeGreaterThan(1);
@@ -30,7 +30,7 @@ for (const idiom of ['bar', 'line', 'point', 'unit']) {
         expect(invalid, `step ${index}`).toEqual([]);
         await expect(page.locator('#app svg').first()).toBeVisible();
       }
-      await page.evaluate(() => window.__scrollyLiteStory.destroy());
+      await page.evaluate(() => window.__scrollytellingStory.destroy());
       expect(errors).toEqual([]);
     });
   }

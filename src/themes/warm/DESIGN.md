@@ -1,5 +1,5 @@
 ---
-name: ScrollyLite Warm
+name: VisDelta Warm
 description: >
   Warm editorial theme evoking long-form print journalism — ink on cream,
   earthy data marks, serif body text. Suited to story-driven data journalism

@@ -3,7 +3,7 @@ import {
   externalizeScrollyViewSpec,
   inferTransition,
   withNarrative
-} from 'scrollylite/composition';
+} from 'visdelta/composition';
 import type {
   LayoutSpec,
   StepActionInput,
@@ -13,7 +13,7 @@ import type {
   StorySpec,
   ThemeSpec,
   ViewSpec
-} from 'scrollylite/composition';
+} from 'visdelta/composition';
 
 type ViewLike = ViewSpec | { toSpec(): ViewSpec };
 

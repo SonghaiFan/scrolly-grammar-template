@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/examples/transition/#sort');
+  await page.goto('/tests/fixtures/runtime.html');
   await expect(page.locator('#status')).toHaveText('Ready');
 });
 
 for (const mode of ['undeclared', 'field', 'range', 'domain', 'stacked', 'grouped', 'reconstruct']) {
   test(`sort preserves keyed colors and legend: ${mode}`, async ({ page }) => {
     const result = await page.evaluate(async mode => {
-      const { bar, transition } = await import('/dist/scrollylite.esm.js');
+      const { bar, transition } = await import('/dist/visdelta.esm.js');
       const segmented = ['stacked', 'grouped'].includes(mode);
       const rows = segmented ? [
         { category: 'A', value: 10, type: 'one' },
@@ -84,7 +84,7 @@ for (const mode of ['undeclared', 'field', 'range', 'domain', 'stacked', 'groupe
 
 test('explicit color changes are still allowed during sorting', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { bar, transition } = await import('/dist/scrollylite.esm.js');
+    const { bar, transition } = await import('/dist/visdelta.esm.js');
     const from = bar([
       { category: 'A', value: 10, type: 'one' },
       { category: 'B', value: 30, type: 'two' }
@@ -109,9 +109,11 @@ test('explicit color changes are still allowed during sorting', async ({ page })
 });
 
 test('sort lab keeps the same colors at both endpoints', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#sort');
+  await expect(page.locator('#status')).toHaveText('Ready');
   const read = () => page.locator('#chart rect.sl-bar').evaluateAll(nodes => Object.fromEntries(
     nodes.map(node => [node.dataset.category, {
-      fill: window.d3.color(node.getAttribute('fill')).formatHex(),
+      fill: getComputedStyle(node).fill,
       height: node.getAttribute('height')
     }])
   ));
@@ -123,7 +125,7 @@ test('sort lab keeps the same colors at both endpoints', async ({ page }) => {
 
 test('undeclared color uses one fill and no legend; split demo declares segment color', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { bar, transition } = await import('/dist/scrollylite.esm.js');
+    const { bar, transition } = await import('/dist/visdelta.esm.js');
     const rows = [
       { category: 'A', value: 10, type: 'one' },
       { category: 'B', value: 20, type: 'two' }
@@ -160,6 +162,8 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
   expect(result.splitLegends).toBe(0);
   expect(result.segments).toBe(4);
 
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#sort');
+  await expect(page.locator('#status')).toHaveText('Ready');
   await page.locator('#scenario').selectOption('split');
   await expect(page.locator('#status')).toHaveText('Ready');
   await expect(page.locator('#editor')).toHaveValue(/\.color\("type"\)/);
@@ -172,7 +176,7 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
 
 test('stacked split cuts at final segment bounds, then reveals color over the parent', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { bar, transition } = await import('/dist/scrollylite.esm.js');
+    const { bar, transition } = await import('/dist/visdelta.esm.js');
     const rows = [
       { category: 'A', value: 10, type: 'one' },
       { category: 'A', value: 20, type: 'two' },

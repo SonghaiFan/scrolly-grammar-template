@@ -1,5 +1,5 @@
 ---
-name: ScrollyLite Default
+name: VisDelta Default
 description: >
   Clean editorial style for data storytelling. Optimised for long-form
   articles and journalism where the chart is a supporting argument,

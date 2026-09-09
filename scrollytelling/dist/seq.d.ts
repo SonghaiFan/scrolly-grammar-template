@@ -1,4 +1,4 @@
-import type { ViewSpec, StorySpec, ChartRuntime } from 'scrollylite/composition';
+import type { ViewSpec, StorySpec, ChartRuntime } from 'visdelta/composition';
 export interface SeqState {
     /** The view spec for this state */
     spec: ViewSpec;
@@ -65,12 +65,12 @@ export declare class Seq {
     off(event: 'change'): this;
     /**
      * Compile to a StorySpec.
-     * Called internally by sl.chart(seq, opts) — you rarely need this directly.
+     * Called internally by chart(seq, opts) — you rarely need this directly.
      */
     toSpec(): StorySpec;
     /**
      * Sync cursor position without triggering notifications.
-     * Called by sl.chart(seq, opts) to align cursor with chart's initialStep
+     * Called by chart(seq, opts) to align cursor with chart's initialStep
      * so the first sq.next() advances to step 1 rather than step 0.
      */
     syncCursor(index: number): void;

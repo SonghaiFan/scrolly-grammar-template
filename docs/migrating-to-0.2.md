@@ -4,7 +4,18 @@
 the migration contract for the candidate, not a claim about 0.1.1 behavior on a
 live CDN. Use matching package, JavaScript and CSS versions.
 
-## New core, existing composition
+## Package rename and new core boundary
+
+The npm identity changes from `scrollylite` to `visdelta`; the browser global
+changes from `ScrollyLite` to `VisDelta`, with `vd` as its short alias. Generated
+bundle and stylesheet names change from `scrollylite.*` to `visdelta.*`.
+
+This is also an ownership change. Story, Seq, page layouts, navigation, theme
+mounting, and native scrolling moved to the private
+`@visdelta/scrollytelling` package in this repository. They are not exported by
+VisDelta and will later be integrated into ScrollyTale.
+
+## Standalone transitions
 
 Chart declarations remain chainable and immutable. Zero-argument factories now
 support deferred `.data(source)`, and rebinding replaces the previous complete
@@ -12,8 +23,8 @@ data source. Two same-idiom declarations can be passed directly to
 `transition(from, to, options)` without Story, Seq or scrolling.
 
 ```js
-import { bar } from 'scrollylite/bar';
-import { transition } from 'scrollylite/transition';
+import { bar } from 'visdelta/bar';
+import { transition } from 'visdelta/transition';
 const first = bar().data(rows).x('category').y('sales').key('category');
 const second = first.y('profit');
 const change = await transition(first, second, { target: '#chart', d3 });
@@ -22,12 +33,13 @@ change.progress(0.5);
 change.destroy();
 ```
 
-`scrollylite/core` contains DOM-free normalization and delta operations;
-`/bar`, `/transition` and `/plugins` avoid the Story module. `/story` and the
-root retain the full composition APIs. Root imports, `story`, `seq`, `chart`,
-`page`, `render`, `createStory`, `createChart` and `createPage` are not removed
-or deprecated. The browser adapter delegates to the same implementation and
-retains global D3/Arquero fallback; canonical ESM requires explicit dependencies.
+`visdelta/core` contains DOM-free normalization and delta operations.
+`visdelta/bar`, `/transition`, and `/plugins` are focused public entries. The
+root exports visualization authoring, delta, transition, and plugin APIs; it no
+longer exports `story`, `seq`, `chart`, `page`, `render`, `createStory`,
+`createChart`, or `createPage`. The browser adapter delegates to the same core
+implementation and can resolve D3/Arquero from browser globals; canonical ESM
+requires explicit dependencies.
 
 Arquero is optional only if no transforms are declared. Filters, sort, fold,
 aggregate, bin and timeUnit currently require `{ aq }`. D3 is still required
@@ -56,20 +68,17 @@ because their method-call histories differ.
 
 ## Ownership and cleanup
 
-- Theme variables apply to the target rather than `document.documentElement`.
-  If your application relied on theme side effects elsewhere, set its global
-  CSS explicitly. Story colors and built-in plugin helpers are per-instance.
+- Transition color tokens resolve from the target rather than requiring
+  `document.documentElement` mutation. Set CSS custom properties on each target
+  when surfaces need different palettes.
 - External stylesheets remain document-wide. Shared links are reference counted;
   application-owned links are never removed. Use scoped CSS for different themes.
-- Destroy before reusing a host. Story/chart/page destroy leaves rendered markup
-  but stops owned work and restores theme tokens; pair destroy removes its markup.
-  Destruction is idempotent; chart controls reject use after destruction.
+- Destroy before reusing a host. Pair destroy removes its mounted transition
+  markup and is idempotent; controller methods reject use after destruction.
 - Failed initial mounts preserve the original host nodes, listeners, class and
   theme. This does not revive an already destroyed runtime.
-- `Seq` snapshots inputs and inspection results. Empty/invalid navigation throws;
-  `unbind()` and `off('change')` release bindings without destroying owned charts.
-- Native scrolling is event-driven rather than continuous polling. Call the
-  driver's `refresh()` after position changes not detected by resize observation.
+Story/Seq lifecycle and scrolling notes now belong to the extracted adapter's
+own documentation.
 
 ## Explicit limits of this release
 

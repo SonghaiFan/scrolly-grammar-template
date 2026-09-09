@@ -1,4 +1,4 @@
-import type { LayoutSpec, StepActionInput, StepDefinition, StepSpec, StorySpec, ThemeSpec, ViewSpec } from 'scrollylite/composition';
+import type { LayoutSpec, StepActionInput, StepDefinition, StepSpec, StorySpec, ThemeSpec, ViewSpec } from 'visdelta/composition';
 type ViewLike = ViewSpec | {
     toSpec(): ViewSpec;
 };

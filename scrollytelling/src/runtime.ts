@@ -1,4 +1,4 @@
-// @ts-nocheck — Story composition runtime built on ScrollyLite's driver surface.
+// @ts-nocheck — Story composition runtime built on VisDelta's driver surface.
 import {
   applyTransforms,
   availableChartIdioms,
@@ -18,10 +18,10 @@ import {
   registerChartIdiom,
   registerChartModule,
   renderChartShell,
-  SCROLL_TRANSITION_NAME,
+  VISDELTA_TRANSITION_NAME,
   snapshotChartRegistry,
   viewRows
-} from 'scrollylite/composition';
+} from 'visdelta/composition';
 import type {
   AnyRecord,
   ChartOptions,
@@ -30,7 +30,7 @@ import type {
   PageRuntime,
   RuntimeOptions,
   StoryRuntime
-} from 'scrollylite/composition';
+} from 'visdelta/composition';
 import { applyTheme } from './runtime/theme.js';
 import { restoreHashPosition, setupNav, setupResize, setupScroll } from './runtime/navigation.js';
 import { compileSpec, storySignature } from './runtime/spec.js';
@@ -227,7 +227,7 @@ function createRenderer(shell: AnyRecord, spec: AnyRecord, datasets: AnyRecord, 
     Object.entries(shell.views).forEach(([viewId, node]: [string, any]) => {
       const viewConfig = spec.views[viewId] || {};
       const viewSpec = step.views[viewId] || step.views.main || {};
-      node.__scrollyLiteMarkName = shell.markName;
+      node.__visDeltaMarkName = shell.markName;
       const previousStep = bounded > 0 ? spec.steps[bounded - 1] : null;
       const previousViewSpec = previousStep
         ? previousStep.views[viewId] || previousStep.views.main || null
@@ -302,14 +302,14 @@ function createRenderer(shell: AnyRecord, spec: AnyRecord, datasets: AnyRecord, 
       resizeFrame = null;
       cancelScrollProgress();
       for (const node of Object.values(shell.views)) {
-        const scene = node.__scrollyLiteScene;
+        const scene = node.__visDeltaScene;
         if (scene) {
           if (scene.virtualRenderTimer) window.clearTimeout(scene.virtualRenderTimer);
           clearSceneTransitionProgress(scene, { finish: false });
         }
-      d3.select(node).interrupt().interrupt(SCROLL_TRANSITION_NAME);
-      d3.select(node).selectAll('*').interrupt().interrupt(SCROLL_TRANSITION_NAME);
-        delete node.__scrollyLiteScene;
+      d3.select(node).interrupt().interrupt(VISDELTA_TRANSITION_NAME);
+      d3.select(node).selectAll('*').interrupt().interrupt(VISDELTA_TRANSITION_NAME);
+        delete node.__visDeltaScene;
       }
       if (shell.tooltip) shell.tooltip.style.opacity = '0';
       if (runtime.context) runtime.context.colors = null;
@@ -457,7 +457,7 @@ function buildColorRegistry(
 function resolveTarget(target) {
   if (typeof target !== "string") return target;
   const node = document.querySelector(target);
-  if (!node) throw new Error(`ScrollyLite target not found: ${target}`);
+  if (!node) throw new Error(`VisDelta target not found: ${target}`);
   return node;
 }
 

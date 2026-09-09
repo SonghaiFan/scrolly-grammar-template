@@ -10,6 +10,7 @@ import type {
 } from '../../types/index.js';
 import {
   barCollapseIntermediateSpec,
+  canonicalBarTransitionPair,
   barIntermediateSpecs,
   barSplitIntermediateSpec,
   resolveBarTransitionPlan
@@ -27,6 +28,7 @@ export function createBarIdiom(deps: ChartDeps): ChartIdiom<BarSpec> {
     renderer,
     prepareSpec: prepareBarSpec,
     resolveTransitionPlan: resolveBarTransitionPlan as (prev: BarSpec | null, next: BarSpec | null) => TransitionPlan,
+    canonicalTransitionPair: canonicalBarTransitionPair,
     intermediateSpecs: barIntermediateSpecs as (prev: BarSpec, next: BarSpec) => IntermediateSpec<BarSpec>[],
     intermediateSpec(previousSpec: BarSpec, nextSpec: BarSpec): IntermediateSpec<BarSpec> | null {
       const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);

@@ -1,41 +1,37 @@
 # Data Sources & Transforms
 
-ScrollyLite loads datasets once at story startup (via D3) and reshapes them
-per-view at render time (via Arquero). This page covers both halves: how to
-declare data sources, and how the transform pipeline reshapes rows before
-they reach the renderer.
+VisDelta accepts inline rows or a data-source declaration on each visualization
+and reshapes rows during transition compilation. D3 loads remote sources;
+Arquero is the current optional transform backend.
 
 ## Declaring datasets
 
-Datasets live in `spec.data`, a name → source map. Register them with
-`.data()` on the story builder, or write `data` directly in a hand-authored
-spec:
+The most direct form is an array of rows:
 
 ```js
-story()
-  .data("weatherDays", { url: "./weather_days_tidy.csv", type: "csv" })
-  .data({
-    weather:     { url: "./weather_sample.csv", type: "csv" },
-    annotations: { values: [{ year: 1939, label: "Black Friday bushfires" }] }
-  })
+const chart = bar()
+  .data(rows)
+  .x("decade")
+  .y("count");
 ```
 
 A `source` is one of:
 
 | Form | Example | Behavior |
 |---|---|---|
-| Remote CSV | `{ url: "./data.csv", type: "csv" }` | Loaded with `d3.csv(url)` |
-| Remote JSON | `{ url: "./data.json", type: "json" }` | Loaded with `d3.json(url)` |
+| Remote CSV | `{ url: "./data.csv", type: "csv" }` | Loaded with `d3.csv(url)` during transition initialization |
+| Remote JSON | `{ url: "./data.json", type: "json" }` | Loaded with `d3.json(url)` during transition initialization |
 | Inline rows (object form) | `{ values: [{ a: 1 }, { a: 2 }] }` | Used directly, no request |
 | Inline rows (array form) | `[{ a: 1 }, { a: 2 }]` | Same as `{ values: [...] }` |
 
-All datasets are loaded **once**, in parallel, before the first step renders
-(`createStory` awaits `loadData(spec.data, d3)`). Reference a dataset by name
-from any chart idiom factory: `bar("weatherDays")`, `line("weather")`, etc.
+The same source declaration can be attached with `.data(source)`. Named
+composition-level datasets belong to the extracted scrollytelling package and
+are not resolved by standalone VisDelta unless a driver supplies the matching
+data map to `transition(..., { data })`.
 
 ### Tidy data works best
 
-ScrollyLite's built-in idioms assume **long ("tidy") format**: one row per
+VisDelta's built-in idioms assume **long ("tidy") format**: one row per
 observation, with separate columns for the category, the measure, and the
 value — rather than one column per measure. For example:
 

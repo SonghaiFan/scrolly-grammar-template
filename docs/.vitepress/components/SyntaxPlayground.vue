@@ -1,12 +1,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as d3 from 'd3';
+import { scenarios as barScenarios } from '../../../examples/transition/scenarios.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 const props = defineProps({
   initial: { type: String, default: 'measure' },
-  compact: { type: Boolean, default: false }
+  compact: { type: Boolean, default: false },
+  mode: { type: String, default: 'all' }
 });
 
 const samples = {
@@ -117,45 +119,11 @@ const grouped = grid.group("team", {
 });
 
 return { from: grid, to: grouped };`
-  },
-  seq: {
-    label: 'Seq cursor',
-    code: `const revenue = bar(rows)
-  .x("category")
-  .y("sales")
-  .key("category");
-const profit = revenue.y("profit");
-
-const states = seq()
-  .add(revenue, "Revenue by category")
-  .add(profit, "Profit by category");
-
-return {
-  from: states.at(0).spec,
-  to: states.at(1).spec
-};`
-  },
-  story: {
-    label: 'Story composition',
-    code: `const revenue = bar(rows)
-  .x("category")
-  .y("sales")
-  .key("category");
-const profit = revenue.y("profit");
-
-const narrative = story()
-  .title("Quarterly performance")
-  .layout("floatToText")
-  .add("Revenue", revenue)
-  .add("Profit", profit)
-  .toSpec();
-
-return {
-  from: narrative.steps[0].views.main,
-  to: narrative.steps[1].views.main
-};`
   }
 };
+
+const barLabSamples = Object.fromEntries(barScenarios.map(sample => [sample.id, sample]));
+const availableSamples = computed(() => props.mode === 'bar-lab' ? barLabSamples : samples);
 
 const rows = [
   { category: 'Hardware', region: 'North', sales: 86, profit: 34 },
@@ -189,12 +157,15 @@ const units = [
 ];
 
 const chartTarget = ref(null);
-const initialSample = samples[props.initial] ? props.initial : 'measure';
+const initialFromHash = props.mode === 'bar-lab' && typeof location !== 'undefined' ? location.hash.slice(1) : '';
+const initialSample = availableSamples.value[initialFromHash]
+  ? initialFromHash
+  : availableSamples.value[props.initial] ? props.initial : Object.keys(availableSamples.value)[0];
 const selected = ref(initialSample);
-const code = ref(samples[initialSample].code);
+const code = ref(availableSamples.value[initialSample].code);
 const status = ref('Loading runtime');
 const error = ref('');
-const progress = ref(0.5);
+const progress = ref(props.mode === 'bar-lab' ? 0 : 0.5);
 const autoRun = ref(true);
 const hasChange = ref(false);
 const deltaText = ref('Waiting for a valid state pair.');
@@ -207,10 +178,16 @@ let runVersion = 0;
 let resizeObserver = null;
 let visibilityObserver = null;
 let animationFrame = 0;
+const drafts = new Map();
 
 const statusKind = computed(() => error.value ? 'error' : status.value === 'Ready' ? 'ready' : 'busy');
+const description = computed(() => availableSamples.value[selected.value]?.description ?? '');
 
 onMounted(() => {
+  if (props.mode === 'bar-lab') {
+    const requested = location.hash.slice(1);
+    if (availableSamples.value[requested]) selected.value = requested;
+  }
   if (!('IntersectionObserver' in window)) {
     initialize();
     return;
@@ -227,7 +204,7 @@ onMounted(() => {
 async function initialize() {
   try {
     const [runtime, arquero] = await Promise.all([
-      import('../../../dist/scrollylite.esm.js'),
+      import('../../../dist/visdelta.esm.js'),
       import('arquero')
     ]);
     api = runtime;
@@ -250,19 +227,26 @@ onBeforeUnmount(() => {
 });
 
 watch(code, () => {
-  if (!autoRun.value || !api) return;
+  drafts.set(selected.value, code.value);
+  if (!api) return;
   clearTimeout(debounceTimer);
-  status.value = 'Waiting for input';
-  debounceTimer = window.setTimeout(runCode, 450);
+  status.value = autoRun.value ? 'Waiting for input' : 'Edited · press Run';
+  if (autoRun.value) debounceTimer = window.setTimeout(runCode, 450);
 });
 
-function chooseSample() {
-  code.value = samples[selected.value].code;
+watch(selected, (next, previous) => {
+  drafts.set(previous, code.value);
+  code.value = drafts.get(next) ?? availableSamples.value[next].code;
+  progress.value = 0;
+  if (props.mode === 'bar-lab' && typeof history !== 'undefined') {
+    history.replaceState(null, '', `#${next}`);
+  }
   if (!autoRun.value) runCode();
-}
+});
 
 function reset() {
-  code.value = samples[selected.value].code;
+  drafts.delete(selected.value);
+  code.value = availableSamples.value[selected.value].code;
   if (!autoRun.value) runCode();
 }
 
@@ -273,37 +257,48 @@ async function runCode() {
   cancelAnimationFrame(animationFrame);
   error.value = '';
   status.value = 'Compiling';
+  let candidate = null;
+  let nextChange = null;
 
   try {
-    const evaluate = new AsyncFunction(
-      'bar', 'line', 'point', 'unit', 'delta', 'seq', 'story', 'rows', 'segments', 'series', 'units',
-      `"use strict";\n${code.value}`
-    );
-    const result = await evaluate(
-      api.bar, api.line, api.point, api.unit, api.delta, api.seq, api.story,
-      structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
-    );
+    const isBarLab = props.mode === 'bar-lab';
+    const evaluate = isBarLab
+      ? new AsyncFunction('bar', `"use strict";\n${code.value}`)
+      : new AsyncFunction(
+        'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
+        `"use strict";\n${code.value}`
+      );
+    const result = isBarLab
+      ? await evaluate(api.bar)
+      : await evaluate(
+        api.bar, api.line, api.point, api.unit, api.delta,
+        structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
+      );
     if (version !== runVersion) return;
     if (!result?.from || !result?.to) {
       throw new Error('Return an object with { from, to } visualization states.');
     }
 
-    change?.destroy();
-    change = null;
-    hasChange.value = false;
-    const nextChange = await api.transition(result.from, result.to, {
-      target: chartTarget.value,
+    candidate = document.createElement('div');
+    candidate.className = 'playground-candidate';
+    chartTarget.value.append(candidate);
+    nextChange = await api.transition(result.from, result.to, {
+      target: candidate,
       d3,
       aq,
-      height: 300
+      height: isBarLab ? 400 : 300
     });
     if (version !== runVersion) {
       nextChange.destroy();
+      candidate.remove();
       return;
     }
+    nextChange.progress(progress.value);
+    change?.destroy();
+    chartTarget.value.replaceChildren(candidate);
+    candidate.className = '';
     change = nextChange;
     hasChange.value = true;
-    change.progress(progress.value);
     deltaText.value = JSON.stringify({
       changed: change.delta.changed,
       deltas: change.delta.deltas,
@@ -311,12 +306,15 @@ async function runCode() {
     }, null, 2);
     status.value = 'Ready';
   } catch (cause) {
+    nextChange?.destroy();
+    candidate?.remove();
     if (version === runVersion) showError(cause);
   }
 }
 
 function showError(cause) {
-  error.value = cause instanceof Error ? cause.message : String(cause);
+  const message = cause instanceof Error ? cause.message : String(cause);
+  error.value = `${message}${change ? '\nShowing the last successful preview.' : ''}`;
   status.value = 'Error';
 }
 
@@ -335,6 +333,12 @@ function play(to) {
     if (Math.abs(change.value - to) > 0.001) animationFrame = requestAnimationFrame(update);
   };
   animationFrame = requestAnimationFrame(update);
+}
+
+function pause() {
+  change?.pause();
+  cancelAnimationFrame(animationFrame);
+  if (change) progress.value = change.value;
 }
 
 function handleEditorKeydown(event) {
@@ -360,41 +364,45 @@ function handleEditorKeydown(event) {
     <div class="playground-toolbar">
       <label v-if="!compact">
         <span>Example</span>
-        <select v-model="selected" aria-label="Syntax example" @change="chooseSample">
-          <option v-for="(sample, key) in samples" :key="key" :value="key">{{ sample.label }}</option>
+        <select :id="mode === 'bar-lab' ? 'scenario' : undefined" v-model="selected" aria-label="Syntax example">
+          <option v-for="(sample, key) in availableSamples" :key="key" :value="key">{{ sample.label }}</option>
         </select>
       </label>
-      <strong v-else class="playground-inline-title">{{ samples[selected].label }}</strong>
+      <strong v-else class="playground-inline-title">{{ availableSamples[selected].label }}</strong>
       <label class="playground-auto">
-        <input v-model="autoRun" type="checkbox" @change="autoRun && runCode()" />
+        <input :id="mode === 'bar-lab' ? 'auto-run' : undefined" v-model="autoRun" type="checkbox" @change="autoRun && runCode()" />
         Auto-run
       </label>
-      <button type="button" @click="runCode">Run <kbd>⌘↵</kbd></button>
-      <button type="button" @click="reset">Reset</button>
-      <span class="playground-status" :data-kind="statusKind">{{ status }}</span>
+      <button :id="mode === 'bar-lab' ? 'run' : undefined" type="button" @click="runCode">Run <kbd>⌘↵</kbd></button>
+      <button :id="mode === 'bar-lab' ? 'reset' : undefined" type="button" @click="reset">Reset</button>
+      <span :id="mode === 'bar-lab' ? 'status' : undefined" class="playground-status" :data-kind="statusKind">{{ status }}</span>
     </div>
+    <p v-if="description" class="playground-description">{{ description }}</p>
 
     <div class="playground-grid">
       <div class="playground-editor-pane">
         <div class="playground-pane-label">Editable JavaScript</div>
         <textarea
           v-model="code"
+          :id="mode === 'bar-lab' ? 'editor' : undefined"
           class="playground-editor"
-          aria-label="Editable ScrollyLite code"
+          aria-label="Editable VisDelta code"
           autocomplete="off"
           autocapitalize="off"
           spellcheck="false"
           @keydown="handleEditorKeydown"
         ></textarea>
-        <p class="playground-contract">Available: <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, <code>seq</code>, <code>story</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
+        <p v-if="mode === 'bar-lab'" class="playground-contract"><code>bar</code> is provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
+        <p v-else class="playground-contract">Available: <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
       </div>
 
       <div class="playground-output-pane">
-        <div class="playground-pane-label">Live output · progress {{ progress.toFixed(2) }}</div>
-        <div ref="chartTarget" class="playground-chart" aria-label="Editable syntax output"></div>
+        <div class="playground-pane-label">Live output · progress <output :id="mode === 'bar-lab' ? 'value' : undefined">{{ progress.toFixed(2) }}</output></div>
+        <div :id="mode === 'bar-lab' ? 'chart' : undefined" ref="chartTarget" class="playground-chart" aria-label="Editable syntax output"></div>
         <div v-if="error" class="playground-runtime-error" role="alert">{{ error }}</div>
         <input
           type="range"
+          :id="mode === 'bar-lab' ? 'progress' : undefined"
           min="0"
           max="1"
           step="0.01"
@@ -404,8 +412,11 @@ function handleEditorKeydown(event) {
           @input="setProgress($event.target.valueAsNumber)"
         />
         <div class="playground-output-actions">
-          <button type="button" :disabled="!hasChange" @click="play(1)">Play →</button>
-          <button type="button" :disabled="!hasChange" @click="play(0)">← Reverse</button>
+          <button v-if="mode === 'bar-lab'" id="start" type="button" :disabled="!hasChange" @click="setProgress(0)">Start · 0</button>
+          <button :id="mode === 'bar-lab' ? 'reverse' : undefined" type="button" :disabled="!hasChange" @click="play(0)">← Reverse</button>
+          <button :id="mode === 'bar-lab' ? 'play' : undefined" type="button" :disabled="!hasChange" @click="play(1)">Play →</button>
+          <button v-if="mode === 'bar-lab'" id="pause" type="button" :disabled="!hasChange" @click="pause">Pause</button>
+          <button v-if="mode === 'bar-lab'" id="end" type="button" :disabled="!hasChange" @click="setProgress(1)">End · 1</button>
         </div>
         <details>
           <summary>Inspect computed delta</summary>

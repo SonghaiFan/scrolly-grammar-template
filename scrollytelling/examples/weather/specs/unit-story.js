@@ -1,4 +1,4 @@
-import { unit } from "../../../dist/index.js";
+import { unit } from "../../../../dist/index.js";
 import { story } from "./shared.js";
 
 export function createUnitStory({ actionMode = ["step", "tooltip"] } = {}) {

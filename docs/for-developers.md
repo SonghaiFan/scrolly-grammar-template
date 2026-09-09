@@ -1,209 +1,65 @@
-# For Developers
+# Developer guide
 
-This guide is for JavaScript developers integrating ScrollyLite into a
-bundled/framework project (Vite, webpack, Next.js, …), contributing to the
-library itself, or building custom chart idioms. If you just want to drop a
-chart into a static page with `<script>` tags and no build step, see
-[For CDN Users](./for-cdn-users.md) instead — the underlying grammar is
-identical either way, only the loading mechanics differ.
+VisDelta is the visualization state, delta, renderer, and seekable pair
+transition package. Narrative layout and scroll orchestration are separate.
 
-## 1. Install
-
-This checkout prepares 0.2.0. Before publication install a local tarball; the
-versioned command below applies once that candidate is published.
+## Install
 
 ```sh
-npm install scrollylite@0.2.0 d3 arquero
+npm install visdelta@0.2.0 d3
 ```
 
-`d3` and `arquero` are **peer dependencies** — ScrollyLite doesn't bundle
-them, so your project controls the versions and there's only one copy on the
-page. Rendering requires `d3@^7`; transforms require `arquero@^8`. Arquero is
-optional when no transforms are declared.
+This package name/version is the current release candidate and is not yet a
+claim that the package has been published.
 
-## 2. Minimal integration
+Add `arquero@8` when using the current transform backend.
+
+## Integration
 
 ```js
-import * as aq from "arquero";
 import * as d3 from "d3";
-import { createStory, story, bar } from "scrollylite";
-import "scrollylite/style.css";
-// Optional packaged theme:
-// import "scrollylite/themes/default.css";
+import { bar } from "visdelta/bar";
+import { transition } from "visdelta/transition";
+import "visdelta/style.css";
 
-const spec = story()
-  .data("rows", { url: "./sales.csv", type: "csv" })
-  .view("main", { height: 520 })
-  .add("Baseline", bar("rows").x("month").y("sales").key("month"))
-  .toSpec();
+const first = bar(rows).x("category").y("revenue").key("category");
+const second = first.y("profit");
+const change = await transition(first, second, { target: "#chart", d3 });
 
-const runtime = await createStory(spec, { target: "#app", d3, aq });
+change.progress(0.5);
+change.play({ duration: 700 });
 
-// later, e.g. on component unmount:
-runtime.destroy();
+// Framework teardown
+change.destroy();
 ```
 
-With the ESM entry (`import { createStory } from "scrollylite"`), pass both
-`d3` and `aq` explicitly. This mirrors D3's module-first practice and keeps
-framework, bundler, CDN, and agent-generated code using the same dependency
-shape. (The global fallback behaves differently: it falls back to
-`globalThis.d3`/`globalThis.aq`. See
-[Runtime API](./runtime-api.md#createstoryspec-options) for the full
-ESM-vs-browser distinction.)
+## Source architecture
 
-A second entry point, `scrollylite/browser`, exposes the same API pre-wired
-for `<script>`-tag globals if you need that shape inside a bundled project.
-
-## 3. Package layout (what you're importing)
-
-| Export | What it is |
-|---|---|
-| `dist/scrollylite.esm.js` | Main ESM entry — `import { createStory, story, … } from "scrollylite"` |
-| `dist/scrollylite.browser.js` | ESM entry pre-wired for browser-global D3/Arquero — `scrollylite/browser` |
-| `dist/scrollylite.global.js` | IIFE bundle exposing `window.ScrollyLite` — fallback for plain script pages |
-| `dist/index.d.ts` / `dist/browser.d.ts` | TypeScript definitions (`types` field — automatic with most tooling) |
-| `dist/scrollylite.css` | Required structural styles — `scrollylite/style.css` |
-| `dist/themes/default.css` | Default color theme — `scrollylite/themes/default.css` |
-
-TypeScript users get types automatically via the `types`/`exports` fields in
-`package.json` — no `@types/` package needed.
-
-## 4. The grammar, in brief
-
-You build a **spec** — a plain JS object describing datasets, layout, and a
-sequence of **steps** — and hand it to `createStory`. The chainable `story()`
-/ `bar()`/`line()`/`point()`/`unit()` builders are sugar for producing that
-object; you can also hand-author the spec JSON directly (e.g. for
-serialization, server-side generation, or storing stories in a CMS).
-
-```js
-story()
-  .data("rows", { url: "...", type: "csv" })
-  .layout("floatToText")
-  .add("A", bar("rows").x("category").y("value").key("category"))
-  .add("B", bar("rows").x("category").y("value").key("category").highlight({ category: "X" }))
-  .toSpec();   // → plain object, JSON-serializable
-```
-
-Each `.add(title, chartState)` describes *what that step's chart looks like*.
-ScrollyLite diffs every consecutive pair of steps, classifies the differences
-into one or more **scenes** (`focus`, `observation`, `granularity`, `guide`),
-and computes/plays the corresponding D3 transition — you never hand-write
-animation code. This is the project's core idea; see
-[Core Concepts](./concepts.md) and
-[Scenes & Transitions](./scenes-and-transitions.md) for the full model.
-
-Full references for every part of the grammar:
-
-- [Story Builder](./story-builder.md) — `story()` chainable API
-- [Chart Idioms](./chart-idioms.md) — `bar`/`line`/`point`/`unit` and every chainable method
-- [Data Sources & Transforms](./data-sources-and-transforms.md) — datasets and the transform pipeline
-- [Layouts, Themes & Scrolling](./layouts-themes-and-scrolling.md) — visual presets, theming, scroll config
-- [Runtime API](./runtime-api.md) — `createStory`, `StoryRuntime`, programmatic control
-
-## 5. Project architecture (for contributors)
-
-```
+```text
 src/
-  grammar/          chainable story/idiom authoring API, scene inference (inferTransition)
-  charts/           chart idiom plugins: renderer, spec compiler, authoring state, per-idiom folders
-  layouts/          layout preset registry (floatToText, textOverVis)
-  scroll-drivers/   geometry-based native scroll tracking
-  data/             dataset loading + transform pipeline (filter, fold, bin, aggregate, sort, …)
-  transitions/      spec compilation from plugin transition capabilities
-  identity/         semantic-key resolution across steps
-  runtime/          action events, scroll-progress easing
-  themes/           default theme CSS
-  scrollylite.ts    createStory lifecycle and rendering
-  index.ts          public exports (ESM + generated declarations)
+  charts/             idiom authoring, compilation, rendering, and transition plans
+  data/               validation and transform execution
+  grammar/            immutable view state, diff, and transition inference
+  identity/           semantic object identity
+  runtime/            chart surface, scene rendering, and progress evaluation
+  transitions/        scene and intermediate-state compilation
+  composition.ts      explicit adapter surface for external driver packages
 ```
 
-Each built-in chart idiom lives in `src/charts/<idiom>/` and exports a
-`plugin.js` built with `defineChartIdiom`, plus an `authoring.js` exposing a
-chainable builder (`bar()`, `line()`, …). See
-[`src/charts/README.md`](https://github.com/SonghaiFan/scrollylite/blob/main/src/charts/README.md) for the exact folder
-contract, and [Extending with Plugins](./extending-with-plugins.md) for how to
-build a new one (the built-ins use the *same* public plugin API — nothing is
-special-cased).
+The private `scrollytelling/` folder contains Story, Seq, layout, navigation,
+theme mounting, and native scroll handling. It imports only
+`visdelta/composition`; VisDelta never imports it.
 
-## 6. Scripts and workflows
+## Commands
 
 ```sh
-npm run check          # lint/structural checks
-npm run manifest:check # regenerate + validate src/charts/manifest.js (run after add/remove idiom folders)
-npm run build          # produce dist/ (ESM, browser, global bundles, .d.ts, CSS)
-npm run examples:check # validate example specs compile
-npm run package:check  # validate package.json / exports shape
-npm run pack:check     # smoke-test the package as an npm consumer would see it
-npm run smoke          # end-to-end smoke test of the built bundles
-npm test               # static checks, build, bundle budgets, examples, package, smoke, unit tests
-npm run test:browser   # real browser behavior and module-loading boundaries
-npm run release:check  # npm test + browser tests + installed tarball consumer
+npm test
+npm run test:browser
+npm run pack:check
+npm --prefix scrollytelling test
 ```
 
-`prepack` runs `npm test`. `prepublishOnly` runs the complete `release:check`,
-including browsers and strict TypeScript checks against an installed tarball.
-Install Chromium with `npx playwright install chromium`, or point
-`SCROLLYLITE_CHROME_PATH` at an existing Chrome executable.
-
-## 7. Running the examples locally
-
-```sh
-git clone https://github.com/SonghaiFan/scrollylite.git
-cd scrollylite
-npm install
-python3 -m http.server 5510
-```
-
-```text
-http://localhost:5510/examples/minimal/      # smallest possible story
-http://localhost:5510/examples/weather/      # full demo: 4 idioms, 2 layouts, scroll/step modes
-```
-
-The weather demo accepts query params for quick exploration, e.g.
-`?layout=textOverVis&story=line&action=scroll`. The [live syntax examples](/examples)
-keep executable grammar, output, errors, progress, and delta together in the docs.
-
-## 8. Release flow (maintainers)
-
-Use Node 20+ for release tooling; CI uses Node 22. The package's Node 18 engine
-floor is for consumers, not the Playwright-based contributor workflow. After
-building under Node 22, CI switches to Node 18 and runs `pack:check` separately.
-
-```sh
-npx playwright install chromium
-npm run release:check      # unit + browser + size + installed tarball checks
-npm publish                # publish to npm (mirrors automatically to jsDelivr/unpkg)
-git push --follow-tags
-```
-
-Finalize the version/date and migration notes, review and commit intended files,
-then create the corresponding tag. This checkout already prepares 0.2.0; do not
-bump it again just to publish the candidate. `npm publish` re-runs
-`release:check` via `prepublishOnly` regardless — the manual run above is for
-catching problems before publication. Choose the release increment deliberately;
-new public entry points and stricter grammar are more than a documentation patch.
-
-jsDelivr serves the published npm package directly. Prefer the package ESM
-endpoint for browser-native CDN usage:
-
-```text
-https://cdn.jsdelivr.net/npm/scrollylite@<version>/dist/scrollylite.global.js
-https://cdn.jsdelivr.net/npm/scrollylite@<version>/dist/scrollylite.esm.js
-```
-
-It can also serve tagged GitHub releases — but for that path you must commit
-`dist/` before tagging, since GitHub's CDN mirror doesn't run a build step:
-
-```text
-https://cdn.jsdelivr.net/gh/<org>/<repo>@<tag>/dist/scrollylite.esm.js
-```
-
-## 9. Extending ScrollyLite
-
-Need a chart type ScrollyLite doesn't ship (area, map, custom pictogram
-layout, …)? Build it as a plugin via `defineChartIdiom` and register it with
-`registerChartIdiom`/`registerChartModule` — the four built-ins use exactly
-this API, so a custom idiom participates fully in scene-driven transitions,
-the story builder, and `.toSpec()` serialization. Full guide:
-[Extending with Plugins](./extending-with-plugins.md).
+The focused bundle gate rejects Story code, unrelated idioms, and the
+composition adapter from the bar-plus-transition closure. See [Module
+boundaries](./modular-architecture.md), [Visualization transitions](./visualization-transitions.md),
+and [Plugins](./extending-with-plugins.md).

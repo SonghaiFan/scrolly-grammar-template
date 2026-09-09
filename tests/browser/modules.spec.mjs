@@ -6,7 +6,7 @@ test('focused bar transition loads no Story runtime or unrelated idioms', async 
     const url = new URL(request.url());
     if (url.pathname.startsWith('/dist/')) modules.push(url.pathname);
   });
-  await page.goto('/examples/transition/');
+  await page.goto('/tests/fixtures/runtime.html');
   await expect(page.locator('#status')).toHaveText('Ready');
   // The lab uses the A/B/C fixture shared by the transition scenarios.
   await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
@@ -14,12 +14,12 @@ test('focused bar transition loads no Story runtime or unrelated idioms', async 
   await expect(page.locator('#value')).toHaveText('0.37');
   expect(modules).toContain('/dist/charts/bar/plugin.js');
   expect(modules.filter(path => /\/charts\/(line|point|unit)\//.test(path))).toEqual([]);
-  expect(modules.filter(path => /\/(scrollylite|story|seq|manifest)\.js$/.test(path))).toEqual([]);
+  expect(modules.filter(path => /\/(visdelta|story|seq|manifest)\.js$/.test(path))).toEqual([]);
   expect(modules.filter(path => /\/(shell|navigation)\.js$|\/scroll-drivers\//.test(path))).toEqual([]);
 });
 
 test('custom idiom compiler runs and an existing pair keeps its renderer after registration changes', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/tests/fixtures/runtime.html');
   const result = await page.evaluate(async () => {
     const { transition } = await import('/dist/transition-entry.js');
     const { defineChartIdiom, registerChartModule } = await import('/dist/plugins.js');
@@ -55,8 +55,8 @@ test('custom idiom compiler runs and an existing pair keeps its renderer after r
   expect(result.after).toBe(result.before);
 });
 
-test('importing Story does not overwrite a focused built-in registration', async ({ page }) => {
-  await page.goto('/examples/transition/');
+test('the root entry does not overwrite a focused built-in registration', async ({ page }) => {
+  await page.goto('/tests/fixtures/runtime.html');
   const calls = await page.evaluate(async () => {
     const { registerChartIdiom } = await import('/dist/plugins.js');
     const { plugin } = await import('/dist/charts/bar/plugin.js');
@@ -75,36 +75,8 @@ test('importing Story does not overwrite a focused built-in registration', async
   expect(calls).toBeGreaterThan(0);
 });
 
-test('ESM and browser Story wrappers share the Seq and runtime contracts', async ({ page }) => {
-  await page.goto('/examples/transition/');
-  const result = await page.evaluate(async () => {
-    const esm = await import('/dist/index.js');
-    const browser = await import('/dist/browser.js');
-    const results = [];
-    for (const api of [esm, browser]) {
-      const host = document.createElement('div');
-      document.body.append(host);
-      const a = api.bar([{ key: 'A', value: 2, other: 4 }]).x('key').y('value');
-      const sequence = api.seq().add(a, 'First').add(a.y('other'), 'Second');
-      const runtime = await api.chart(sequence, { target: host, d3, initialStep: 1 });
-      const index = sequence.index;
-      runtime.progress(1, 0.5);
-      runtime.resize();
-      const bars = host.querySelectorAll('rect.sl-bar').length;
-      runtime.destroy();
-      const shell = await api.page(sequence, { target: host });
-      const steps = shell.steps.length;
-      shell.destroy();
-      host.remove();
-      results.push({ index, bars, steps });
-    }
-    return results;
-  });
-  expect(result).toEqual([{ index: 1, bars: 1, steps: 2 }, { index: 1, bars: 1, steps: 2 }]);
-});
-
 test('initial rendering failure restores the original target and listeners', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/tests/fixtures/runtime.html');
   const result = await page.evaluate(async () => {
     const { bar } = await import('/dist/bar.js');
     const { transition } = await import('/dist/transition-entry.js');

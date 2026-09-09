@@ -10,11 +10,11 @@
 //     .add(bar('weather').x('decade').y('count'), 'Hot days per decade')
 //     .add(base.flip(), 'Flipped to horizontal');
 //
-//   const chart = await sl.chart(sq, { target: '#vis', d3, aq });
+//   const chart = await chart(sq, { target: '#vis', d3, aq });
 //   sq.bind({ chart, text: '#caption' });
 //   btn.onclick = () => sq.next();
 import { story } from './grammar/story.js';
-import { cloneState } from 'scrollylite/composition';
+import { cloneState } from 'visdelta/composition';
 export class Seq {
     constructor() {
         this._entries = [];
@@ -118,7 +118,7 @@ export class Seq {
     // ── Compilation ────────────────────────────────────────────────────────────
     /**
      * Compile to a StorySpec.
-     * Called internally by sl.chart(seq, opts) — you rarely need this directly.
+     * Called internally by chart(seq, opts) — you rarely need this directly.
      */
     toSpec() {
         return this._builder.toSpec();
@@ -126,7 +126,7 @@ export class Seq {
     // ── Internal ───────────────────────────────────────────────────────────────
     /**
      * Sync cursor position without triggering notifications.
-     * Called by sl.chart(seq, opts) to align cursor with chart's initialStep
+     * Called by chart(seq, opts) to align cursor with chart's initialStep
      * so the first sq.next() advances to step 1 rather than step 0.
      */
     syncCursor(index) {

@@ -1,6 +1,6 @@
 # Data transform grammar
 
-ScrollyLite implements a small declarative transform language, not arbitrary
+VisDelta implements a small declarative transform language, not arbitrary
 JavaScript, SQL, or the full Vega transform vocabulary. Transform arrays execute
 in declared order. Every entry has exactly one supported operation; unsupported
 operations, properties, or values throw an error with the `transform[index]`.

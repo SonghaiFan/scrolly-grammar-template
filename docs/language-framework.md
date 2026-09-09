@@ -1,6 +1,6 @@
 # Language framework and roadmap
 
-> **Normative status:** this page is the source of truth for ScrollyLite's public language, implementation coverage, and development direction. It describes the intended whole system without presenting unfinished work as available API. Last aligned with the `0.2.0` candidate on 6 September 2026.
+> **Normative status:** this page is the source of truth for VisDelta's public language, implementation coverage, and development direction. It describes the intended whole system without presenting unfinished work as available API. Last aligned with the `0.2.0` candidate on 6 September 2026.
 
 ## Status vocabulary
 
@@ -16,7 +16,7 @@ An item moves to **Available** only when four things agree: implementation, expo
 
 ## The ontology
 
-ScrollyLite is a declarative visualization language with animation as a first-class evaluation model. Scrolling is one possible driver, not the definition of the system.
+VisDelta is a declarative visualization language with animation as a first-class evaluation model. Scrolling is one possible driver, not the definition of the system.
 
 <div class="language-pipeline">
   <div><strong>Data</strong><span>rows and named sources</span></div>
@@ -66,7 +66,7 @@ The public language is divided into eight grammar families. A method belongs to 
 | `bar(rows)` and other inline inputs | Available | Bind row arrays directly |
 | `bar({ values: rows })` | Available | Explicit inline source object |
 | `bar(url)` / `{ url, type? }` | Available | Load CSV or JSON through D3 |
-| `bar("dataset")` + `story().data()` | Available | Resolve a named composition-level dataset |
+| `bar("dataset")` + composition data map | Extracted | Named datasets are resolved by a driver package, not VisDelta core |
 | `filter`, `fold`, `bin`, `aggregate`, `sort`, `limit`, `timeUnit` transforms | Available | Execute in declared order; Arquero is required |
 | Streaming or incremental data sources | Developing | Intended data-source category; no public contract yet |
 | Reactive query graph | Research | Possible future derivation model |
@@ -125,7 +125,7 @@ Idioms are classified by the data relationship they help a reader perceive—not
 
 | Idiom | Status | Current role | Transition evaluation |
 | --- | --- | --- | --- |
-| `bar()` | Available | Categorical comparison, focus, split/merge, grouped/stacked layout | Cached seek tracks |
+| `bar()` | Available | Categorical comparison, focus, reversible split/merge, grouped/stacked layout | Cached seek tracks |
 | `line()` | Available | Ordered trends and multiple series | Reconstructs frames |
 | `point()` | Available | Quantitative relationships and aggregation/detail | Reconstructs frames |
 | `unit()` | Available | Countable units, grids, groups, timelines, dodge | Reconstructs frames |
@@ -162,9 +162,9 @@ The research rows are a taxonomy of likely language space, not release promises.
 | --- | --- | --- |
 | Time | Available | `.play()` |
 | Numeric progress | Available | `.progress(value)` |
-| Buttons and keyboard | Available | Application calls the controller or Seq cursor |
-| Native scroll | Available | Story scroll driver |
-| Step navigation | Available | Story actions and Seq navigation |
+| Buttons and keyboard | Available | Application calls the transition controller |
+| Native scroll | Extracted | Owned by the private `scrollytelling/` adapter |
+| Step navigation | Extracted | Owned by the private `scrollytelling/` adapter |
 | Gesture, route, audio, or external clock | Available as integration | Applications can map any signal to progress; no dedicated declarative syntax |
 | Unified declarative `driver()` objects | Developing | Intended common grammar for non-Story drivers |
 
@@ -174,28 +174,24 @@ The architecture intentionally keeps Driver outside Transition: one transition c
 
 | Syntax | Status | Owns |
 | --- | --- | --- |
-| `seq()` | Available | Ordered snapshots, text, cursor, binding and change events |
-| `story()` | Available | Datasets, metadata, theme, layout, views, actions and steps |
-| `story().add()` | Available | Compile visualization states into narrated steps |
-| `story().layout()` | Available | Select the current Story page presets |
-| `story().theme()` | Available | Theme tokens and stylesheets |
+| `seq()` | Extracted | Private `scrollytelling/` package; planned for ScrollyTale |
+| `story()` | Extracted | Private `scrollytelling/` package; planned for ScrollyTale |
+| `story().add()` | Extracted | No longer exported by VisDelta core |
+| `story().layout()` | Extracted | No longer exported by VisDelta core |
+| `story().theme()` | Extracted | No longer exported by VisDelta core |
 | Branching or graph narratives | Developing | Current Story and Seq are linear |
 | Nested or parallel sequences | Research | Composition model not yet defined |
-
-<SyntaxPlayground initial="seq" compact />
-
-<SyntaxPlayground initial="story" compact />
 
 ### 8. Runtime and extension grammar
 
 | Syntax | Status | Contract |
 | --- | --- | --- |
-| `createChart()` / `chart()` | Available | Mount one animated chart or Seq |
-| `createPage()` / `page()` | Available | Mount layout shell and view targets |
-| `createStory()` / `render()` | Available | Mount the complete narrative runtime |
+| `createChart()` / `chart()` | Extracted | Private `scrollytelling/` package |
+| `createPage()` / `page()` | Extracted | Private `scrollytelling/` package |
+| `createStory()` / `render()` | Extracted | Private `scrollytelling/` package |
 | `defineChartIdiom()` | Available | Define an idiom plugin factory |
 | `registerChartModule()` | Available | Register renderer/compiler capability before runtime creation |
-| Focused `scrollylite/bar` entry | Available | Lightweight bar authoring |
+| Focused `visdelta/bar` entry | Available | Lightweight bar authoring |
 | Focused line, point, and unit entries | Developing | Available through the complete entry; dedicated public subpaths are not shipped |
 | Automatic builder generation from plugins | Developing | Registration currently supplies runtime capability, not new fluent syntax automatically |
 
@@ -280,7 +276,7 @@ Evaluate area, rect/heatmap, arc, and annotation idioms only after Milestone B e
 
 <span class="language-status is-research">Research</span>
 
-Do not expose bar-to-line syntax until ScrollyLite has an explicit cross-idiom identity model, semantic compatibility rules, intermediate geometry strategy, and deterministic seek behavior. A visually attractive morph without those contracts would weaken the language.
+Do not expose bar-to-line syntax until VisDelta has an explicit cross-idiom identity model, semantic compatibility rules, intermediate geometry strategy, and deterministic seek behavior. A visually attractive morph without those contracts would weaken the language.
 
 ## Maintenance rules
 

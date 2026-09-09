@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('VitePress reference loads the real seekable transition', async ({ page }) => {
-  await expect(page).toHaveTitle(/Interactive reference.*ScrollyLite/);
+  await expect(page).toHaveTitle(/Interactive reference.*VisDelta/);
   await expect(page.getByRole('link', { name: 'Guide', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Search/ })).toBeVisible();
   const workbench = page.locator('.transition-workbench');
@@ -24,7 +24,7 @@ test('VitePress reference loads the real seekable transition', async ({ page }) 
   await expect(page.locator('.workbench-inspector')).toContainText('semantic');
 });
 
-test('Seq controls drive the same transition progress', async ({ page }) => {
+test('application state controls drive the same transition progress', async ({ page }) => {
   await page.getByRole('button', { name: 'Next state' }).click();
   await expect(page.locator('.workbench-readout output')).toHaveText('0.50');
   await expect(page.locator('.workbench-seq-head output')).toHaveText('2 / 3');
@@ -37,7 +37,7 @@ test('Seq controls drive the same transition progress', async ({ page }) => {
 
 test('editable grammar recompiles live, reports errors, and switches idioms', async ({ page }) => {
   await page.locator('.syntax-playground').scrollIntoViewIfNeeded();
-  const editor = page.getByRole('textbox', { name: 'Editable ScrollyLite code' });
+  const editor = page.getByRole('textbox', { name: 'Editable VisDelta code' });
   const status = page.locator('.playground-status');
   await expect(status).toHaveText('Ready');
   await expect(editor).toContainText('.y("sales"');
@@ -97,7 +97,7 @@ test('reference stays usable at a narrow viewport', async ({ page }) => {
 
 test('language map is the status source of truth with inline live grammar', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/language-framework.html');
-  await expect(page).toHaveTitle(/Language framework and roadmap.*ScrollyLite/);
+  await expect(page).toHaveTitle(/Language framework and roadmap.*VisDelta/);
   await expect(page.getByRole('heading', { name: 'Grammar taxonomy' })).toBeVisible();
   await expect(page.getByText('Available', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Developing', { exact: true }).first()).toBeVisible();
@@ -112,11 +112,11 @@ test('language map is the status source of truth with inline live grammar', asyn
 
 test('examples are inline editors rather than source-file references', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/examples.html');
-  await expect(page.locator('.syntax-playground')).toHaveCount(10);
+  await expect(page.locator('.syntax-playground')).toHaveCount(8);
   await expect(page.getByText(/^Source:/)).toHaveCount(0);
 
-  const storyPlayground = page.locator('.syntax-playground').last();
-  await storyPlayground.scrollIntoViewIfNeeded();
-  await expect(storyPlayground.locator('.playground-status')).toHaveText('Ready');
-  expect(await storyPlayground.locator('rect.sl-bar').count()).toBeGreaterThan(0);
+  const finalPlayground = page.locator('.syntax-playground').last();
+  await finalPlayground.scrollIntoViewIfNeeded();
+  await expect(finalPlayground.locator('.playground-status')).toHaveText('Ready');
+  expect(await finalPlayground.locator('circle').count()).toBeGreaterThan(0);
 });

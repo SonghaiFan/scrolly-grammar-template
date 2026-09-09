@@ -1,161 +1,135 @@
 # Core Concepts
 
-ScrollyLite has a small vocabulary. Once these pieces click, every part of the
-API — the story builder, the chart idioms, the runtime — reads the same way.
+VisDelta has four layers:
 
-## Visualization, delta and transition
+<div class="ontology-flow">
+  <code>Visualization</code><span>to</span><code>Delta</code><span>to</span><code>Transition</code><span>to</span><code>Driver</code>
+</div>
 
-The core unit is an immutable **visualization declaration**, produced by a
-chain such as `bar().data(rows).x("category").y("value")`. Deriving a new
-declaration does not mutate the original. A declaration is not a mounted chart.
+The first three belong to VisDelta. A driver is application code that supplies
+time or normalized progress: a button, slider, scroll position, gesture, route,
+or test.
 
-`delta(from, to)` describes semantic differences between two same-idiom
-endpoints without touching the DOM. `await transition(from, to, options)` loads
-data and creates a mounted **transition controller**: `progress(0…1)` seeks a
-frame, while `play()` supplies time-based progress. Neither requires Story or
-scrolling. Chart-type changes are outside this standalone contract.
+## Visualization
 
-Story, steps, layouts and scroll drivers form an optional composition layer
-above that model. See [Visualization Transitions](./visualization-transitions.md)
-for the standalone API and [Module Boundaries](./modular-architecture.md) for
-focused imports.
-
-## Story
-
-A **story** is a narrative composition spec: title, description, datasets, layout,
-theme, named views, and an ordered list of **steps**. It's a plain JSON-like
-object — you can write it by hand, generate it, or build it with the
-[`story()`](./story-builder.md) chainable API. Either way, `createStory(spec,
-options)` is what brings it to life in the browser.
+A **visualization** is an immutable declaration produced by a chain such as:
 
 ```js
-{
-  title: "Melbourne Weather",
-  description: "How hot and cold days have shifted across a century.",
-  data: { weatherDays: { url: "./weather_days.csv", type: "csv" } },
-  layout: { preset: "floatToText", offset: 0.58 },
-  theme: { background: "#fafafa", accent: "#b05d3b" },
-  views: { main: { title: "Melbourne weather", height: 540 } },
-  steps: [ /* … */ ]
-}
+const revenue = bar(rows)
+  .x("category")
+  .y("revenue")
+  .key("category");
+
+const profit = revenue.y("profit");
 ```
 
-## Step
+`profit` derives from `revenue`; it does not mutate it. A declaration describes
+an endpoint and does not mount a chart by itself. Calling `.toSpec()` compiles
+the chain to a serializable visualization spec.
 
-A **step** is one beat of the narrative: a title, body text, and one
-**view spec** per named view (usually just `main`). Steps are what the reader
-scrolls or clicks through. Each step also carries:
+## Delta
 
-- `transition.scene` — which kinds of change happened since the previous step
-  (inferred automatically; see [Scenes](#scene))
-- `action` — how the step is driven: discrete nav/programmatic jumps (`"step"`),
-  continuous scroll-scrubbing (`"scroll"`), tooltips (`"tooltip"`), or
-  play-on-load (`"enter"`)
+`delta(from, to)` compares the meaning of two same-idiom endpoints without
+touching the DOM. It reports changes to identity, data, encoding, focus, guide,
+transform, granularity, and transition metadata.
 
-You rarely write steps by hand. The story builder's `.add(title, chartState,
-options)` compiles all of this for you from a chart idiom chain.
+```js
+import { delta } from "visdelta/core";
 
-## View
+const change = delta(revenue, profit);
+```
 
-A **view** is one rendered chart inside a story. Most stories use a single
-view named `"main"`, declared once via `.view("main", { title, height })` and
-then re-encoded differently at each step. Multi-view stories are possible —
-declare more named views and provide a spec for each in every step's `views`
-map.
+The delta is semantic input for evaluation and inspection. It is not a list of
+SVG mutations that application code must execute.
 
-A view's **spec** is a small Vega-Lite-flavored object: `mark` (the idiom key,
-e.g. `"bar"`), `data`, `encoding` (channel → field/value bindings), `transform`
-(data-shaping pipeline), plus idiom-specific extras like `key`, `guide`,
-`granularity`, `unit`. The chart idiom builders (`bar()`, `line()`, …) are
-just ergonomic factories for this object — `.toSpec()` returns the compiled
-form.
+## Transition
+
+`transition(from, to, options)` loads and compiles both endpoints, mounts the
+appropriate chart renderer, and returns a seekable controller.
+
+```js
+import * as d3 from "d3";
+import { transition } from "visdelta/transition";
+
+const pair = await transition(revenue, profit, {
+  target: "#chart",
+  d3
+});
+
+pair.progress(0.42);
+pair.play({ duration: 800 });
+pair.pause();
+pair.resize();
+pair.destroy();
+```
+
+Progress is always normalized from `0` to `1`. The controller owns evaluation;
+the caller owns when and why progress changes.
+
+## Driver
+
+A **driver** converts an interaction or clock into progress. It is deliberately
+outside VisDelta's core ontology:
+
+```js
+slider.addEventListener("input", event => {
+  pair.progress(Number(event.currentTarget.value));
+});
+```
+
+This boundary lets the same transition work for a click, a scrubber, scrolling,
+automated playback, or a static frame export.
 
 ## Idiom
 
-An **idiom** is a chart type plugin: `bar`, `line`, `point`, `unit` ship
-built in. An idiom bundles together:
+An **idiom** is a chart-type plugin. `bar`, `line`, `point`, and `unit` are
+built in. An idiom bundles a renderer, a spec compiler, supported semantic
+changes, and optional transition plans. A transition currently requires both
+endpoints to use the same idiom; cross-idiom morphing is not part of the public
+contract.
 
-- a **renderer** (draws marks with D3, handles enter/update/exit and
-  transitions)
-- a **spec compiler** (normalizes/derives encoding from authored shorthand)
-- a list of **scenes** it supports and how each scene maps to a state
-  operation (e.g. `focus → filter`)
-- optional **transition plans** (custom multi-stage animation sequencing,
-  e.g. bar's flip does y-then-x staging)
+See [Chart Idioms](./chart-idioms.md) and
+[Extending with Plugins](./extending-with-plugins.md).
 
-You can register your own idiom with [`defineChartIdiom` /
-`registerChartIdiom`](./extending-with-plugins.md). From the author's side,
-each idiom exposes a chainable builder — `bar("dataset")`, `line("dataset")`,
-etc. — documented in full in [Chart Idioms](./chart-idioms.md).
+## Semantic identity
 
-## Scene
-
-A **scene** is ScrollyLite's vocabulary for *what kind of thing changed*
-between two consecutive steps. There are four:
-
-| Scene         | Question it answers                          | Typical authoring trigger |
-|---------------|----------------------------------------------|---------------------------|
-| `focus`       | Which rows are emphasized or visible?        | `.where()`, filter transforms, `.highlight()` |
-| `guide`       | How is the same data being read (orientation, scale, layout)? | `.flip()`, `.guide()`, `.layout()` |
-| `granularity` | What level of aggregation/grouping is shown?  | `.breakdown()`, `.rollup()`, `.segment()` |
-| `observation` | Which variable/field is encoded?              | `.x()`, `.y()`, `.color()` with a new field |
-
-You almost never set scenes manually. When you chain `.add(title, viewState)`
-in the story builder, ScrollyLite **diffs** the current view state against the
-previous step's and infers `transition.scene` automatically — see
-[Scenes & Transitions](./scenes-and-transitions.md) for the full inference
-rules and how each idiom animates each scene.
-
-## Semantic identity (`key`)
-
-Scrollytelling lives and dies by object permanence: when a bar splits into two
-segments, or a scatter point's axes change, does the reader still recognize
-"that's the same thing, now shown differently"? ScrollyLite tracks this with a
-**semantic key** — `.key("decade")` or `.key(["decade", "type"])`. The
-renderer uses the key to match marks across steps with D3's data-join, so
-marks animate (move/resize/recolor) instead of disappearing and reappearing.
-
-Pick a key that uniquely identifies a "thing" in your narrative — usually the
-field(s) that stay constant across the steps where that thing appears.
-
-## Authoring vs. compiled spec
-
-The chart builders carry extra **authoring-only** state — e.g. the last
-`.where()` selectors, used to infer titles and identity — that doesn't belong
-in the final spec. Calling `.toSpec()` runs the compiler, which:
-
-- expands shorthand (`.y("count", "Total")` → `{ field: "count", title:
-  "Total" }`)
-- compiles row-filtering `.where()` into filter transforms (line instead defaults
-  to displayed-range cropping)
-- prunes authoring-only bookkeeping (`__grammar`, default guide staging, …)
-- hands the result to `compileViewSpec`, which finalizes margins, narrative
-  metadata, and idiom-specific defaults
-
-The result is a plain object — safe to `JSON.stringify`, store, or hand-edit.
-
-## Putting it together
+The key answers: “which mark at the first endpoint is the same object at the
+second endpoint?”
 
 ```js
-import { story, bar } from "scrollylite";
-
-const base = bar("weatherDays").x("decade").y("count").key("decade");
-
-const spec = story()
-  .title("Hot Days Over Time")
-  .data("weatherDays", { url: "./weather_days_tidy.csv", type: "csv" })
-  .layout("floatToText")
-  .view("main", { title: "Melbourne", height: 540 })
-  .add("Baseline", base.where({ type: "Hot days" }))            // observation: count by decade
-  .add("Focus", base.where({ type: "Hot days", period: "recent" })) // scene: focus
-  .add("Guide", base.where({ type: "Hot days", period: "recent" }).flip()) // scene: guide
-  .add("Granularity", base.breakdown("type"))                   // scene: granularity
-  .toSpec();
-
-await createStory(spec, { target: "#app", d3, aq });
+bar(rows).x("category").y("value").key("category")
 ```
 
-Each `.add()` call records a chart state; the builder diffs consecutive
-states, infers the scene(s), compiles the view, and appends a finished step to
-`spec.steps`. By the time `.toSpec()` runs, the whole story — narrative,
-scenes, and chart specs — is ready to render.
+Choose fields that remain stable through the change. Good identity lets marks
+move, resize, split, or merge while retaining object permanence. Ambiguous or
+unstable keys turn a meaningful transition into unrelated exits and enters.
+
+## Change taxonomy
+
+VisDelta classifies endpoint differences into four semantic families:
+
+| Family | Question | Typical authoring trigger |
+| --- | --- | --- |
+| `focus` | Which observations are visible or emphasized? | `.where()`, `.highlight()` |
+| `guide` | How is the same data arranged or read? | `.flip()`, `.guide()`, `.layout()` |
+| `granularity` | What aggregation or grouping level is shown? | `.breakdown()`, `.rollup()`, `.segment()` |
+| `observation` | Which variable or channel is encoded? | `.x()`, `.y()`, `.color()` |
+
+The taxonomy describes *what changed*. The idiom's transition plan decides
+*how that change is staged*.
+
+## Authoring declaration vs compiled spec
+
+Builders retain authoring information used for defaults and inference.
+`.toSpec()` compiles shorthand, transform declarations, keys, guides, and
+idiom-specific options into a plain object. This separates a fluent authoring
+surface from the normalized evaluator input.
+
+## Where Story and Seq went
+
+`story()`, `seq()`, layouts, navigation, and native scroll progress are
+composition concepts, not visualization-transition primitives. They now live
+in the repository's private `scrollytelling/` package for later integration
+into ScrollyTale. They are not exported from `visdelta`.
+
+See [Module Boundaries](./modular-architecture.md) for the ownership contract.

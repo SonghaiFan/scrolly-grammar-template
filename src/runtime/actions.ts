@@ -68,7 +68,7 @@ export function normalizeScrollAction(scrollSpec: true | Record<string, unknown>
 
 export function easeProgress(progress: number, name = 'linear', d3: Record<string, unknown>): number {
   if (!d3) {
-    throw new Error('ScrollyLite scroll easing requires D3. Pass { d3 } to createStory().');
+    throw new Error('VisDelta easing requires D3. Pass { d3 } to the transition or driver runtime.');
   }
   const eases: Record<string, ((t: number) => number) | undefined> = {
     linear: d3.easeLinear as (t: number) => number,

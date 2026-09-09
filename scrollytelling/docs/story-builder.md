@@ -7,7 +7,8 @@ any reasonable order — the builder recompiles steps lazily whenever something
 that affects them changes.
 
 ```js
-import { story, bar } from "scrollylite";
+import { story } from "@visdelta/scrollytelling";
+import { bar } from "visdelta";
 
 const spec = story()
   .title("…")
@@ -83,7 +84,7 @@ field `layout` accepts (presets, `offset`, `nav`, `progress`, `scroll`, …).
 
 ## `.theme(themeOrHref, options?)`
 
-Configures the story's visual theme. Use a string when you want ScrollyLite to
+Configures the story's visual theme. Use a string when you want VisDelta to
 load a CSS file for this story:
 
 ```js

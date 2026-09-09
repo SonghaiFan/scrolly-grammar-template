@@ -1,7 +1,7 @@
 interface ShellStoryElement extends HTMLElement {
-    __scrollyLiteScrollDriver?: ScrollDriver;
-    __scrollyLiteNavTimers?: ReturnType<typeof setTimeout>[];
-    __scrollyLiteNavCleanups?: (() => void)[];
+    __visDeltaScrollDriver?: ScrollDriver;
+    __visDeltaNavTimers?: ReturnType<typeof setTimeout>[];
+    __visDeltaNavCleanups?: (() => void)[];
 }
 interface Shell {
     story: ShellStoryElement;

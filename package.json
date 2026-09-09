@@ -1,5 +1,5 @@
 {
-  "name": "scrollylite",
+  "name": "visdelta",
   "version": "0.2.0",
   "description": "Declarative visualization states and seekable animated transitions for the browser.",
   "type": "module",
@@ -12,27 +12,27 @@
     "url": "https://github.com/SonghaiFan/scrollylite/issues"
   },
   "homepage": "https://github.com/SonghaiFan/scrollylite#readme",
-  "main": "./dist/scrollylite.esm.js",
-  "module": "./dist/scrollylite.esm.js",
+  "main": "./dist/visdelta.esm.js",
+  "module": "./dist/visdelta.esm.js",
   "types": "./dist/index.d.ts",
-  "jsdelivr": "./dist/scrollylite.global.js",
-  "unpkg": "./dist/scrollylite.global.js",
-  "style": "./dist/scrollylite.css",
+  "jsdelivr": "./dist/visdelta.global.js",
+  "unpkg": "./dist/visdelta.global.js",
+  "style": "./dist/visdelta.css",
   "sideEffects": [
     "./dist/browser.js",
-    "./dist/scrollylite.browser.js",
-    "./dist/scrollylite.global.js",
+    "./dist/visdelta.browser.js",
+    "./dist/visdelta.global.js",
     "*.css",
     "dist/**/*.css"
   ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/scrollylite.esm.js"
+      "import": "./dist/visdelta.esm.js"
     },
     "./browser": {
       "types": "./dist/browser.d.ts",
-      "import": "./dist/scrollylite.browser.js"
+      "import": "./dist/visdelta.browser.js"
     },
     "./core": {
       "types": "./dist/core.d.ts",
@@ -54,7 +54,7 @@
       "types": "./dist/composition.d.ts",
       "import": "./dist/composition.js"
     },
-    "./style.css": "./dist/scrollylite.css",
+    "./style.css": "./dist/visdelta.css",
     "./themes/default.css": "./dist/themes/default.css",
     "./themes/dark.css": "./dist/themes/dark.css",
     "./themes/paper.css": "./dist/themes/paper.css"

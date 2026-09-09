@@ -1,6 +1,6 @@
-# Color in ScrollyLite
+# Color in VisDelta
 
-This guide covers how ScrollyLite assigns and manages color for data encoding,
+This guide covers how VisDelta assigns and manages color for data encoding,
 and the design rules baked into the library's defaults.
 
 The rules below are distilled from Stephen Few's *"Practical Rules for Using
@@ -12,7 +12,7 @@ theory.
 
 ## The nine rules at a glance
 
-| # | Rule | How ScrollyLite implements it |
+| # | Rule | How VisDelta implements it |
 |---|---|---|
 | 1 | Consistent background for same-colored objects | Single `--sl-surface` token; avoid per-step background changes |
 | 2 | Data marks must contrast with the background | Default palette checked against `--sl-surface` (white) |
@@ -43,7 +43,7 @@ bar("sales")
 
 ### What happens automatically
 
-1. **Domain resolution** — ScrollyLite collects the unique values of `segment`
+1. **Domain resolution** — VisDelta collects the unique values of `segment`
    from the data rows (or reads `color.domain` if you provide one).
 2. **Palette resolution** — the ten `--sl-series-*` CSS variables are read at
    render time (so a theme change is always reflected without rebuilding).
@@ -94,16 +94,16 @@ references. Unknown/null entries fall back to the positional palette color.
 
 ### Overriding the palette
 
-Replace any or all series tokens in your theme to change the whole palette
-at once:
+Replace series CSS custom properties on the transition target to change the
+palette for that surface:
 
-```js
-story().theme({
-  series: [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
-  ]
-})
+```css
+#chart {
+  --sl-series-1: #1f77b4;
+  --sl-series-2: #ff7f0e;
+  --sl-series-3: #2ca02c;
+  --sl-series-4: #9467bd;
+}
 ```
 
 The hue-maximisation runs on the *resolved* palette at render time, so the
@@ -125,7 +125,7 @@ point("cities")
   .color({ field: "density", type: "quantitative" })
 ```
 
-ScrollyLite maps the domain `[min, max]` to a lightness range of roughly
+VisDelta maps the domain `[min, max]` to a lightness range of roughly
 `L +18 … L −18` in HCL space (pale = low, dark = high), where L is the
 lightness of the resolved `--sl-accent` color.
 
@@ -195,7 +195,7 @@ distinct from the series colors:
 ## Non-data ink (Rule #7)
 
 Axes, tick marks, and grid lines should not compete with data marks.
-ScrollyLite uses:
+VisDelta uses:
 
 | Token | Role | Default |
 |---|---|---|
@@ -220,14 +220,13 @@ failure modes are avoided:
 - **n ≥ 6**: red enters the set; if your audience includes colorblind users,
   pair color with shape, pattern, or direct labels for those categories.
 
-If you need a fully colorblind-safe palette for larger N, supply an explicit
-`series` via `.theme()`. The IBM color-blind-safe palette or the Okabe-Ito
-palette are good choices:
+If you need a fully colorblind-safe palette for larger N, set the series CSS
+tokens or pass an explicit `range` to `.color()`. For example:
 
 ```js
-// Okabe-Ito (8 colors, designed for colorblind accessibility)
-story().theme({
-  series: [
+bar(rows).color({
+  field: "series",
+  range: [
     "#56b4e9", "#e69f00", "#009e73", "#f0e442",
     "#0072b2", "#d55e00", "#cc79a7", "#000000"
   ]

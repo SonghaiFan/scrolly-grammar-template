@@ -1,6 +1,6 @@
 # Interactive reference
 
-This is the canonical map of ScrollyLite's public 0.2 language. It connects immutable visualization declarations, semantic delta, seekable transition evaluation, and optional narrative composition.
+This is the canonical map of VisDelta's visualization-transition language. It connects immutable visualization declarations, semantic delta, and seekable transition evaluation.
 
 For the normative ontology, grammar families, implementation status, missing capabilities, and development milestones, start with the [Language framework and roadmap](/language-framework). This page is the detailed API-level companion.
 
@@ -10,7 +10,7 @@ For the normative ontology, grammar families, implementation status, missing cap
 
 <TransitionWorkbench />
 
-The workbench above imports the same built modules that an application imports. Drag the slider, play in either direction, inspect the delta and endpoint specs, then use the Seq controls to move between positions.
+The workbench above imports the same built modules that an application imports. Drag the slider, play in either direction, and inspect the delta and endpoint specs.
 
 ## Edit the grammar live
 
@@ -42,7 +42,7 @@ const profit = base.y("profit");
 A delta compares the meaning of two same-idiom endpoints. It records top-level and semantic changes, including encoding, identity, transforms, focus, guides, and granularity.
 
 ```js
-import { delta } from "scrollylite/core";
+import { delta } from "visdelta/core";
 
 const result = delta(base, profit);
 
@@ -93,7 +93,7 @@ bar(rows)                          // Inline row array
 bar({ values: rows })              // Explicit inline source
 bar("./data/sales.csv")            // URL shorthand
 bar({ url: "./data/sales.json" })  // URL object
-bar("sales")                       // Named Story or Seq dataset
+bar("sales")                       // Named dataset supplied in transition options
 ```
 
 ### Channel objects
@@ -145,9 +145,9 @@ Use `transition()` when you have exactly two same-idiom endpoints and your appli
 
 ```js
 import * as d3 from "d3";
-import { bar } from "scrollylite/bar";
-import { transition } from "scrollylite/transition";
-import "scrollylite/style.css";
+import { bar } from "visdelta/bar";
+import { transition } from "visdelta/transition";
+import "visdelta/style.css";
 
 const change = await transition(base, profit, {
   target: "#chart",
@@ -190,72 +190,12 @@ change.destroy();
 
 `progress()`, `play()`, `pause()`, and `resize()` return the controller for chaining. `destroy()` is idempotent.
 
-## Seq and Story
+## Scrollytelling composition
 
-### `seq()` is a mutable state cursor
-
-Seq stores ordered visualization snapshots, optional narrative text, and a navigation cursor. It does not create a page layout.
-
-```js
-const sequence = seq()
-  .view({ height: 360 })
-  .add(base, "Revenue by category", { title: "Revenue" })
-  .add(profit, "Profit by category", { title: "Profit" });
-
-const runtime = await chart(sequence, { target: "#chart", d3 });
-sequence.bind({ chart: runtime, text: "#caption" });
-
-sequence.next();
-sequence.prev();
-sequence.goto(1);
-sequence.at(0);
-sequence.current;
-sequence.index;
-sequence.length;
-sequence.atStart;
-sequence.atEnd;
-sequence.unbind();
-```
-
-Use Seq for next, previous, and goto behavior around a chart controlled by your application.
-
-### `story()` is a mutable narrative builder
-
-Story composes datasets, layout, theme, named views, narrated steps, inferred transition classifications, and action tokens into a serializable `StorySpec`.
-
-```js
-const spec = story()
-  .title("Quarterly performance")
-  .description("From revenue to margin")
-  .data("rows", { values: rows })
-  .layout("floatToText", { nav: true, progress: true })
-  .theme({ accent: "#1c6ae4" })
-  .action(["step", "tooltip"])
-  .view("main", { height: 420 })
-  .add("Revenue", base, { body: "Gross sales by category." })
-  .add("Profit", profit, { body: "The same entities, now measured by profit." })
-  .toSpec();
-```
-
-Visualization builders are immutable. StoryBuilder is deliberately mutable and returns the same builder while composing. Seq is also mutable because its cursor changes. Call `.toSpec()` to obtain a detached Story snapshot.
-
-## Embedding runtimes
-
-| Runtime | Owns | Public control |
-| --- | --- | --- |
-| `createStory(spec, options)` | Data, theme, page shell, charts, tooltip, navigation, scroll, resize, and hash restoration | `to()`, `scrollDriver`, `destroy()` |
-| `createChart(spec, options)` | Data and one named animated chart | `to()`, `progress()`, `resize()`, `destroy()` |
-| `createPage(spec, options)` | Layout shell and empty view targets | Elements and `destroy()` |
-
-Short aliases map directly to these runtimes:
-
-```js
-render(spec, options); // createStory
-chart(spec, options);  // createChart
-page(spec, options);   // createPage
-```
-
-The short `render()` and `chart()` forms also accept a Seq.
+Story, Seq, page layout, navigation, and scroll ownership have moved out of
+this package. They currently live in the private `scrollytelling/` folder and
+will later be integrated into ScrollyTale. VisDelta itself accepts any
+external driver that supplies transition progress.
 
 ## Data and transforms
 
@@ -277,13 +217,13 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 
 | Entry | Responsibility |
 | --- | --- |
-| `scrollylite/core` | DOM-free normalization and semantic delta |
-| `scrollylite/bar` | Focused immutable bar authoring |
-| `scrollylite/transition` | Pair initialization, seek, play, resize, and destroy |
-| `scrollylite/plugins` | Plugin definition and registration |
-| `scrollylite/story` | Story, Seq, page and chart embedding, and scrolling |
-| `scrollylite` | Compatible complete API |
-| `scrollylite/browser` | Complete browser API with global dependency fallback |
+| `visdelta/core` | DOM-free normalization and semantic delta |
+| `visdelta/bar` | Focused immutable bar authoring |
+| `visdelta/transition` | Pair initialization, seek, play, resize, and destroy |
+| `visdelta/plugins` | Plugin definition and registration |
+| `visdelta/composition` | Adapter contract used by external driver packages |
+| `visdelta` | Visualization grammar, delta, transition, and plugin API |
+| `visdelta/browser` | Transition API with browser-global dependency fallback |
 
 Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for bar authoring, and under 35 KB for bar plus transition. These exclude D3, optional Arquero, and CSS.
 
@@ -292,7 +232,7 @@ Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for bar
 `ChartPlugin` is a configuration and factory object. `ChartIdiom` is the runtime object produced by that factory.
 
 ```js
-import { defineChartIdiom, registerChartModule } from "scrollylite/plugins";
+import { defineChartIdiom, registerChartModule } from "visdelta/plugins";
 
 const plugin = defineChartIdiom({
   key: "area",
@@ -323,7 +263,7 @@ transition() requires two visualizations of the same chart idiom.
 Pass { target, d3 } to transition().
 transition(): missing dataset "name".
 Cannot navigate an empty Seq.
-ScrollyLite target not found: selector
+VisDelta target not found: selector
 ```
 
 ## Current boundaries
@@ -332,16 +272,16 @@ ScrollyLite target not found: selector
 - Bar uses cached frame evaluation. Line, point, unit, and unspecified plugins reconstruct when seeking.
 - Focused entries do not yet exist for line, point, and unit authoring.
 - Arquero is optional only when no transform pipeline is declared.
-- Theme stylesheet leases are cleaned up, but CSS selectors are not isolated through Shadow DOM.
-- The browser global build is a convenience complete bundle, not the lightweight integration path.
+- The composition adapter is deliberately lower level and is not a beginner API.
+- CSS selectors are not isolated through Shadow DOM.
 
 ## Integration checklist
 
 1. Import focused modules when you only need pair transitions.
 2. Treat visualization builders as immutable endpoint declarations.
 3. Declare a stable key for objects that should persist across states.
-4. Use `transition()` for a pair, `seq()` for an ordered cursor, and `story()` for narrative composition.
+4. Use `transition()` for a pair and let the application own the driver.
 5. Pass D3 explicitly and Arquero only when transforms require it.
-6. Import `scrollylite/style.css` once.
-7. Destroy runtimes and unbind Seq references during teardown.
+6. Import `visdelta/style.css` once.
+7. Destroy transition controllers during teardown.
 8. Run the release gate against an installed tarball before publishing.

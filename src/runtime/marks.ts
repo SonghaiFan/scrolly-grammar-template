@@ -1,7 +1,7 @@
 // @ts-nocheck — D3 rendering utilities; typed via deps injection
 import { narrativeTransition } from '../scrolly-meta.js';
 import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
-import { SCROLL_TRANSITION_NAME } from '../transition-progress.js';
+import { VISDELTA_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
 
 export interface RenderContext {
@@ -161,12 +161,12 @@ function themeValue(cssVar, fallback) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
-  if (!d3) throw new Error('ScrollyLite transitions require D3. Pass { d3 } to createStory().');
+  if (!d3) throw new Error('VisDelta transitions require D3. Pass { d3 } to transition() or the driver runtime.');
   const local = narrativeTransition(spec);
   const previous = previousSpec ? narrativeTransition(previousSpec) : {};
   const transition = { ...defaultTransition(), ...previous, ...local };
   const ease = easeFor(transition.ease, d3);
-  const base = (scrollDriven ? d3.transition(SCROLL_TRANSITION_NAME) : d3.transition())
+  const base = (scrollDriven ? d3.transition(VISDELTA_TRANSITION_NAME) : d3.transition())
     .duration(transition.duration).ease(ease);
   return { ...transition, base };
 }
@@ -358,16 +358,15 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base) 
     }
   }
   const transform = `translate(${chart.margin.left},${chart.margin.top + chart.innerHeight})`;
-  const xAxis = chart.scene.xAxis.interrupt().attr('transform', transform);
+  const xAxis = chart.scene.xAxis.interrupt();
   renderAxisWithGuard(xAxis, axis, transition, axisKind('bottom', scale));
   xAxis.selectAll('.tick text').attr('dy', '0.8em');
   alignEdgeTickLabels(xAxis, scale, d3);
-  xAxis.transition(transition).style('opacity', 1);
+  xAxis.transition(transition).attr('transform', transform).style('opacity', 1);
   if (title) {
-    chart.scene.xLabel
+    transitionAxisLabel(chart.scene.xLabel, title, transition)
       .attr('x', chart.innerWidth / 2).attr('y', chart.margin.top + chart.innerHeight + labelOffset)
-      .attr('text-anchor', 'middle').attr('transform', `translate(${chart.margin.left},0)`)
-      .text(title).transition(transition).style('opacity', 1);
+      .attr('text-anchor', 'middle').attr('transform', `translate(${chart.margin.left},0)`);
   } else {
     chart.scene.xLabel.transition(transition).style('opacity', 0);
   }
@@ -393,14 +392,15 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base) 
       axis = axis.tickValues(domain.filter((_, i) => i % step === 0));
     }
   }
-  const yAxis = chart.scene.yAxis.interrupt().attr('transform', `translate(${chart.margin.left},${chart.margin.top})`);
+  const yAxis = chart.scene.yAxis.interrupt();
   renderAxisWithGuard(yAxis, axis, transition, axisKind('left', scale));
-  yAxis.transition(transition).style('opacity', 1);
+  yAxis.transition(transition)
+    .attr('transform', `translate(${chart.margin.left},${chart.margin.top})`)
+    .style('opacity', 1);
   if (title) {
-    chart.scene.yLabel
+    transitionAxisLabel(chart.scene.yLabel, title, transition)
       .attr('x', -chart.innerHeight / 2).attr('y', chart.margin.left - labelOffset)
-      .attr('text-anchor', 'middle').attr('transform', `translate(0,${chart.margin.top}) rotate(-90)`)
-      .text(title).transition(transition).style('opacity', 1);
+      .attr('text-anchor', 'middle').attr('transform', `translate(0,${chart.margin.top}) rotate(-90)`);
   } else {
     chart.scene.yLabel.transition(transition).style('opacity', 0);
   }
@@ -483,7 +483,7 @@ function hideTooltip(tooltip) { tooltip.style.opacity = '0'; }
 function markAxisInactive(axisGroup) {
   const node = axisGroup.node();
   if (!node) return;
-  node.__scrollyLiteAxisActive = false;
+  node.__visDeltaAxisActive = false;
 }
 
 function applyXAxisClip(chart) {
@@ -522,10 +522,32 @@ function axisKind(placement, scale) {
 
 function renderAxisWithGuard(axisGroup, axis, transition, kind) {
   const node = axisGroup.node();
-  const canTransition = node?.__scrollyLiteAxisActive && node.__scrollyLiteAxisKind === kind;
-  if (node) { node.__scrollyLiteAxisActive = true; node.__scrollyLiteAxisKind = kind; }
+  const canTransition = node?.__visDeltaAxisActive && node.__visDeltaAxisKind === kind;
+  const replacesKind = node?.__visDeltaAxisActive && node.__visDeltaAxisKind !== kind;
+  if (node) { node.__visDeltaAxisActive = true; node.__visDeltaAxisKind = kind; }
   if (canTransition) { axisGroup.transition(transition).call(axis); return; }
+  if (replacesKind) {
+    fadeClone(axisGroup, 'sl-axis sl-axis-ghost', transition);
+    axisGroup.call(axis).style('opacity', 0);
+    return;
+  }
   axisGroup.call(axis);
+}
+
+function transitionAxisLabel(label, title, transition) {
+  const previousTitle = label.text();
+  const visible = previousTitle && label.style('opacity') !== '0';
+  if (visible && previousTitle !== title) {
+    fadeClone(label, 'sl-axis-label sl-axis-label-ghost', transition);
+    label.style('opacity', 0);
+  }
+  label.text(title);
+  return label.transition(transition).style('opacity', 1);
+}
+
+function fadeClone(selection, className, transition) {
+  selection.clone(true).attr('class', className).attr('aria-hidden', 'true')
+    .transition(transition).style('opacity', 0).remove();
 }
 
 function resolveColorChannel(rows, channel) {

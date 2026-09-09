@@ -14,7 +14,10 @@ console.log('Focused transition example invariants ok.');
 async function assertLocalAssets(source, baseDir) {
   const attrs = [...source.matchAll(/\s(?:href|src)="([^"]+)"/g)]
     .map(match => match[1])
-    .filter(value => value && !/^(?:https?:|\?|#)/.test(value));
+    .filter(value => value && !/^(?:https?:|\?|#)/.test(value))
+    // Compatibility launchers may point at generated documentation, which is
+    // intentionally absent in a clean checkout until `docs:check` runs.
+    .filter(value => !value.includes('docs/.vitepress/dist/'));
   const moduleImports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)]
     .map(match => match[1])
     .filter(value => value.startsWith('.'));

@@ -1,58 +1,22 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ScrollyLite · Bar transition lab</title>
-  <link rel="stylesheet" href="../../dist/scrollylite.css">
-  <link rel="stylesheet" href="./lab.css">
-</head>
-<body>
-<main>
-  <nav><a href="../../index.html">ScrollyLite</a><span> / Bar transition lab</span></nav>
-  <h1>Two states. Twelve ways to change.</h1>
-  <p>Edit the data and grammar on the left. Inspect the real transition on the right.</p>
-  <div class="toolbar">
-    <label>Scenario <select id="scenario"></select></label>
-    <label><input id="auto-run" type="checkbox" checked> Auto-run</label>
-    <button id="run">Run</button>
-    <button id="reset">Reset example</button>
-    <span id="status" role="status">Loading</span>
-  </div>
-  <p id="description"></p>
-  <div class="workspace">
-    <section class="editor-pane" aria-labelledby="editor-title">
-      <h2 id="editor-title">Editable JavaScript</h2>
-      <textarea id="editor" aria-label="Editable ScrollyLite code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-      <p class="hint"><code>bar</code> is provided. Return <code>{ from, to }</code>; the preview calls <code>transition(from, to, { target, d3, aq })</code>. ⌘/Ctrl + Enter runs immediately. Edits stay in this tab when switching scenarios.</p>
-      <p class="hint">Code runs in this page. Only run code you trust.</p>
-    </section>
-    <section class="preview-pane" aria-labelledby="preview-title">
-      <h2 id="preview-title">Live preview</h2>
-      <div id="chart"></div>
-      <p id="error" role="alert" hidden></p>
-      <div class="progress-control">
-        <label for="progress">Progress</label>
-        <input id="progress" type="range" min="0" max="1" step="0.01" value="0" disabled>
-        <output id="value" for="progress">0.00</output>
-      </div>
-      <div class="playback">
-        <button id="start" disabled>Start · 0</button>
-        <button id="reverse" disabled>← Reverse</button>
-        <button id="play" disabled>Play →</button>
-        <button id="pause" disabled>Pause</button>
-        <button id="end" disabled>End · 1</button>
-      </div>
-      <details>
-        <summary>Inspect computed delta</summary>
-        <pre id="delta">Waiting for a valid state pair.</pre>
-      </details>
-    </section>
-  </div>
-  <p class="hint">These are the 12 scenario types in the browser transition tests, not an exhaustive bar support matrix. Successful rendering does not prove every edited combination is supported.</p>
-</main>
-<script src="../../node_modules/d3/dist/d3.min.js"></script>
-<script src="../../node_modules/arquero/dist/arquero.min.js"></script>
-<script type="module" src="./lab.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VisDelta · Bar transition lab</title>
+    <meta name="description" content="This example has moved into the canonical VisDelta documentation.">
+  </head>
+  <body>
+    <p id="message">The Bar transition lab now lives in the <a href="../../docs/.vitepress/dist/transition-lab.html">VisDelta documentation</a>.</p>
+    <script>
+      const target = new URL('../../docs/.vitepress/dist/transition-lab.html', location.href);
+      target.search = location.search;
+      target.hash = location.hash;
+      if (location.protocol === 'file:') {
+        document.querySelector('#message').innerHTML = 'The Bar transition lab now lives inside the canonical VitePress site. Run <code>npm run docs:dev</code>, then choose <strong>Bar Lab</strong> in the documentation navigation.';
+      } else {
+        location.replace(target.href);
+      }
+    </script>
+  </body>
 </html>

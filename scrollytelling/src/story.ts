@@ -5,7 +5,7 @@ export type { SeqState } from './seq.js';
 
 import { createChart, createPage, createStory } from './runtime.js';
 import { Seq as SeqClass } from './seq.js';
-import type { ChartOptions, PageOptions, RuntimeOptions } from 'scrollylite/composition';
+import type { ChartOptions, PageOptions, RuntimeOptions } from 'visdelta/composition';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -41,4 +41,4 @@ export type {
   RuntimeOptions,
   ScrollRuntime,
   StoryRuntime
-} from 'scrollylite/composition';
+} from 'visdelta/composition';

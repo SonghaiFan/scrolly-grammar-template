@@ -1,4 +1,4 @@
-import { line } from "../../../dist/index.js";
+import { line } from "../../../../dist/index.js";
 import { story } from "./shared.js";
 
 export function createLineStory({ actionMode = ["step", "tooltip"] } = {}) {

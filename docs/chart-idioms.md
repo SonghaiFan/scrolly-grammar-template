@@ -1,10 +1,10 @@
 # Chart Idioms
 
-ScrollyLite ships four built-in chart idioms — `bar`, `line`, `point`, `unit`
+VisDelta ships four built-in chart idioms — `bar`, `line`, `point`, `unit`
 — each a chainable builder that compiles to a view spec via `.toSpec()`.
 
 ```js
-import { bar, line, point, unit } from "scrollylite";
+import { bar, line, point, unit } from "visdelta";
 
 bar("dataset")     // → BarState
 line("dataset")    // → LineState
@@ -19,7 +19,7 @@ methods, defaults, and example progressions.
 
 > **Immutability:** every chainable method returns a *new* state object. The
 > original is untouched, so you can build a `base` chart and branch from it
-> freely (see [Story Builder](./story-builder.md#reusable-bases-and-branching-narratives)).
+> freely; external composition code can arrange those immutable states into a narrative.
 
 ---
 
@@ -72,7 +72,7 @@ Three forms:
 .color({ field: "type", domain: ["Hot days", "Cold days"], range: [...] })
 ```
 
-ScrollyLite also supports **composite hue + luminance** color encodings —
+VisDelta also supports **composite hue + luminance** color encodings —
 useful for showing two dimensions (e.g. category *and* time period) through
 one color channel:
 
@@ -352,21 +352,22 @@ base.stage(["y", "x"])
 base.stage(["x", "y"], { duration: 700, stagger: 40 })
 ```
 
-### Bar example progression
+### Bar state family
 
 ```js
 const base = bar("weatherDays").x("decade").y("count").sort("year");
 
-story()
-  .add("Baseline",            base.where({ type: "Hot days" }))
-  .add("Focus",               base.where({ type: "Hot days", period: "recent" }))
-  .add("Guide: flip",         base.where({ type: "Hot days", period: "recent" }).flip())
-  .add("Focus: swap measure", base.where({ type: "Cold days" }).flip())
-  .add("Granularity: split",  base.breakdown("type"))
-  .add("Focus: highlight",    base.breakdown("type").highlight({ type: "Cold days" }))
-  .add("Guide: grouped",      base.breakdown("type").layout("grouped").flip())
-  .add("Granularity: rollup", base.rollup("decade", { title: "Average days", op: "mean" }))
-  .toSpec();
+const states = {
+  baseline: base.where({ type: "Hot days" }),
+  focus: base.where({ type: "Hot days", period: "recent" }),
+  flip: base.where({ type: "Hot days", period: "recent" }).flip(),
+  split: base.breakdown("type"),
+  highlight: base.breakdown("type").highlight({ type: "Cold days" }),
+  grouped: base.breakdown("type").layout("grouped").flip(),
+  rollup: base.rollup("decade", { title: "Average days", op: "mean" })
+};
+
+const pair = await transition(states.baseline, states.focus, { target, d3, aq });
 ```
 
 ---
@@ -385,7 +386,7 @@ const base = line("weather").x("decade").y("hot_days").key("decade");
 ### `.curve(value)`
 
 Sets the D3 curve interpolation, e.g. `"linear"`, `"monotone"`, `"natural"`,
-`"step"`, `"basis"` (any name resolvable by ScrollyLite's curve lookup).
+`"step"`, `"basis"` (any name resolvable by VisDelta's curve lookup).
 
 ```js
 .curve("monotone")
@@ -432,20 +433,20 @@ base.breakdown("period").rollup()
 base.breakdown("period").rollup({ color: "#536a9e" })
 ```
 
-### Line example progression
+### Line state family
 
 ```js
 const base = line("weather").x("decade").y("hot_days").key("decade");
 const cold = base.y("cold_days").color(COLD_COLOR);
 
-story()
-  .add("Baseline: hot-days trend", base)
-  .add("Focus: zoom to recent",    base.where({ period: "recent" }))
-  .add("Guide: log scale",         base.guide({ y: { scale: { type: "log" } } }))
-  .add("Observation: cold days",   cold)
-  .add("Granularity: by period",   cold.breakdown("period"))
-  .add("Granularity: merge back",  cold.breakdown("period").rollup())
-  .toSpec();
+const states = [
+  base,
+  base.where({ period: "recent" }),
+  base.guide({ y: { scale: { type: "log" } } }),
+  cold,
+  cold.breakdown("period"),
+  cold.breakdown("period").rollup()
+];
 ```
 
 ---
@@ -506,18 +507,18 @@ base.rollup("period").breakdown("year")
 base.breakdown({ detail: "year", key: "period" })
 ```
 
-### Point example progression
+### Point state family
 
 ```js
 const base = point("weather").x("tmin").y("tmax").key("decade");
 
-story()
-  .add("Baseline: temperature scatter", base)
-  .add("Focus: recent decades",          base.where({ period: "recent" }))
-  .add("Observation: hot vs cold days",  base.x("hot_days").y("cold_days"))
-  .add("Granularity: rollup by period",  base.x("hot_days").y("cold_days").rollup("period"))
-  .add("Granularity: back to detail",    base.x("hot_days").y("cold_days").rollup("period").breakdown("decade"))
-  .toSpec();
+const states = [
+  base,
+  base.where({ period: "recent" }),
+  base.x("hot_days").y("cold_days"),
+  base.x("hot_days").y("cold_days").rollup("period"),
+  base.x("hot_days").y("cold_days").rollup("period").breakdown("decade")
+];
 ```
 
 ---
@@ -594,19 +595,19 @@ base.dodge("year")
 > `.timeline()`/`.dodge()`/`.group()` are mutually exclusive *layouts* — each
 > call replaces the unit chart's guide layout with its own.
 
-### Unit example progression
+### Unit state family
 
 ```js
 const base = unit("weather").x("year").y("hot_days").key("decade")
   .value("hot_days").label("decade");
 
-story()
-  .add("Baseline: every decade",      base)
-  .add("Focus: recent decades only",  base.where({ period: "recent" }))
-  .add("Guide: grouped by period",    base.group("period"))
-  .add("Guide: timeline layout",      base.timeline("year"))
-  .add("Guide: dodge layout",         base.dodge("year"))
-  .toSpec();
+const states = [
+  base,
+  base.where({ period: "recent" }),
+  base.group("period"),
+  base.timeline("year"),
+  base.dodge("year")
+];
 ```
 
 > **Note:** unit charts don't implement `observation`/`granularity` scenes —

@@ -12,10 +12,10 @@ for (const sample of scenarios) {
   test(`lab ${sample.id}: editable pair, reversible seek, working endpoints`, async ({ page }) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(`/examples/transition/#${sample.id}`);
+    await page.goto(`/docs/.vitepress/dist/transition-lab.html#${sample.id}`);
     await ready(page);
     await expect(page.locator('#scenario option')).toHaveCount(12);
-    const editor = page.getByRole('textbox', { name: 'Editable ScrollyLite code' });
+    const editor = page.getByRole('textbox', { name: 'Editable VisDelta code' });
     await expect(editor).toHaveValue(sample.code);
     const start = await snapshot(page);
     await page.locator('#progress').fill('0.37');
@@ -42,7 +42,7 @@ for (const sample of scenarios) {
 }
 
 test('invalid code and invalid pairs preserve preview; reset recovers', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   const editor = page.locator('#editor');
   const original = await snapshot(page);
@@ -60,7 +60,7 @@ test('invalid code and invalid pairs preserve preview; reset recovers', async ({
 });
 
 test('manual run, drafts, switching and playback controls', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
   const edited = scenarios[0].code.replaceAll('category: "A"', 'category: "Draft"');
@@ -90,7 +90,7 @@ test('manual run, drafts, switching and playback controls', async ({ page }) => 
 });
 
 test('late async evaluation cannot overwrite a newer edit', async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
   await page.locator('#editor').fill(`await new Promise(resolve => { window.releaseLabRun = resolve; });\n${scenarios[0].code.replaceAll('category: "A"', 'category: "Stale"')}`);
@@ -106,7 +106,7 @@ test('late async evaluation cannot overwrite a newer edit', async ({ page }) => 
 });
 
 test('narrow layout fits and resize preserves progress', async ({ page }) => {
-  await page.goto('/examples/transition/#split');
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#split');
   await ready(page);
   await page.locator('#progress').fill('0.37');
   await page.setViewportSize({ width: 390, height: 844 });

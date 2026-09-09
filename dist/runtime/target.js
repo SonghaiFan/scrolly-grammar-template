@@ -3,6 +3,6 @@ export function resolveTarget(target) {
         return target;
     const node = document.querySelector(target);
     if (!node)
-        throw new Error(`ScrollyLite target not found: ${target}`);
+        throw new Error(`VisDelta target not found: ${target}`);
     return node;
 }

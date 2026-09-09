@@ -1,5 +1,5 @@
 // @ts-nocheck — DOM rendering and inspection utilities
-import { createViewCompiler, dash, diffViewStates, escapeHtml, externalizeScrollyViewSpec } from 'scrollylite/composition';
+import { createViewCompiler, dash, diffViewStates, escapeHtml, externalizeScrollyViewSpec } from 'visdelta/composition';
 import { layoutClasses } from '../layouts/index.js';
 export function renderShell(target, spec, options = {}) {
     target.className = ['sl-root', ...layoutClasses(spec.layout)].join(' ');

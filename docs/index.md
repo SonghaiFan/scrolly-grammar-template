@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: ScrollyLite
+  name: VisDelta
   text: Declare states. Control frames.
   tagline: A declarative visualization language for immutable chart states, semantic delta, and seekable animated transitions.
   actions:
@@ -22,10 +22,10 @@ features:
     details: Play by time or sample any deterministic frame with a normalized progress value.
   - title: Driver independent
     details: Buttons, scroll, sliders, gestures, routes, and timers can drive the same transition.
-  - title: Optional composition
-    details: Use transition for a pair, Seq for an ordered cursor, or Story for a complete narrative page.
+  - title: Deliberately decoupled
+    details: Story layout, navigation, and scroll drivers live in the temporary scrollytelling package, not the transition runtime.
   - title: Focused modules
-    details: Import core, bar, transition, plugins, or the complete Story runtime according to your integration.
+    details: Import core, bar, transition, plugins, or the lower-level composition adapter according to your integration.
 ---
 
 ## The language in one line
@@ -36,9 +36,9 @@ features:
 
 ```js
 import * as d3 from "d3";
-import { bar } from "scrollylite/bar";
-import { transition } from "scrollylite/transition";
-import "scrollylite/style.css";
+import { bar } from "visdelta/bar";
+import { transition } from "visdelta/transition";
+import "visdelta/style.css";
 
 const revenue = bar(rows)
   .x("category")
@@ -52,14 +52,22 @@ change.progress(0.42);
 change.play({ duration: 800 });
 ```
 
-The visualization declarations describe what the endpoints mean. ScrollyLite computes what changed and turns that delta into a transition that can be controlled independently of scrolling.
+The visualization declarations describe what the endpoints mean. VisDelta computes what changed and turns that delta into a transition that can be controlled independently of scrolling.
 
-## Choose the right composition level
+## Try the real runtime
+
+<TransitionWorkbench />
+
+Continue into the [complete twelve-scenario bar transition lab](/transition-lab)
+to edit endpoint declarations, scrub frames, reverse animations, and inspect
+their computed deltas.
+
+## Core and drivers
 
 <div class="doc-decision-grid">
   <div><strong><code>transition()</code></strong><p>Two same-idiom visualization states with direct play and progress control.</p></div>
-  <div><strong><code>seq()</code></strong><p>An ordered list of states, narrative text, and a mutable navigation cursor.</p></div>
-  <div><strong><code>story()</code></strong><p>Datasets, layout, theme, views, narrated steps, actions, and scrolling in one spec.</p></div>
+  <div><strong>Application drivers</strong><p>Buttons, sliders, gestures, routes, and timers supply normalized progress.</p></div>
+  <div><strong>Scrollytelling adapter</strong><p>The extracted private package owns Story, Seq, layout, navigation, and native scroll progress until it moves into ScrollyTale.</p></div>
 </div>
 
 Start with the [language framework and roadmap](/language-framework) for the normative taxonomy and implementation status. Continue to the [interactive API reference](/reference) for detailed runtime contracts.

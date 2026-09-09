@@ -18,5 +18,5 @@ export function transition(from: Visualization, to: Visualization, options: Part
 
 // Only dependency lookup and global installation differ from the ESM entry.
 const browserApi = { ...core, transition };
-(globalThis as unknown as Record<string, unknown>)['ScrollyLite'] = browserApi;
-(globalThis as unknown as Record<string, unknown>)['sl'] = browserApi;
+(globalThis as unknown as Record<string, unknown>)['VisDelta'] = browserApi;
+(globalThis as unknown as Record<string, unknown>)['vd'] = browserApi;

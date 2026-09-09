@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => { await page.goto('/examples/transition/'); });
+test.beforeEach(async ({ page }) => { await page.goto('/scrollytelling/tests/fixture.html'); });
 
 test('Story themes/colors and standalone pair themes stay isolated across resize and destroy', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { bar, story, createStory, transition } = await import('/dist/index.js');
+    const { bar, transition } = await import('/dist/index.js');
+    const { story, createStory } = await import('/scrollytelling/dist/index.js');
     const hosts = [0, 1, 2].map(() => { const host = document.createElement('div'); host.style.width = '700px'; document.body.append(host); return host; });
     const rootAccent = document.documentElement.style.getPropertyValue('--sl-accent');
     const rows = [{ category: 'A', value: 2 }, { category: 'B', value: 4 }];
@@ -47,7 +48,7 @@ test('Story themes/colors and standalone pair themes stay isolated across resize
 
 test('theme tokens restore priorities without overwriting later application changes', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { createPage } = await import('/dist/index.js');
+    const { createPage } = await import('/scrollytelling/dist/index.js');
     const host = document.createElement('div'); document.body.append(host);
     host.style.setProperty('--sl-accent', '#222222', 'important');
     const runtime = await createPage({ theme: { colorPrimary: '#ff0000', background: '#ffffff', muted: '#888888' }, steps: [{}] }, { target: host });
@@ -64,7 +65,7 @@ test('theme tokens restore priorities without overwriting later application chan
 test('application-owned stylesheets survive and malformed URLs acquire no resources', async ({ page }) => {
   await page.route('**/app-owned.css', route => route.fulfill({ contentType: 'text/css', body: ':root { --app-proof: 1; }' }));
   const result = await page.evaluate(async () => {
-    const { createPage } = await import('/dist/index.js');
+    const { createPage } = await import('/scrollytelling/dist/index.js');
     const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = '/app-owned.css';
     await new Promise((resolve, reject) => { link.onload = resolve; link.onerror = reject; document.head.append(link); });
     const host = document.createElement('div'); document.body.append(host);
@@ -73,7 +74,7 @@ test('application-owned stylesheets survive and malformed URLs acquire no resour
     let rejected = false;
     try { await createPage({ theme: { stylesheets: ['/unused.css', 'http://[invalid'] }, steps: [{}] }, { target: host }); }
     catch { rejected = true; }
-    const result = { retained: link.isConnected, rejected, owned: document.querySelectorAll('link[data-scrollylite-theme]').length };
+    const result = { retained: link.isConnected, rejected, owned: document.querySelectorAll('link[data-scrollytelling-theme]').length };
     link.remove(); host.remove(); return result;
   });
   expect(result).toEqual({ retained: true, rejected: true, owned: 0 });
@@ -84,7 +85,7 @@ test('shared stylesheet waits for load and is released only after the last insta
   const gate = new Promise(resolve => { release = resolve; });
   await page.route('**/shared-theme.css', async route => { await gate; await route.fulfill({ contentType: 'text/css', body: '.shared-theme-proof { color: red; }' }); });
   await page.evaluate(async () => {
-    const { createPage } = await import('/dist/index.js');
+    const { createPage } = await import('/scrollytelling/dist/index.js');
     window.hosts = [0, 1].map(() => { const host = document.createElement('div'); document.body.append(host); return host; });
     window.finished = 0;
     window.pendingThemes = hosts.map(target => createPage({ theme: { href: '/shared-theme.css' }, steps: [{}] }, { target }).then(runtime => { finished++; return runtime; }));
@@ -102,7 +103,8 @@ test('shared stylesheet waits for load and is released only after the last insta
 test('failed data, stylesheet and rendering initialization preserve original nodes and theme', async ({ page }) => {
   await page.route('**/missing-theme.css', route => route.fulfill({ status: 404, body: '' }));
   const result = await page.evaluate(async () => {
-    const { bar, story, createStory, createChart, createPage } = await import('/dist/index.js');
+    const { bar } = await import('/dist/index.js');
+    const { story, createStory, createChart, createPage } = await import('/scrollytelling/dist/index.js');
     const host = document.createElement('div'); host.className = 'original'; document.body.append(host);
     const original = document.createElement('button'); host.append(original);
     let clicks = 0; original.onclick = () => clicks++;
@@ -126,5 +128,5 @@ test('failed data, stylesheet and rendering initialization preserve original nod
   expect(result.errors[2]).toContain('stylesheet failed');
   expect(result.errors[3]).toContain('data failure');
   expect(result).toMatchObject({ identity: true, count: 1, className: 'original', accent: '#abcdef', clicks: 1 });
-  await expect(page.locator('link[data-scrollylite-theme]')).toHaveCount(0);
+  await expect(page.locator('link[data-scrollytelling-theme]')).toHaveCount(0);
 });

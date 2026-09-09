@@ -1,11 +1,11 @@
 import { createScrollDriver } from '../scroll-drivers/index.js';
 import type { ScrollConfig, ScrollEvent } from '../scroll-drivers/index.js';
-import { hasScrollAction } from 'scrollylite/composition';
+import { hasScrollAction } from 'visdelta/composition';
 
 interface ShellStoryElement extends HTMLElement {
-  __scrollyLiteScrollDriver?: ScrollDriver;
-  __scrollyLiteNavTimers?: ReturnType<typeof setTimeout>[];
-  __scrollyLiteNavCleanups?: (() => void)[];
+  __visDeltaScrollDriver?: ScrollDriver;
+  __visDeltaNavTimers?: ReturnType<typeof setTimeout>[];
+  __visDeltaNavCleanups?: (() => void)[];
 }
 
 interface Shell {
@@ -61,7 +61,7 @@ export function setupScroll(
   }) as ScrollDriver;
 
   shell.story.dataset.scrollDriver = 'native';
-  shell.story.__scrollyLiteScrollDriver = driver;
+  shell.story.__visDeltaScrollDriver = driver;
   return driver;
 }
 
@@ -82,7 +82,7 @@ export function setupNav(
     clearNavigationTimers(shell);
     delete shell.story.dataset.navTargetIndex;
     delete shell.story.dataset.navLockToken;
-    delete shell.story.__scrollyLiteScrollDriver;
+    delete shell.story.__visDeltaScrollDriver;
   };
 }
 
@@ -214,16 +214,16 @@ function isCurrentNavigation(shell: Shell, token: string): boolean {
 }
 
 function clearNavigationTimers(shell: Shell): void {
-  const timers = shell.story.__scrollyLiteNavTimers ?? [];
+  const timers = shell.story.__visDeltaNavTimers ?? [];
   timers.forEach((t) => window.clearTimeout(t));
-  shell.story.__scrollyLiteNavTimers = [];
-  const cleanups = shell.story.__scrollyLiteNavCleanups ?? [];
+  shell.story.__visDeltaNavTimers = [];
+  const cleanups = shell.story.__visDeltaNavCleanups ?? [];
   cleanups.forEach((c) => c());
-  shell.story.__scrollyLiteNavCleanups = [];
+  shell.story.__visDeltaNavCleanups = [];
 }
 
 function addNavigationCleanup(shell: Shell, cleanup: () => void): void {
-  const cleanups = shell.story.__scrollyLiteNavCleanups ?? [];
+  const cleanups = shell.story.__visDeltaNavCleanups ?? [];
   cleanups.push(cleanup);
-  shell.story.__scrollyLiteNavCleanups = cleanups;
+  shell.story.__visDeltaNavCleanups = cleanups;
 }

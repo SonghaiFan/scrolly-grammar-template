@@ -1,4 +1,4 @@
-import { uniqueTokens } from 'scrollylite/composition';
+import { uniqueTokens } from 'visdelta/composition';
 import { normalizeScrollDriverConfig } from '../scroll-drivers/index.js';
 export function compileSpec(spec) {
     if (!spec || typeof spec !== 'object') {

@@ -13,7 +13,6 @@ const sequenceIndex = ref(0);
 const sequenceCaption = ref('Revenue by category.');
 
 let change = null;
-let sequence = null;
 let resizeObserver = null;
 let themeObserver = null;
 let watchFrame = 0;
@@ -41,13 +40,17 @@ const inspectorText = computed(() => {
 });
 
 const sequencePosition = computed(() => `${sequenceIndex.value + 1} / 3`);
+const sequenceCaptions = [
+  'Revenue by category.',
+  'A seekable frame halfway through the same delta.',
+  'Profit by category.'
+];
 
 onMounted(async () => {
   try {
-    const [{ bar }, { transition }, { seq }] = await Promise.all([
+    const [{ bar }, { transition }] = await Promise.all([
       import('../../../dist/bar.js'),
-      import('../../../dist/transition-entry.js'),
-      import('../../../dist/story.js')
+      import('../../../dist/transition-entry.js')
     ]);
 
     const rows = [
@@ -88,17 +91,7 @@ onMounted(async () => {
     }, null, 2);
     specText.value = JSON.stringify({ from: change.from, to: change.to }, null, 2);
 
-    sequence = seq()
-      .add(base, 'Revenue by category.', { title: 'Revenue' })
-      .add(base, 'A seekable frame halfway through the same delta.', { title: 'Midpoint' })
-      .add(profitState, 'Profit by category.', { title: 'Profit' });
-
-    sequence.on('change', state => {
-      sequenceIndex.value = state.index;
-      sequenceCaption.value = state.text;
-      setProgress(state.index / Math.max(1, sequence.length - 1));
-    });
-    sequence.goto(0);
+    moveSequence(0);
 
     resizeObserver = new ResizeObserver(() => change?.resize());
     resizeObserver.observe(target.value);
@@ -115,8 +108,6 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(watchFrame);
   resizeObserver?.disconnect();
   themeObserver?.disconnect();
-  sequence?.off('change');
-  sequence?.unbind();
   change?.destroy();
 });
 
@@ -148,8 +139,12 @@ function pause() {
 }
 
 function moveSequence(direction) {
-  if (!sequence) return;
-  direction > 0 ? sequence.next() : sequence.prev();
+  const next = direction === 0
+    ? 0
+    : Math.max(0, Math.min(2, sequenceIndex.value + direction));
+  sequenceIndex.value = next;
+  sequenceCaption.value = sequenceCaptions[next];
+  setProgress(next / 2);
 }
 </script>
 
@@ -185,7 +180,7 @@ function moveSequence(direction) {
       <div class="workbench-copy">
         <p class="workbench-kicker">Live runtime: {{ status }}</p>
         <h3>Revenue to profit</h3>
-        <p>The slider, buttons, inspector, and Seq cursor all drive the real package modules from this checkout.</p>
+        <p>The slider, buttons, inspector, and state cursor all drive the real transition package from this checkout.</p>
         <div class="workbench-tabs" role="tablist" aria-label="Runtime inspector">
           <button v-for="panel in ['code', 'delta', 'spec']" :key="panel" type="button" role="tab" :aria-selected="activePanel === panel" :class="{ 'is-active': activePanel === panel }" @click="activePanel = panel">{{ panel[0].toUpperCase() + panel.slice(1) }}</button>
         </div>
@@ -195,7 +190,7 @@ function moveSequence(direction) {
 
     <div class="workbench-seq">
       <div class="workbench-seq-head">
-        <strong>Seq as a driver</strong>
+        <strong>Application state as a driver</strong>
         <output>{{ sequencePosition }}</output>
       </div>
       <p>{{ sequenceCaption }}</p>

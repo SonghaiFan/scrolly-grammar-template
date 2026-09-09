@@ -77,7 +77,7 @@ function acquireStylesheet(href) {
         if (!existing) {
             link.rel = 'stylesheet';
             link.href = key;
-            link.dataset.scrollyliteTheme = 'true';
+            link.dataset.scrollytellingTheme = 'true';
             document.head.append(link);
         }
     }

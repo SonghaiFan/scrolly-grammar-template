@@ -1,16 +1,16 @@
 import { defineConfig } from 'vitepress';
 
-// The default makes the generated site work when the repository itself is
-// served by a plain static server. Deployments can override this, for example
-// DOCS_BASE=/scrollylite/ for GitHub Pages.
+// The default works when the repository is served by a plain static server.
+// Deployments can override it, for example DOCS_BASE=/visdelta/ for GitHub
+// Pages. VitePress is an HTTP application; direct file:// use is unsupported.
 const base = process.env.DOCS_BASE || '/docs/.vitepress/dist/';
 
 export default defineConfig({
-  title: 'ScrollyLite',
+  title: 'VisDelta',
   description: 'Declarative visualization states and seekable animated transitions.',
   lang: 'en-US',
   base,
-  cleanUrls: true,
+  cleanUrls: false,
   lastUpdated: true,
   srcExclude: [
     'release-0.2.0.md',
@@ -27,15 +27,16 @@ export default defineConfig({
     lineNumbers: true
   },
   themeConfig: {
-    siteTitle: 'ScrollyLite',
+    siteTitle: 'VisDelta',
     nav: [
       { text: 'Language map', link: '/language-framework' },
       { text: 'Guide', link: '/getting-started' },
       { text: 'API Reference', link: '/reference' },
+      { text: 'Bar Lab', link: '/transition-lab' },
       { text: 'Examples', link: '/examples' },
       { text: '0.2.0', items: [
         { text: 'Changelog', link: 'https://github.com/SonghaiFan/scrollylite/blob/main/CHANGELOG.md' },
-        { text: 'npm package', link: 'https://www.npmjs.com/package/scrollylite' }
+        { text: 'npm package', link: 'https://www.npmjs.com/package/visdelta' }
       ] }
     ],
     sidebar: [
@@ -47,6 +48,7 @@ export default defineConfig({
           { text: 'Getting started', link: '/getting-started' },
           { text: 'Mental model', link: '/concepts' },
           { text: 'Interactive reference', link: '/reference' },
+          { text: 'Bar transition lab', link: '/transition-lab' },
           { text: 'Examples', link: '/examples' }
         ]
       },
@@ -54,7 +56,6 @@ export default defineConfig({
         text: 'Authoring language',
         items: [
           { text: 'Chart idioms', link: '/chart-idioms' },
-          { text: 'Story builder', link: '/story-builder' },
           { text: 'Data sources', link: '/data-sources-and-transforms' },
           { text: 'Transform grammar', link: '/data-transforms' },
           { text: 'Color guide', link: '/color-guide' }
@@ -65,8 +66,7 @@ export default defineConfig({
         items: [
           { text: 'Visualization transitions', link: '/visualization-transitions' },
           { text: 'Delta and transition planning', link: '/scenes-and-transitions' },
-          { text: 'Runtime API', link: '/runtime-api' },
-          { text: 'Layouts, themes, and scroll', link: '/layouts-themes-and-scrolling' },
+          { text: 'Transition runtime', link: '/runtime-api' },
           { text: 'Transition performance', link: '/transition-performance' }
         ]
       },
@@ -99,7 +99,7 @@ export default defineConfig({
     },
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'ScrollyLite 0.2 documentation'
+      copyright: 'VisDelta 0.2 documentation'
     },
     docFooter: {
       prev: 'Previous',

@@ -429,6 +429,12 @@ export interface IntermediateSpec<S extends ViewSpec = ViewSpec> {
     spec: S;
     scene: string;
 }
+export interface CanonicalTransitionPair<S extends ViewSpec = ViewSpec> {
+    from: S;
+    to: S;
+    /** Map authored progress p to canonical progress 1 - p. */
+    reverse: boolean;
+}
 export interface CompilerContext {
     [key: string]: unknown;
 }
@@ -451,6 +457,11 @@ export interface ChartIdiom<S extends ViewSpec = ViewSpec> {
     renderer: Renderer<S>;
     prepareSpec(spec: S): S;
     resolveTransitionPlan(prev: S | null, next: S | null): TransitionPlan;
+    /**
+     * Optionally compile opposite authored directions as one reversible path.
+     * The public transition still exposes the endpoints in authored order.
+     */
+    canonicalTransitionPair?(prev: S, next: S): CanonicalTransitionPair<S>;
     intermediateSpecs?(prev: S, next: S): IntermediateSpec<S>[];
     intermediateSpec?(prev: S, next: S): IntermediateSpec<S> | null;
     defaultMargin(spec: S): Partial<MarginSpec>;

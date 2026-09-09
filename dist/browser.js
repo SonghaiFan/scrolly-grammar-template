@@ -10,5 +10,5 @@ export function transition(from, to, options = {}) {
 }
 // Only dependency lookup and global installation differ from the ESM entry.
 const browserApi = { ...core, transition };
-globalThis['ScrollyLite'] = browserApi;
-globalThis['sl'] = browserApi;
+globalThis['VisDelta'] = browserApi;
+globalThis['vd'] = browserApi;

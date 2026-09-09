@@ -1,6 +1,6 @@
 # Chart Idiom Folders
 
-ScrollyLite is designed to run as a browser ESM library from a CDN URL. That
+VisDelta is designed to run as a browser ESM library from a CDN URL. That
 means runtime code cannot scan `src/charts/` or discover new files dynamically.
 Every built-in chart idiom is therefore represented by one folder plus a
 generated static ESM manifest.
@@ -154,7 +154,7 @@ Keep the public chaining surface idiom-first:
 - unit: `value`, `label`, `columns`, `radius`, `group`, `timeline`, and `dodge`
 
 Compiled authoring specs should be Vega-ish first: `data`, `mark`,
-`encoding`, and `transform` stay in the root spec, while ScrollyLite-only
+`encoding`, and `transform` stay in the root spec, while VisDelta-only
 semantics live under `narrative`. Do not add invented Vega-Lite channels such
 as `encoding.series`; line grouping is stored in
 `narrative.state.sceneState.granularity.seriesField` and rendered through the

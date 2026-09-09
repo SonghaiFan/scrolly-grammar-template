@@ -9,7 +9,7 @@ import { clamp } from './utils.js';
 let sceneIdentity = 0;
 
 export function getScene(node, viewConfig, d3) {
-  if (node.__scrollyLiteScene) return node.__scrollyLiteScene;
+  if (node.__visDeltaScene) return node.__visDeltaScene;
   const width = Math.max(60, node.clientWidth || 720);
   const height = viewConfig.height || 500;
   node.innerHTML = '';
@@ -35,7 +35,7 @@ export function getScene(node, viewConfig, d3) {
   scene.granularityLayer = markRoot.append('g').attr('class', 'sl-scene-layer sl-granularity-layer');
   scene.guideLayer = frame.append('g').attr('class', 'sl-scene-layer sl-guide-layer');
   scene.empty = d3.select(node).append('div').attr('class', 'sl-empty').style('display', 'none');
-  node.__scrollyLiteScene = scene;
+  node.__visDeltaScene = scene;
   return scene;
 }
 

@@ -10,11 +10,11 @@ const changelog = await readFile(join(root, "CHANGELOG.md"), "utf8");
 const publicExports = {
   ".": {
     types: "./dist/index.d.ts",
-    import: "./dist/scrollylite.esm.js"
+    import: "./dist/visdelta.esm.js"
   },
   "./browser": {
     types: "./dist/browser.d.ts",
-    import: "./dist/scrollylite.browser.js"
+    import: "./dist/visdelta.browser.js"
   },
   "./core": {
     types: "./dist/core.d.ts",
@@ -36,7 +36,7 @@ const publicExports = {
     types: "./dist/composition.d.ts",
     import: "./dist/composition.js"
   },
-  "./style.css": "./dist/scrollylite.css",
+  "./style.css": "./dist/visdelta.css",
   "./themes/default.css": "./dist/themes/default.css",
   "./themes/dark.css": "./dist/themes/dark.css",
   "./themes/paper.css": "./dist/themes/paper.css"
@@ -58,10 +58,10 @@ const requiredFiles = [
   "dist/composition.js",
   "dist/transition-entry.d.ts",
   "dist/transition-entry.js",
-  "dist/scrollylite.browser.js",
-  "dist/scrollylite.esm.js",
-  "dist/scrollylite.global.js",
-  "dist/scrollylite.css",
+  "dist/visdelta.browser.js",
+  "dist/visdelta.esm.js",
+  "dist/visdelta.global.js",
+  "dist/visdelta.css",
   "dist/themes/default.css",
   "dist/themes/dark.css",
   "dist/themes/paper.css",
@@ -90,8 +90,8 @@ const forbiddenSourceText = [
 ];
 const browserAdapterFiles = new Set([
   "dist/browser.js",
-  "dist/scrollylite.browser.js",
-  "dist/scrollylite.global.js"
+  "dist/visdelta.browser.js",
+  "dist/visdelta.global.js"
 ]);
 const browserAdapterGlobals = new Set([
   "globalThis.d3",
@@ -100,12 +100,12 @@ const browserAdapterGlobals = new Set([
 
 assertEqual(packageJson.exports, publicExports, "package exports");
 assertEqual(packageJson.files, ["dist", "README.md", "CHANGELOG.md", "LICENSE"], "published files");
-assertEqual(packageJson.main, "./dist/scrollylite.esm.js", "main");
-assertEqual(packageJson.module, "./dist/scrollylite.esm.js", "module");
+assertEqual(packageJson.main, "./dist/visdelta.esm.js", "main");
+assertEqual(packageJson.module, "./dist/visdelta.esm.js", "module");
 assertEqual(packageJson.types, "./dist/index.d.ts", "types");
-assertEqual(packageJson.jsdelivr, "./dist/scrollylite.global.js", "jsdelivr");
-assertEqual(packageJson.unpkg, "./dist/scrollylite.global.js", "unpkg");
-assertEqual(packageJson.style, "./dist/scrollylite.css", "style");
+assertEqual(packageJson.jsdelivr, "./dist/visdelta.global.js", "jsdelivr");
+assertEqual(packageJson.unpkg, "./dist/visdelta.global.js", "unpkg");
+assertEqual(packageJson.style, "./dist/visdelta.css", "style");
 assertEqual(packageJson.repository, {
   type: "git",
   url: "git+https://github.com/SonghaiFan/scrollylite.git"

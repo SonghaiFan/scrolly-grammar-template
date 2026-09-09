@@ -14,7 +14,7 @@ const coreBuild = spawnSync('npm', ['run', 'build'], {
 if (coreBuild.status !== 0) {
   process.stderr.write(coreBuild.stdout || '');
   process.stderr.write(coreBuild.stderr || '');
-  throw new Error('ScrollyLite core build failed.');
+  throw new Error('VisDelta core build failed.');
 }
 
 await rm(new URL('../dist/', import.meta.url), { recursive: true, force: true });

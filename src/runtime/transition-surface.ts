@@ -5,7 +5,7 @@ import { resolveTarget } from './target.js';
 import { inferTransition } from '../grammar/infer-transition.js';
 import { captureDomFrame } from './dom-frame.js';
 import { hideTooltip } from './marks.js';
-import { SCROLL_TRANSITION_NAME, clearSceneTransitionProgress } from '../transition-progress.js';
+import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress } from '../transition-progress.js';
 import type { AnyRecord } from '../types.js';
 import type { ChartIdiomRegistry } from '../charts/index.js';
 
@@ -13,37 +13,42 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
   const { d3, aq } = options;
   const { drawView, prepareScrollSourceState, compileTransitionSource,
     renderVirtualScrollPhase, applyVirtualScrollSequence } = createViewRenderer(idioms);
-  if (!idioms.get(from)) throw new Error(`Unsupported chart idiom: ${from.mark}`);
+  const idiom = idioms.get(from);
+  if (!idiom) throw new Error(`Unsupported chart idiom: ${from.mark}`);
+  const canonical = idiom.canonicalTransitionPair?.(from, to) ?? { from, to, reverse: false };
+  const source = canonical.from;
+  const target = canonical.to;
+  const canonicalProgress = value => canonical.reverse ? 1 - value : value;
   const host = resolveTarget(options.target || '#app');
   const root = document.createElement('div');
   root.className = 'sl-transition-root';
   const shell = renderChartShell(root, {}, 'main');
   const node = shell.views.main as any;
   const config = { height: options.height ?? from.height ?? to.height ?? 500 };
-  const scenes = { scene: inferTransition(from, to) };
+  const scenes = { scene: inferTransition(source, target) };
   // Cache only when the selected idiom explicitly opts into the property-track
   // contract. Unspecified/custom renderers use the reconstruction bridge.
-  const cacheFrames = idioms.get(from)?.transitionEvaluation === 'cached' && options.reconstruct !== true;
+  const cacheFrames = idiom.transitionEvaluation === 'cached' && options.reconstruct !== true;
   let cached = null;
   const disposeScene = () => {
-    const scene = node.__scrollyLiteScene;
+    const scene = node.__visDeltaScene;
     if (scene) {
       clearSceneTransitionProgress(scene, { finish: false });
       if (scene.virtualRenderTimer) window.clearTimeout(scene.virtualRenderTimer);
     }
-    d3.select(node).selectAll('*').interrupt().interrupt(SCROLL_TRANSITION_NAME);
+    d3.select(node).selectAll('*').interrupt().interrupt(VISDELTA_TRANSITION_NAME);
     node.replaceChildren();
-    delete node.__scrollyLiteScene;
+    delete node.__visDeltaScene;
   };
   let previousChildren = [...host.childNodes];
   host.replaceChildren(root);
 
   function compileFrames() {
     disposeScene();
-    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(from));
+    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(source));
     const startFrame = captureDomFrame(node);
-    drawView(node, to, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], { previousViewSpec: from });
-    const scene = node.__scrollyLiteScene;
+    drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], { previousViewSpec: source });
+    const scene = node.__visDeltaScene;
     const phases = scene.virtualScrollSequence?.phases ?? [{ start: 0, end: 1 }];
     const frames = phases.map((phase, index) => {
       if (index > 0) renderVirtualScrollPhase(scene, index);
@@ -53,7 +58,7 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
     // Save the clean endpoint (no zero-opacity exit marks/ticks), while keeping
     // detached nodes alive in the phase snapshots for later reverse seeks.
     clearSceneTransitionProgress(scene, { finish: true });
-    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(to));
+    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(target));
     const endFrame = captureDomFrame(node);
     let activeFrame = endFrame;
     const activate = (frame) => {
@@ -79,6 +84,7 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
     },
     progress(value: number) {
       hideTooltip(shell.tooltip);
+      value = canonicalProgress(value);
       if (cacheFrames) {
         cached ??= compileFrames();
         cached.progress(value);
@@ -86,15 +92,15 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
       }
       disposeScene();
       if (value === 0 || value === 1) {
-        const endpoint = compileTransitionSource(value === 0 ? from : to);
+        const endpoint = compileTransitionSource(value === 0 ? source : target);
         prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, endpoint);
       } else {
-        drawView(node, to, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], {
-          previousViewSpec: from
+        drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], {
+          previousViewSpec: source
         });
         // The pair's progress is already normalized. Chart-local timing and
         // staging apply inside the plan; scroll easing is not a driver here.
-        const scene = node.__scrollyLiteScene;
+        const scene = node.__visDeltaScene;
         if (!applyVirtualScrollSequence(scene, value)) scene.transitionProgress?.progress(value);
       }
     },

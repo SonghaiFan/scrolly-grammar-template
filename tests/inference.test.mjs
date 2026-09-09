@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bar, line, point, unit, story } from '../dist/index.js';
+import { bar, line, point, unit } from '../dist/index.js';
 import { inferTransition } from '../dist/grammar/infer-transition.js';
 
 test('scene inference ignores operation history and agrees with raw endpoints', () => {
@@ -40,10 +40,6 @@ test('grouping changes remain granularity and layout-only changes remain guide',
   ]) assert.deepEqual(inferTransition(first, second(first)), ['granularity']);
 });
 
-test('Story emits the same scene list for builders and their specs', () => {
-  const a = bar('rows').x('category').y('value');
-  const b = a.y('other');
-  const compile = (a, b) => story().add('First', a).add('Second', b).toSpec().steps.map(step => step.transition);
-  assert.deepEqual(compile(a, b), compile(a.toSpec(), b.toSpec()));
-  assert.deepEqual(inferTransition(null, a), []);
+test('initial state has no inferred transition', () => {
+  assert.deepEqual(inferTransition(null, bar('rows').x('category').y('value')), []);
 });

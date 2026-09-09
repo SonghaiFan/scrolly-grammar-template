@@ -1,83 +1,70 @@
-# Module boundaries and remaining cleanup
+# Module boundaries
 
-This describes the current 0.2.0 candidate in this checkout.
+VisDelta is now the visualization-transition package. Narrative page
+composition has been extracted to the private `scrollytelling/` package for
+later integration into ScrollyTale.
 
-## Public entry points
+## Ownership
 
-| Entry | Responsibility | Dependency boundary |
-| --- | --- | --- |
-| `scrollylite/core` | Endpoint normalization and semantic delta | No DOM, Story, or renderers |
-| `scrollylite/bar` | Immutable chainable bar authoring | Own compiler, no renderers or global manifest |
-| `scrollylite/transition` | Pair initialization, seek, play, resize, destroy | Shared chart renderer; selected idiom loaded on demand |
-| `scrollylite/plugins` | Plugin definition and registration | No eager built-in renderers or Story |
-| `scrollylite/story` | Story, Seq, page/chart embedding and scrolling | Full built-in manifest and composition runtime |
-| `scrollylite` | Compatible full API | Not the minimal entry |
-| `scrollylite/browser` | Full API with global dependency fallback/installation | Delegates to the canonical ESM implementation |
+| Package | Owns |
+| --- | --- |
+| `visdelta` | Immutable visualization declarations, semantic delta, chart idioms, rendering, data transforms, and seekable pair transitions |
+| `scrollytelling/` | `story()`, `seq()`, multi-step chart composition, page shell, layout, theme mounting, navigation, scroll progress, resize, and hash restoration |
 
-The standalone path is `visualizations → data snapshots + idiom snapshot →
-view compiler/renderer → frame evaluator → progress/play`. Story composes views
-and supplies navigation/scroll input to the shared rendering layer; standalone
-transitions do not load the Story shell, navigation, or scroll drivers.
+The dependency direction is one way:
 
-The package does not yet have focused line/point/unit authoring entry points.
-The global build remains a convenience full bundle, not a lightweight path.
+```text
+scrollytelling
+      ↓
+visdelta/composition
+      ↓
+VisDelta chart and transition internals
+```
 
-## Size and regression gates
+VisDelta never imports the scrollytelling package. A focused transition can
+therefore be installed, bundled, and used without a Story shell or scroll
+driver.
 
-`npm run bundle:check` minifies with the pinned esbuild version and gzips outputs.
-The focused delta fixture is about 3.2 KB; bar authoring about 6.9 KB; bar plus
-transition about 34.7 KB. The last number sums the entry, required shared chunks,
-and the lazy bar plugin, counting each once. It excludes unrelated idiom chunks,
-D3, optional Arquero, and CSS. It is not the full application's download size.
-Code splitting must be enabled in a consumer bundler to preserve lazy loading.
-Native ESM also preserves the module boundary but transfers unminified modules.
+## Public VisDelta entries
 
-Budgets are 4,000 / 8,000 / 35,000 gzip bytes respectively. The transition gate
-also rejects Story or unrelated idiom source code in its selected module closure.
-Browser tests independently inspect actual requests, not just bundler output.
+| Entry | Responsibility |
+| --- | --- |
+| `visdelta` | Visualization authoring, delta, transition, and plugin registration |
+| `visdelta/core` | DOM-free normalization and semantic delta |
+| `visdelta/bar` | Focused immutable bar authoring |
+| `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
+| `visdelta/plugins` | Plugin definition and registration |
+| `visdelta/browser` | The same transition API with browser-global dependency fallback |
+| `visdelta/composition` | Lower-level adapter surface for driver packages; not the beginner entry |
 
-`npm run pack:check` installs a real tarball in an isolated temporary consumer,
-checks all public entries and browser globals, and compiles positive/negative
-TypeScript usage without skipping declaration checks.
+`story`, `seq`, `createStory`, `createChart`, `createPage`, `render`, `chart`,
+and `page` are no longer exported by VisDelta. They currently belong to
+`@visdelta/scrollytelling` inside this repository.
 
-`npm run release:check` runs the unit/build/size gates, the real-browser suite,
-and the installed-consumer check. The publish hook uses this same complete gate;
-CI installs Chromium before invoking it.
+## Size gates
 
-## Legacy retained deliberately
+`npm run bundle:check` measures three focused closures: core delta, bar
+authoring, and bar plus transition. The transition closure rejects the
+composition adapter, unrelated chart idioms, and the extracted scrollytelling
+directory.
 
-- Root imports, Story, Seq, `createStory`, `createChart`, and `createPage` remain
-  compatibility/composition APIs; they are not deprecated solely because the
-  new pair API exists.
-- Internal `createTransitionSurface` in the Story module is a compatibility
-  bridge. Public pair code imports the independent runtime module directly.
-- Scene names `focus`, `guide`, `granularity`, and `observation` still drive
-  existing idiom compilation/planning. They are not a replacement for the
-  endpoint delta. Inference now uses endpoint semantics only; operation history
-  is retained solely as legacy inspection metadata.
-- The cached evaluator still reads D3 transition schedules during compilation.
-  Line/point/unit and unspecified plugins reconstruct on seek. Neither limitation
-  is removed merely by splitting modules.
-- Built-in and module-factory helpers now capture per-instance theme/color
-  contexts; Story and pair idiom registries are snapshots. Externally registered
-  runtime idioms still own their own dependency management. External CSS remains
-  document-wide; stylesheet leases do not provide CSS selector isolation.
+The measured transition bundle excludes D3, optional Arquero, and CSS. D3 is a
+peer dependency. Arquero remains optional when no transform pipeline is
+declared.
 
-## Next release hardening
+## Remaining cleanup
 
-1. Completed: endpoint-only scene inference, with builder/raw-spec parity tests.
-2. Completed: strict transform/operator validation and tests for zero limits,
-   sparse rows, constant/empty bins, scalar expressions and compound comparisons.
-3. Completed: instance-scoped Story colors/theme tokens, shared stylesheet leases,
-   and asynchronous mount failure cleanup. Also implemented: idempotent destruction, pending navigation/hash/resize
-   cancellation, owned SVG interruption, unique clip IDs, and Seq unbind/off.
-4. Implemented: weather navigation across all idioms/layouts; native wheel input,
-   event coalescing, geometry resize observation, idle-work and post-destroy
-   inactivity checks. These are behavior tests, not a full visual accessibility audit.
-5. Implemented: 0.2.0 candidate metadata, migration notes, versioned CDN paths,
-   link/path/version checks and actual tarball-backed browser execution of the
-   documentation templates. `clean:check` independently installs and rebuilds
-   the current source before running the complete release gate.
+- `NarrativeSpec` metadata and several legacy `scroll`-named internal helpers
+  still participate in transition compilation. They are compatibility wire
+  format, not ownership of the scroll driver.
+- The `visdelta/composition` surface is intentionally explicit but broad.
+  It should shrink into a smaller renderer/driver contract before ScrollyTale
+  consumes it permanently.
+- Story CSS lives in the temporary package. The core stylesheet contains only
+  visualization tokens, chart surfaces, marks, guides, legends, and tooltips.
+- Arquero should later sit behind a transform-engine interface or be replaced
+  for the supported subset by native arrays plus D3.
 
-This module split is implemented and testable. Passing release checks means a
-candidate is validated, not that npm publication, a Git tag or a push occurred.
+This split changes package ownership. It does not by itself claim cross-idiom
+morphing, universal cached seeking, Shadow DOM isolation, or a published
+ScrollyTale integration.

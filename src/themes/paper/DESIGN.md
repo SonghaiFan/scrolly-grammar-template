@@ -1,5 +1,5 @@
 ---
-name: ScrollyLite Paper
+name: VisDelta Paper
 description: >
   Newspaper and magazine editorial style. Ink on newsprint.
   Serif typeface, cream paper background, minimal chrome — designed for

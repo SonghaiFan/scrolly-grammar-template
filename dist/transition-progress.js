@@ -4,18 +4,18 @@ const STARTED = 3;
 const RUNNING = 4;
 const ENDING = 5;
 const ENDED = 6;
-export const SCROLL_TRANSITION_NAME = '__scrollyLiteScroll';
+export const VISDELTA_TRANSITION_NAME = '__visDeltaTransition';
 export function installTransitionProgress(d3) {
     const transition = d3.transition();
     const proto = transition?.constructor?.prototype;
-    if (!proto || proto.__scrollyLiteProgressInstalled)
+    if (!proto || proto.__visDeltaProgressInstalled)
         return;
-    Object.defineProperty(proto, '__scrollyLiteProgressInstalled', { value: true });
+    Object.defineProperty(proto, '__visDeltaProgressInstalled', { value: true });
     proto.progress = function progress(value) {
-        if (!this.__scrollyLiteProgressController) {
-            this.__scrollyLiteProgressController = createProgressController(transitionNodes(this), { transitionId: this._id });
+        if (!this.__visDeltaProgressController) {
+            this.__visDeltaProgressController = createProgressController(transitionNodes(this), { transitionId: this._id });
         }
-        this.__scrollyLiteProgressController.progress(value);
+        this.__visDeltaProgressController.progress(value);
         return this;
     };
 }

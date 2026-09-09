@@ -45,7 +45,7 @@ export function normalizeScrollAction(scrollSpec = {}) {
 }
 export function easeProgress(progress, name = 'linear', d3) {
     if (!d3) {
-        throw new Error('ScrollyLite scroll easing requires D3. Pass { d3 } to createStory().');
+        throw new Error('VisDelta easing requires D3. Pass { d3 } to the transition or driver runtime.');
     }
     const eases = {
         linear: d3.easeLinear,

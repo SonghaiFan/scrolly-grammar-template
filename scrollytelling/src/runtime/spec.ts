@@ -1,5 +1,5 @@
-import { uniqueTokens } from 'scrollylite/composition';
-import type { LayoutSpec, StepSpec, StorySpec } from 'scrollylite/composition';
+import { uniqueTokens } from 'visdelta/composition';
+import type { LayoutSpec, StepSpec, StorySpec } from 'visdelta/composition';
 import { normalizeScrollDriverConfig } from '../scroll-drivers/index.js';
 
 type AnyRecord = Record<string, unknown>;

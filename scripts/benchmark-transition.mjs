@@ -2,14 +2,14 @@ import { chromium } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 
 // Run against the built checkout served by scripts/serve-tests.mjs.
-const browser = await chromium.launch(process.env.SCROLLYLITE_CHROME_PATH
-  ? { executablePath: process.env.SCROLLYLITE_CHROME_PATH } : {});
+const chromePath = process.env.VISDELTA_CHROME_PATH || process.env.SCROLLYLITE_CHROME_PATH;
+const browser = await chromium.launch(chromePath ? { executablePath: chromePath } : {});
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.goto('http://127.0.0.1:5511/examples/transition/');
+  await page.goto('http://127.0.0.1:5511/tests/fixtures/runtime.html');
   await page.waitForSelector('rect.sl-bar');
   const results = await page.evaluate(async () => {
-    const sl = await import('/dist/scrollylite.esm.js');
+    const sl = await import('/dist/visdelta.esm.js');
     const results = [];
     document.body.innerHTML = '<div id="benchmark" style="width:1200px"></div>';
     for (const count of [100, 500, 1000]) {

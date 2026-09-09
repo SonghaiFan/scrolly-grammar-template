@@ -1,7 +1,7 @@
 import { dataName } from '../scrolly-meta.js';
 export async function loadData(dataSpec, d3) {
     if (!d3) {
-        throw new Error('ScrollyLite data loading requires D3. Pass { d3 } to createStory().');
+        throw new Error('VisDelta data loading requires D3. Pass { d3 } to transition() or the driver runtime.');
     }
     const entries = await Promise.all(Object.entries(dataSpec).map(async ([name, source]) => {
         if (Array.isArray(source))

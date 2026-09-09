@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ScrollyLite Demo</title>
+    <title>Scrollytelling adapter demo</title>
+    <script type="importmap">
+      { "imports": { "visdelta/composition": "/dist/composition.js" } }
+    </script>
     <link rel="stylesheet" href="../../src/styles.css" />
     <link id="demo-theme-style" rel="stylesheet" href="../../src/themes/default/index.css" />
     <style>
@@ -111,7 +114,7 @@
   <body>
     <header class="demo-toolbar" aria-label="Demo controls">
       <div class="demo-toolbar-brand">
-        <h1>ScrollyLite</h1>
+        <h1>Scrollytelling + VisDelta</h1>
         <p>Action API demo</p>
       </div>
 
@@ -173,10 +176,10 @@
       import { layoutCopy } from "./specs/shared.js";
 
       const THEMES = {
-        default: { label: "Default", href: "../../src/themes/default/index.css" },
-        dark:    { label: "Arch",    href: "../../src/themes/dark/index.css"    },
-        paper:   { label: "Paper",   href: "../../src/themes/paper/index.css"   },
-        warm:    { label: "Paper",   href: "../../src/themes/paper/index.css"   }  // legacy alias
+        default: { label: "Default", href: "../../../src/themes/default/index.css" },
+        dark:    { label: "Arch",    href: "../../../src/themes/dark/index.css"    },
+        paper:   { label: "Paper",   href: "../../../src/themes/paper/index.css"   },
+        warm:    { label: "Paper",   href: "../../../src/themes/paper/index.css"   }  // legacy alias
       };
 
       // ── Resolve URL params ──────────────────────────────────────────────────
@@ -267,7 +270,7 @@
       });
 
       // ── Create story ────────────────────────────────────────────────────────
-      window.__scrollyLiteStory = await createStory(
+      window.__scrollytellingStory = await createStory(
         createDemoSpec({ layoutPreset, storyId, actionMode }),
         {
           target: "#app",

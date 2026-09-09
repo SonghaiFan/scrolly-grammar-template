@@ -1,4 +1,4 @@
-export declare const SCROLL_TRANSITION_NAME = "__scrollyLiteScroll";
+export declare const VISDELTA_TRANSITION_NAME = "__visDeltaTransition";
 export declare function installTransitionProgress(d3: any): void;
 export declare function createSceneTransitionProgress(scene: any, options?: {}): {
     items: any[];

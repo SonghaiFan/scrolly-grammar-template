@@ -12,7 +12,7 @@ const files = ['README.md', 'llms.txt', 'index.html', ...await walk('docs'), ...
 let urls = 0;
 for (const file of files) {
   const source = await readFile(join(root, file), 'utf8');
-  for (const match of source.matchAll(/https:\/\/cdn\.jsdelivr\.net\/(?:npm\/scrollylite|gh\/SonghaiFan\/scrollylite)@(\d+\.\d+\.\d+(?:-[\w.-]+)?)([^\s"'`<>)]*)/g)) {
+  for (const match of source.matchAll(/https:\/\/cdn\.jsdelivr\.net\/(?:npm\/visdelta|gh\/SonghaiFan\/visdelta)@(\d+\.\d+\.\d+(?:-[\w.-]+)?)([^\s"'`<>)]*)/g)) {
     const [, version, path] = match;
     if (version !== pkg.version) throw new Error(`${file}: CDN version ${version} differs from candidate ${pkg.version}.`);
     if (!path.startsWith('/dist/')) throw new Error(`${file}: use the packaged ESM/CSS/global path, not an untested CDN rewrite: ${match[0]}`);

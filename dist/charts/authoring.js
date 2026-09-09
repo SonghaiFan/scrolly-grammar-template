@@ -7,13 +7,12 @@ export { titleize };
 //
 // Observable-Plot style: pass a URL (string or { url }) directly to bar() etc.
 //
-//   sl.bar('/data/weather.csv').x('decade').y('count')
-//   sl.bar({ url: '/data/weather.csv', type: 'csv' }).x(...).y(...)
+//   bar('/data/weather.csv').x('decade').y('count')
+//   bar({ url: '/data/weather.csv', type: 'csv' }).x(...).y(...)
 //
 // A plain non-URL string is treated as a named dataset reference (existing
-// behavior).  The runtime's collectViewDataSources() automatically hoists
-// inline { url } objects into the top-level data registry, so seq().data()
-// is no longer needed when using inline URLs.
+// behavior). Standalone transition() resolves inline URLs directly; a driver
+// may additionally provide named sources through its own data map.
 export function normalizeDataSource(data) {
     if (typeof data === 'string' && isDataUrl(data)) {
         return { url: data };

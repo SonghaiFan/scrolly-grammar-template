@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/examples/transition/');
+  await page.goto('/tests/fixtures/runtime.html');
   await page.waitForSelector('rect.sl-bar');
   await page.evaluate(async () => {
-    window.sl = await import('/dist/scrollylite.esm.js');
+    window.sl = await import('/dist/visdelta.esm.js');
     document.body.innerHTML = '<div id="cached" style="width:800px"></div><div id="reference" style="width:800px"></div>';
     window.rows = [
       { id: 'A', value: 10, other: 30, group: 'one' },
@@ -71,7 +71,8 @@ test('seek and play reuse nodes without unnecessary transforms, scales or D3 sch
 for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip', 'split', 'merge', 'grouped-split', 'grouped-merge']) {
   test(`${scenario}: cached mark geometry matches reconstruction`, async ({ page }) => {
     const samples = await page.evaluate(async scenario => {
-      const { createTransitionSurface } = await import('/dist/scrollylite.js');
+      const { createTransitionSurface } = await import('/dist/runtime/transition-surface.js');
+      const { transitionRegistry, createChartRuntimeDeps } = await import('/dist/composition.js');
       const segmented = sl.bar().data([
         { id: 'A', group: 'one', value: 10 }, { id: 'A', group: 'two', value: 20 },
         { id: 'B', group: 'one', value: 30 }, { id: 'B', group: 'two', value: 15 }
@@ -88,7 +89,14 @@ for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip
       }[scenario];
       const cached = await sl.transition(source, target, options('#cached'));
       // Test the old deterministic renderer bridge, not another cached pair.
-      const reference = createTransitionSurface(source.toSpec(), target.toSpec(), { ...options('#reference'), reconstruct: true });
+      const referenceHost = document.querySelector('#reference');
+      const idioms = await transitionRegistry(source.toSpec(), createChartRuntimeDeps({ root: referenceHost }));
+      const reference = createTransitionSurface(
+        source.toSpec(),
+        target.toSpec(),
+        { ...options(referenceHost), reconstruct: true },
+        idioms
+      );
       const results = [];
       for (const p of [0, 0.07, 0.37, 0.8, 1, 0.2]) {
         cached.progress(p); reference.progress(p);

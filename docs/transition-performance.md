@@ -43,10 +43,10 @@ node scripts/serve-tests.mjs
 In another terminal, run:
 
 ```sh
-node scripts/benchmark-transition.mjs /tmp/scrollylite-benchmark.json
+node scripts/benchmark-transition.mjs /tmp/visdelta-benchmark.json
 ```
 
-For installed Chrome, set `SCROLLYLITE_CHROME_PATH` to its executable. Browser
+For installed Chrome, set `VISDELTA_CHROME_PATH` to its executable. Browser
 regressions in `tests/browser/compiled-transition.spec.mjs` independently assert
 that seek/play do not recreate data tables, scales or D3 schedules; that common
 SVG nodes survive; and that mark geometry matches the reconstruction renderer.
