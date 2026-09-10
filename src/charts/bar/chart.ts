@@ -2,7 +2,7 @@ import { createBarRenderer } from './render.js';
 import { cloneSpec, uniqueTokens } from '../../runtime/utils.js';
 import type {
   ChartDeps,
-  ChartIdiom,
+  ChartType,
   IntermediateSpec,
   MarginSpec,
   TransitionPlan,
@@ -20,7 +20,7 @@ export interface BarSpec extends ViewSpec {
   mark: 'bar';
 }
 
-export function createBarIdiom(deps: ChartDeps): ChartIdiom<BarSpec> {
+export function createBarChart(deps: ChartDeps): ChartType<BarSpec> {
   const renderer = createBarRenderer(deps);
 
   return {
@@ -32,14 +32,14 @@ export function createBarIdiom(deps: ChartDeps): ChartIdiom<BarSpec> {
     intermediateSpecs: barIntermediateSpecs as (prev: BarSpec, next: BarSpec) => IntermediateSpec<BarSpec>[],
     intermediateSpec(previousSpec: BarSpec, nextSpec: BarSpec): IntermediateSpec<BarSpec> | null {
       const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);
-      if (collapseSpec) return { spec: collapseSpec as BarSpec, scene: 'guide' };
+      if (collapseSpec) return { spec: collapseSpec as BarSpec, scene: 'axis' };
       const splitSpec = barSplitIntermediateSpec(previousSpec, nextSpec);
-      if (splitSpec) return { spec: splitSpec as BarSpec, scene: 'granularity' };
+      if (splitSpec) return { spec: splitSpec as BarSpec, scene: 'detail' };
       return null;
     },
     defaultMargin,
-    scenes: ['focus', 'guide', 'granularity', 'observation'],
-    stateOperations: { focus: 'filter', guide: 'coordinate', granularity: 'aggregate' },
+    scenes: ['selection', 'axis', 'detail', 'mapping'],
+    stateOperations: { selection: 'filter', axis: 'coordinate', detail: 'aggregate' },
     inspect: { transitionPlanKey: 'barTransitionPlan' }
   };
 }

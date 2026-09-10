@@ -1,4 +1,4 @@
-import { externalizeScrollyViewSpec } from '../scrolly-meta.js';
+import { serializeViewSpec } from '../spec-meta.js';
 import { ViewState, cloneState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
 import { normalizeFilter } from '../data/filter.js';
@@ -7,8 +7,8 @@ import type {
   ChannelType,
   EncodingSpec,
   FilterSpec,
-  FocusSpec,
-  GuideSpec,
+  SelectionSpec,
+  AxisSpec,
   SortOrder,
   TransitionSpec,
   ViewSpec
@@ -45,16 +45,16 @@ function isDataUrl(s: string): boolean {
   );
 }
 
-// ─── IdiomState ───────────────────────────────────────────────────────────────
+// ─── ChartState ───────────────────────────────────────────────────────────────
 
-export class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
+export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   override toSpec(): Omit<S, '__grammar'> {
     return compileAuthoredView(
-      this.compileSpec(externalizeScrollyViewSpec(super.toSpec() as ViewSpec))
+      this.compileSpec(serializeViewSpec(super.toSpec() as ViewSpec))
     ) as Omit<S, '__grammar'>;
   }
 
-  /** Idiom subclasses override this without importing the global chart manifest. */
+  /** Chart subclasses override this without importing the global chart manifest. */
   protected compileSpec(spec: ViewSpec): ViewSpec {
     return spec;
   }
@@ -121,7 +121,7 @@ export class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   }
 
   where(selector: string | Record<string, unknown> | FilterSpec): this {
-    return this.with({ focus: selectorFrom(selector) } as Partial<S>, 'focus');
+    return this.with({ selection: selectorFrom(selector) } as Partial<S>, 'selection');
   }
 
   highlight(
@@ -129,16 +129,17 @@ export class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
     options: { opacity?: number } = {}
   ): this {
     return this.with({
-      focus: {
+      selection: {
         mode: 'highlight',
         filter: selectorFrom(selector),
         ...(options.opacity != null ? { opacity: options.opacity } : {})
-      } as FocusSpec
-    } as Partial<S>, 'focus');
+      } as SelectionSpec
+    } as Partial<S>, 'selection');
   }
 
-  guide(config: Partial<GuideSpec> = {}): this {
-    return this.with({ guide: cloneState(config) } as Partial<S>, 'guide');
+  /** Configure the chart axes, scales, orientation, and transition order. */
+  axis(config: Partial<AxisSpec> = {}): this {
+    return this.with({ axis: cloneState(config) } as Partial<S>, 'axis');
   }
 }
 
@@ -179,7 +180,7 @@ export function colorFrom(
 
 export function selectorFrom(
   selector: string | Record<string, unknown> | FilterSpec = {}
-): FocusSpec {
+): SelectionSpec {
   if (typeof selector === 'string') return normalizeFilter(selector);
   const sel = selector as Record<string, unknown>;
   if (sel.field) return cloneState(normalizeFilter(sel));
@@ -188,7 +189,7 @@ export function selectorFrom(
     const [field, equal] = entries[0];
     return { field, equal };
   }
-  throw new Error('Use a single field comparison for this idiom selector.');
+  throw new Error('Use a single field comparison for this chart selector.');
 }
 
 // ─── Spec pruning ─────────────────────────────────────────────────────────────
@@ -197,49 +198,48 @@ function pruneAuthoringSpec(spec: ViewSpec): ViewSpec {
   const next = pruneEmpty(cloneState(spec)) as ViewSpec;
   if (Array.isArray(next.transform) && !next.transform.length) delete next.transform;
 
-  const state = (next.narrative as Record<string, unknown> | undefined)?.state as
+  const state = (next.meta as Record<string, unknown> | undefined)?.state as
     | Record<string, unknown>
     | undefined;
   if (!state) return next;
 
   const sceneState = (state.sceneState ?? {}) as Record<string, unknown>;
-  if (!sceneState.guide && shouldPreserveGuideState(state.guide)) {
-    sceneState.guide = state.guide;
+  if (!sceneState.axis && shouldPreserveAxisState(state.axis)) {
+    sceneState.axis = state.axis;
   }
 
-  delete state.focus;
-  delete state.guide;
-  delete state.granularity;
+  delete state.selection;
+  delete state.axis;
+  delete state.detail;
   state.sceneState = sceneState;
   pruneSceneStateDefaults(state.sceneState as Record<string, unknown>);
   state.sceneState = pruneEmpty(state.sceneState);
   if (!Object.keys(state.sceneState as object).length) delete state.sceneState;
-  if (!Object.keys(state).length) delete (next.narrative as Record<string, unknown>).state;
-  if (next.narrative && !Object.keys(next.narrative as object).length) delete next.narrative;
+  if (!Object.keys(state).length) delete (next.meta as Record<string, unknown>).state;
+  if (next.meta && !Object.keys(next.meta as object).length) delete next.meta;
 
   return pruneEmpty(next) as ViewSpec;
 }
 
 function pruneSceneStateDefaults(sceneState: Record<string, unknown>): void {
-  const guide = sceneState.guide as Record<string, unknown> | undefined;
-  if (guide) {
-    if (guide.xScale === 'linear') delete guide.xScale;
-    if (guide.yScale === 'linear') delete guide.yScale;
-    if (isDefaultStaging(guide.staging)) delete guide.staging;
+  const axis = sceneState.axis as Record<string, unknown> | undefined;
+  if (axis) {
+    if (axis.xScale === 'linear') delete axis.xScale;
+    if (axis.yScale === 'linear') delete axis.yScale;
+    if (isDefaultOrder(axis)) delete axis.order;
   }
 }
 
-function shouldPreserveGuideState(guide: unknown): boolean {
-  if (!guide || typeof guide !== 'object' || Array.isArray(guide)) return false;
+function shouldPreserveAxisState(axis: unknown): boolean {
+  if (!axis || typeof axis !== 'object' || Array.isArray(axis)) return false;
   const semanticKeys = ['layout', 'x', 'y', 'group', 'value'];
-  return semanticKeys.some((k) => (guide as Record<string, unknown>)[k] != null);
+  return semanticKeys.some((k) => (axis as Record<string, unknown>)[k] != null);
 }
 
-function isDefaultStaging(staging: unknown): boolean {
-  if (!staging || !Array.isArray((staging as Record<string, unknown>).order)) return false;
-  const s = staging as Record<string, unknown>;
-  if (s.duration != null || s.stagger != null) return false;
-  return (s.order as string[]).join('|') === 'x|y';
+function isDefaultOrder(axis: Record<string, unknown>): boolean {
+  if (!Array.isArray(axis.order)) return false;
+  if (axis.duration != null || axis.stagger != null) return false;
+  return (axis.order as string[]).join('|') === 'x|y';
 }
 
 function pruneEmpty(value: unknown): unknown {

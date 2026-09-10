@@ -15,7 +15,7 @@ export function createLineStory({ actionMode = ["step", "tooltip"] } = {}) {
     .action(actionMode)
     .layout("floatToText")
     .description(
-      "Demonstrates Focus, Guide, Observation, and Granularity on a trend line. " +
+      "Demonstrates Selection, Axis, Mapping, and Detail on a trend line. " +
       "Each scene changes one dimension of how the line is read or grouped."
     )
     .add(
@@ -27,42 +27,42 @@ export function createLineStory({ actionMode = ["step", "tooltip"] } = {}) {
       }
     )
     .add(
-      "Focus: zoom to recent decades",
+      "Selection: zoom to recent decades",
       base.where({ period: "recent" }),
       {
-        body: "Focus keeps the line objects intact and rescales x to the recent period.",
+        body: "Selection keeps the line objects intact and rescales x to the recent period.",
         code: 'base.where({ period: "recent" })'
       }
     )
     .add(
-      "Guide: logarithmic y scale",
-      base.guide({ y: { scale: { type: "log" } } }),
+      "Axis: logarithmic y scale",
+      base.axis({ y: { scale: { type: "log" } } }),
       {
-        body: "Guide changes the reading frame — same data, different scale for the y axis.",
-        code: 'base.guide({ y: { scale: { type: "log" } } })'
+        body: "Axis changes the reading frame — same data, different scale for the y axis.",
+        code: 'base.axis({ y: { scale: { type: "log" } } })'
       }
     )
     .add(
-      "Observation: switch to cold days",
+      "Mapping: switch to cold days",
       cold,
       {
-        body: "Observation swaps the encoded variable — same decade path, y now encodes cold days.",
+        body: "Mapping swaps the encoded variable — same decade path, y now encodes cold days.",
         code: 'base.y("cold_days")'
       }
     )
     .add(
-      "Granularity: split line into periods",
+      "Detail: split line into periods",
       cold.breakdown("period", { color: { field: "period", type: "nominal" } }),
       {
-        body: "Granularity splits one continuous line into per-period segments — same points, new grouping.",
+        body: "Detail splits one continuous line into per-period segments — same points, new grouping.",
         code: 'cold.breakdown("period", { color: { field: "period", type: "nominal" } })'
       }
     )
     .add(
-      "Granularity: merge back to one line",
+      "Detail: merge back to one line",
       cold.rollup(),
       {
-        body: "Granularity merges period segments back into a single continuous trend.",
+        body: "Detail merges period segments back into a single continuous trend.",
         code: 'cold.rollup()'
       }
     )

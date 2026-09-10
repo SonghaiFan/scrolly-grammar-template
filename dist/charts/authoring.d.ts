@@ -1,11 +1,11 @@
 import { ViewState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
-import type { ChannelSpec, FilterSpec, FocusSpec, GuideSpec, SortOrder, TransitionSpec, ViewSpec } from '../types/index.js';
+import type { ChannelSpec, FilterSpec, SelectionSpec, AxisSpec, SortOrder, TransitionSpec, ViewSpec } from '../types/index.js';
 export { titleize };
 export declare function normalizeDataSource(data: unknown): unknown;
-export declare class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
+export declare class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
     toSpec(): Omit<S, '__grammar'>;
-    /** Idiom subclasses override this without importing the global chart manifest. */
+    /** Chart subclasses override this without importing the global chart manifest. */
     protected compileSpec(spec: ViewSpec): ViewSpec;
     data(data: unknown): this;
     x(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;
@@ -21,8 +21,9 @@ export declare class IdiomState<S extends ViewSpec = ViewSpec> extends ViewState
     highlight(selector: string | Record<string, unknown> | FilterSpec, options?: {
         opacity?: number;
     }): this;
-    guide(config?: Partial<GuideSpec>): this;
+    /** Configure the chart axes, scales, orientation, and transition order. */
+    axis(config?: Partial<AxisSpec>): this;
 }
 export declare function channelFrom(field: string | ChannelSpec, options?: Partial<ChannelSpec>): ChannelSpec;
 export declare function colorFrom(valueOrField: string | ChannelSpec, options?: Partial<ChannelSpec>): ChannelSpec;
-export declare function selectorFrom(selector?: string | Record<string, unknown> | FilterSpec): FocusSpec;
+export declare function selectorFrom(selector?: string | Record<string, unknown> | FilterSpec): SelectionSpec;

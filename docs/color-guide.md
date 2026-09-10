@@ -5,7 +5,7 @@ and the design rules baked into the library's defaults.
 
 The rules below are distilled from Stephen Few's *"Practical Rules for Using
 Color in Charts"* (Perceptual Edge, 2008). The implementation tries to enforce
-the good defaults automatically so authors can focus on the story, not color
+the good defaults automatically so authors can focus on the message, not color
 theory.
 
 ---
@@ -171,7 +171,7 @@ Or with a categorical hue:
 **Grouping** (distinguish independent series) → categorical palette, as above.
 
 **Highlighting** (draw attention to one item) → the `.highlight()` method on
-any idiom desaturates non-matching marks to `--sl-muted`, leaving the matched
+any chart type desaturates non-matching marks to `--sl-muted`, leaving the matched
 marks in their original series color:
 
 ```js

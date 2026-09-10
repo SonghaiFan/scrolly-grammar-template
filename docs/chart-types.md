@@ -1,7 +1,8 @@
-# Chart Idioms
+# Chart types
 
-VisDelta ships four built-in chart idioms — `bar`, `line`, `point`, `unit`
-— each a chainable builder that compiles to a view spec via `.toSpec()`.
+VisDelta includes four chart types: `bar`, `line`, `point`, and `unit`. Their
+methods can be chained like a sentence. Call `.toSpec()` when you need the plain
+JavaScript object behind a chart state.
 
 ```js
 import { bar, line, point, unit } from "visdelta";
@@ -12,18 +13,17 @@ point("dataset")   // → PointState
 unit("dataset")    // → UnitState
 ```
 
-All four extend a common `ChartState` base (called `IdiomState` internally),
-so most encoding/filtering/styling methods work identically across idioms.
-This page documents the shared methods first, then each idiom's specific
+All four extend the same `ChartState` base, so most data mapping, filtering,
+and styling methods work identically across chart types.
+This page documents the shared methods first, then each chart type's specific
 methods, defaults, and example progressions.
 
-> **Immutability:** every chainable method returns a *new* state object. The
-> original is untouched, so you can build a `base` chart and branch from it
-> freely; external composition code can arrange those immutable states into a narrative.
+> **Every change makes a new state.** The original stays untouched, so you can
+> make several versions from one `base` chart and move between them safely.
 
 ---
 
-## Shared methods (all idioms)
+## Shared methods (all chart types)
 
 ### `.data(name)`
 
@@ -41,7 +41,7 @@ Bind the x/y encoding channel. `field` may be:
 
 `options` merges into the channel: `{ title, type, scale, … }`.
 
-Default channel `type` differs per idiom (documented in each idiom's section
+Default channel `type` differs per chart type (documented in each chart's section
 below) — e.g. bar's `.x()` defaults to `"nominal"`, point's `.x()`/`.y()`
 default to `"quantitative"`.
 
@@ -55,8 +55,8 @@ bar("rows").y("count", "Total count")                    // shorthand: string 2n
 
 ### `.channel(name, field, options?)`
 
-Generic escape hatch for binding any encoding channel by name — useful for
-idiom-specific or custom channels not covered by `.x()`/`.y()`/`.color()`/etc.
+Sets a visual property by name. Use this lower-level method when a chart has no
+direct method such as `.x()`, `.y()`, or `.color()` for that property.
 
 ```js
 bar("rows").channel("opacity", "confidence", { type: "quantitative" })
@@ -93,16 +93,16 @@ point("rows").size("population")
 
 ### `.key(fields)`
 
-Sets the **semantic identity key** — the field(s) that uniquely identify a
-"thing" the reader should track across transitions. Single field collapses to
-a string; multiple fields stay an array:
+Tells VisDelta how to **match the same item** between two chart states. Use the
+field or fields that uniquely name the thing a reader is following. A single
+field becomes a string; multiple fields stay an array:
 
 ```js
 .key("decade")               // → key: "decade"
 .key(["decade", "type"])     // → key: ["decade", "type"]
 ```
 
-See [Concepts → Semantic identity](./concepts.md#semantic-identity-key) for
+See [Concepts → Matching items](./concepts.md#matching-items-with-key) for
 why this matters and how to choose a good key.
 
 ### `.tooltip(items)`
@@ -171,22 +171,18 @@ but do not render selective opacity; do not rely on it for line/point/unit:
 
 <SyntaxPlayground initial="highlight" compact />
 
-Internally this sets `state.focus = { mode: "highlight", filter: selector,
-opacity? }` and infers a `focus` scene.
+Internally this sets `state.selection = { mode: "highlight", filter: selector,
+opacity? }` and infers a `selection` scene.
 
-### `.guide(config)`
+### `.axis(config)`
 
-Generic guide-state setter — controls how the same data is *read*: scale
-type, orientation, axis config, staging order for multi-stage transitions.
-Most of the time you'll reach for the higher-level `.flip()` instead, but
-`.guide()` is the raw escape hatch:
+Low-level axis setter. It controls scales, axis settings, orientation, and the
+order of x/y transition steps. Most of the time `.flip()` is simpler:
 
 ```js
-.guide({ y: { scale: { type: "log" } } })
-.guide({ flip: true, staging: { order: ["y", "x"], duration: 500 } })
+.axis({ y: { scale: { type: "log" } } })
+.axis({ flip: true, order: ["y", "x"], duration: 500 })
 ```
-
-Infers a `guide` scene.
 
 ---
 
@@ -202,12 +198,12 @@ const base = bar("weatherDays").x("decade").y("count").sort("year");
 ### `.where(selector)` — richer on bar
 
 Bar's `.where()` does more than filter rows — it also tries to keep the
-narrative coherent as the selected category changes:
+chart readable as the selected category changes:
 
 - **Accumulates constraints per field**: calling `.where({ period: "recent" })`
   after `.where({ type: "Hot days" })` keeps both constraints (each new
   selector replaces only the constraint on the *same* field).
-- **Infers semantic identity** when filtering on a "measure-like" field
+- **Keeps bars matched** when filtering on a "measure-like" field
   (`type`, `kind`, or any field ending in `_type`/`_kind`): it sets
   `key: [categoryField, measureField]` and a `semanticKey` descriptor, so
   switching `{ type: "Hot days" }` → `{ type: "Cold days" }` reads as *the
@@ -226,36 +222,34 @@ base.where(null)                                           // clears everything
 
 For a plain filter without bar's extra authoring bookkeeping, supply a raw
 view spec with `transform: [{ filter: ... }]`. It still contributes to the
-endpoint delta and focus inference.
+endpoint delta and selection inference.
 
 ### `.flip(options?)`
 
-Swaps the bars from vertical to horizontal (rotates the guide). Infers a
-`guide` scene and triggers bar's signature **two-stage y-then-x transition**
-(axes restage in sequence rather than jumping at once).
+Swaps the bars from vertical to horizontal. By default it changes y first, then
+x. Each step keeps the scale, axis, and marks together so they never disagree.
 
 ```js
 .flip()
 .flip({ domain: ["Cold days", "Hot days"] })               // pin the flipped axis's domain
-.flip({ order: ["x", "y"] })                                // reverse the staging order
-.flip({ staging: { duration: 600, stagger: { step: 30, max: 300 } } }) // customize timing
+.flip({ order: ["x", "y"] })                              // change x first, then y
+.flip({ duration: 600, stagger: { step: 30, max: 300 } })
 ```
 
 `options`:
 | Key | Effect |
 |---|---|
 | `domain` / `scale.domain` | Fixes the domain of the flipped scale |
-| `scale` | Merges into the guide's scale config |
-| `order` / `stage` / `staging.order` | Staging order, default `["y", "x"]` |
-| (staging timing via `staging`/`stage` object) | `{ duration, stagger }` |
+| `scale` | Merges into the axis scale config |
+| `order` | x/y step order, default `["y", "x"]` |
+| `duration` / `stagger` | Timing for each step |
 
 <SyntaxPlayground initial="flip" compact />
 
 ### `.breakdown(segment?, options?)`
 
-Splits one aggregate bar per category into **segments** by another field —
-the canonical "granularity increase" move (one bar → stacked/grouped
-segments). Infers a `granularity` scene.
+Splits one total bar per category into **segments** using another field. This is
+the direct one-total → stacked/grouped-detail operation.
 
 This changes geometry and grain only. It does not implicitly encode the
 segment field with color: add `.color("type")` or pass an explicit `color`
@@ -293,8 +287,8 @@ base.breakdown("type", { color: TEMPERATURE_HUE, tooltip: [...] })
 
 ### `.rollup(groupby?, options?)`
 
-The inverse of `.breakdown()`: aggregates multiple rows/segments back into
-**fewer, coarser bars**. Infers a `granularity` scene.
+The inverse of `.breakdown()`: combines multiple rows or segments into
+**fewer total bars**.
 
 ```js
 base.rollup("decade", { title: "Average days", op: "mean" })
@@ -314,10 +308,9 @@ base.rollup({ by: "decade", value: "count", as: "total", op: "sum", color: "#b05
 
 ### `.segment(fieldOrConfig?, config?)`
 
-Lower-level granularity primitive behind `.breakdown()` — directly configures
+Lower-level detail primitive behind `.breakdown()` — directly configures
 a multi-field "long format" segmentation, including **wide-to-long folding**
-(turning columns like `hot_days`/`cold_days` into rows). Infers a
-`granularity` scene. Most stories should prefer `.breakdown()`/`.rollup()`;
+(turning columns like `hot_days`/`cold_days` into rows). Most stories should prefer `.breakdown()`/`.rollup()`;
 reach for `.segment()` when you need to fold wide columns or set custom
 labels/domains directly.
 
@@ -334,22 +327,26 @@ base.segment({
 
 ### `.layout(layout, options?)`
 
-Switches between `"stacked"` and `"grouped"` segment layouts (only meaningful
-after `.breakdown()`/`.segment()`). Infers a `guide` scene.
+Switches between `"stacked"` and `"grouped"` segment layouts. It is only useful
+after `.breakdown()` or `.segment()`. Set transition order and timing here when
+the layout change needs more than one x/y step.
 
 ```js
 base.breakdown("type").layout("grouped")
-base.breakdown("type").layout("grouped", { staging: { duration: 500 } })
+base.breakdown("type").layout("grouped", { duration: 500 })
 ```
 
-### `.stage(order, options?)`
+### Transition order
 
-Directly controls multi-stage transition **staging order and timing** —
-the same mechanism `.flip()` uses internally. Infers a `guide` scene.
+There is no separate animation-language method. Put `order`, `duration`, and
+`stagger` on the chart change that needs them. This keeps the code readable:
 
 ```js
-base.stage(["y", "x"])
-base.stage(["x", "y"], { duration: 700, stagger: 40 })
+base.flip({ order: ["x", "y"], duration: 700 })
+base.breakdown("type").layout("grouped", {
+  order: ["y", "x"],
+  stagger: { step: 40 }
+})
 ```
 
 ### Bar state family
@@ -359,7 +356,7 @@ const base = bar("weatherDays").x("decade").y("count").sort("year");
 
 const states = {
   baseline: base.where({ type: "Hot days" }),
-  focus: base.where({ type: "Hot days", period: "recent" }),
+  selection: base.where({ type: "Hot days", period: "recent" }),
   flip: base.where({ type: "Hot days", period: "recent" }).flip(),
   split: base.breakdown("type"),
   highlight: base.breakdown("type").highlight({ type: "Cold days" }),
@@ -367,7 +364,7 @@ const states = {
   rollup: base.rollup("decade", { title: "Average days", op: "mean" })
 };
 
-const pair = await transition(states.baseline, states.focus, { target, d3, aq });
+const pair = await transition(states.baseline, states.selection, { target, d3, aq });
 ```
 
 ---
@@ -402,20 +399,20 @@ Stroke width in pixels, and the radius of circles drawn at data points.
 
 ### `.flip(options?)`
 
-Swaps x/y axes. Infers a `guide` scene.
+Swaps x/y axes.
 
 ```js
 .flip()
 .flip({ x: { scale: { type: "log" } }, order: ["x", "y"] })
 ```
 
-`options`: `x`/`y` (per-axis guide overrides), `order`/`stage`/`staging`
-(staging order, default `["x", "y"]`, plus `{ duration, stagger }` timing).
+`options`: `x`/`y` (per-axis settings), `order` (default `["x", "y"]`),
+`duration`, and `stagger`.
 
 ### `.breakdown(field, options?)`
 
 Splits a single line into **multiple series** — one line per unique value of
-`field`. Infers a `granularity` scene (`mode: "series"`).
+`field`.
 
 ```js
 base.breakdown("period")
@@ -425,8 +422,7 @@ base.breakdown("period", { color: PERIOD_LUMINANCE_COLOR })            // compos
 
 ### `.rollup(groupbyOrOptions?, options?)`
 
-The inverse: merges multiple series back into a **single line**. Infers a
-`granularity` scene (`mode: "single"`).
+The inverse: merges multiple series back into a **single line**.
 
 ```js
 base.breakdown("period").rollup()
@@ -442,7 +438,7 @@ const cold = base.y("cold_days").color(COLD_COLOR);
 const states = [
   base,
   base.where({ period: "recent" }),
-  base.guide({ y: { scale: { type: "log" } } }),
+  base.axis({ y: { scale: { type: "log" } } }),
   cold,
   cold.breakdown("period"),
   cold.breakdown("period").rollup()
@@ -472,26 +468,25 @@ Set the circle size (`radius` is an alias for `pointSize`).
 
 ### `.flip(options?)`
 
-Swaps x/y axes. Infers a `guide` scene. Same `options` shape as line's
-`.flip()` (`x`, `y`, `order`/`stage`/`staging`).
+Swaps x/y coordinates. It accepts the same `x`, `y`, `order`, `duration`, and
+`stagger` options as line's `.flip()`.
 
 ### `.rollup(groupby, options?)`
 
 Aggregates individual points into **larger summary circles** — e.g. one
-circle per period instead of one per year. Infers a `granularity` scene
-(`mode: "aggregate"`).
+circle per period instead of one per year.
 
 ```js
 base.rollup("period")
 base.rollup(["period", "region"], {
   countAs: "n",
   sizeRange: [6, 36],          // map aggregate count → circle radius range
-  x: { op: "mean" },           // aggregation config per axis (idiom-specific)
+  x: { op: "mean" },           // aggregation config for this chart type
   y: { op: "mean" }
 })
 ```
 
-`options`: `key` (identity for the aggregated marks, defaults from `groupby`),
+`options`: `key` (how summary points are matched, defaults from `groupby`),
 `x`/`y` (per-axis aggregation config), `countAs` (name for the synthesized
 count field), `sizeRange` (`[min, max]` radius mapping for aggregate size).
 
@@ -499,8 +494,7 @@ count field), `sizeRange` (`[min, max]` radius mapping for aggregate size).
 
 The inverse of `.rollup()` — reveals **finer-grained detail** within an
 aggregated view (e.g. expand period-level circles into year-level points
-while preserving the higher-level identity). Infers a `granularity` scene
-(`mode: "detail"`).
+while preserving the higher-level match).
 
 ```js
 base.rollup("period").breakdown("year")
@@ -565,7 +559,7 @@ Grid layout column count, and unit circle radius in pixels.
 ### `.group(field, options?)`
 
 Arranges units into a **grouped grid** — one cluster per unique value of
-`field` (sets `guide.layout = "groupedGrid"`). Infers a `guide` scene.
+`field`.
 
 ```js
 base.group("period")
@@ -575,7 +569,7 @@ base.group("period", { color: PERIOD_LUMINANCE_COLOR })
 ### `.timeline(field, options?)`
 
 Arranges units along a horizontal **timeline axis** bound to a quantitative
-field (sets `guide.layout = "timeline"`). Infers a `guide` scene.
+field.
 
 ```js
 base.timeline("year")
@@ -585,15 +579,14 @@ base.timeline("year", { title: "Year" })
 ### `.dodge(field, options?)`
 
 Like `.timeline()`, but units **collision-avoid** (dodge) along the axis
-instead of overlapping (sets `guide.layout = "dodge"`). Infers a `guide`
-scene.
+instead of overlapping.
 
 ```js
 base.dodge("year")
 ```
 
 > `.timeline()`/`.dodge()`/`.group()` are mutually exclusive *layouts* — each
-> call replaces the unit chart's guide layout with its own.
+> call replaces the unit chart's current layout.
 
 ### Unit state family
 
@@ -610,13 +603,12 @@ const states = [
 ];
 ```
 
-> **Note:** unit charts don't implement `observation`/`granularity` scenes —
-> their narrative range is `focus` (filtering the underlying rows) and `guide`
-> (rearranging how units are laid out).
+> **Note:** unit charts currently animate filtering and layout changes. Value
+> remapping and summary/detail transitions are still developing.
 
 ---
 
-## Choosing an idiom
+## Choosing a chart type
 
 | If you want to show… | Reach for |
 |---|---|
@@ -626,6 +618,6 @@ const states = [
 | Concrete counts as countable objects ("32 of these") | `unit` |
 
 All four share the same authoring vocabulary (`.x`, `.y`, `.color`, `.key`,
-`.where`, `.highlight`, `.guide`, …), so switching idioms mid-story — or
-prototyping the same data three different ways — is mostly a matter of
-swapping the factory call and adjusting idiom-specific methods.
+`.where`, `.highlight`, `.axis`, …), so trying the same data with another chart
+type is mostly a matter of
+swapping the factory call and adjusting chart-specific methods.

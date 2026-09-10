@@ -1,5 +1,5 @@
 // @ts-nocheck — D3 rendering utilities; typed via deps injection
-import { narrativeTransition } from '../scrolly-meta.js';
+import { specTransition } from '../spec-meta.js';
 import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
 import { VISDELTA_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
@@ -162,8 +162,8 @@ function themeValue(cssVar, fallback) {
 
 function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
   if (!d3) throw new Error('VisDelta transitions require D3. Pass { d3 } to transition() or the driver runtime.');
-  const local = narrativeTransition(spec);
-  const previous = previousSpec ? narrativeTransition(previousSpec) : {};
+  const local = specTransition(spec);
+  const previous = previousSpec ? specTransition(previousSpec) : {};
   const transition = { ...defaultTransition(), ...previous, ...local };
   const ease = easeFor(transition.ease, d3);
   const base = (scrollDriven ? d3.transition(VISDELTA_TRANSITION_NAME) : d3.transition())
@@ -172,7 +172,7 @@ function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
 }
 
 function effectiveTransitionSpec(spec = {}) {
-  return defaultTransition(narrativeTransition(spec));
+  return defaultTransition(specTransition(spec));
 }
 
 function easeFor(name, d3) {
@@ -269,7 +269,7 @@ function drawUnsupported(chart, spec, availableTypes = []) {
   chart.g.append('text')
     .attr('x', chart.innerWidth / 2).attr('y', chart.innerHeight / 2)
     .attr('text-anchor', 'middle').attr('fill', 'var(--sl-muted)')
-    .text(`Unsupported chart idiom for "${spec.mark}"${availableTypes.length ? ` · available: ${availableTypes.join(', ')}` : ''}`);
+    .text(`Unsupported chart type "${spec.mark}"${availableTypes.length ? ` · available: ${availableTypes.join(', ')}` : ''}`);
 }
 
 function bandOrLinear(rows, channel, range, d3) {
@@ -584,7 +584,7 @@ function inferFieldType(rows, field) {
 function categoricalRange(domain) {
   const resolved = DEFAULT_PALETTE.map((entry) => themeColor(entry));
   // Sequential slot assignment: Nth category → series-N. Consistent with the
-  // stacked/grouped bar idiom's explicit 'var(--sl-series-N)' range and with
+  // stacked/grouped bar chart's explicit 'var(--sl-series-N)' range and with
   // the story-level registry, so fallback scenes never get mismatched colors.
   return domain.map((_, i) => resolved[i % resolved.length]);
 }

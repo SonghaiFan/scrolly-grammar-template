@@ -1,5 +1,5 @@
-import type { StageSpec, ViewSpec } from '../../types/index.js';
-import { IdiomState, normalizeDataSource } from '../authoring.js';
+import type { AxisSpec, ViewSpec } from '../../types/index.js';
+import { ChartState, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createPointSpecCompiler } from './compile.js';
 
@@ -14,7 +14,7 @@ export function point(data?: unknown): PointState {
   return new PointState({ data: normalizeDataSource(data) as PointViewState['data'], mark: 'point', encoding: {} });
 }
 
-export class PointState extends IdiomState<PointViewState> {
+export class PointState extends ChartState<PointViewState> {
   protected override compileSpec(spec: ViewSpec): ViewSpec {
     return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
   }
@@ -36,18 +36,13 @@ export class PointState extends IdiomState<PointViewState> {
   }
 
   flip(options: Record<string, unknown> = {}): this {
-    return this.guide({
+    return this.axis({
       flip: true,
       ...(options['x'] ? { x: options['x'] } : {}),
       ...(options['y'] ? { y: options['y'] } : {}),
-      ...(options['staging'] || options['stage'] || options['order']
-        ? {
-            staging: {
-              ...(typeof options['staging'] === 'object' ? options['staging'] as Partial<StageSpec> : {}),
-              order: ((options['order'] || options['stage'] || (options['staging'] as Record<string, unknown>)?.['order'] || ['x', 'y']) as Array<'x' | 'y'>)
-            } as StageSpec
-          }
-        : {})
+      ...(options['order'] ? { order: options['order'] as Array<'x' | 'y'> } : {}),
+      ...(options['duration'] != null ? { duration: options['duration'] as number } : {}),
+      ...(options['stagger'] ? { stagger: options['stagger'] as AxisSpec['stagger'] } : {})
     });
   }
 
@@ -55,7 +50,7 @@ export class PointState extends IdiomState<PointViewState> {
     const fields = Array.isArray(groupby) ? groupby : [groupby].filter(Boolean) as string[];
     const key = options['key'] || (fields.length === 1 ? fields[0] : fields);
     return this.with({
-      granularity: definedState({
+      detail: definedState({
         mode: 'aggregate',
         groupby: fields,
         key,
@@ -64,7 +59,7 @@ export class PointState extends IdiomState<PointViewState> {
         countAs: options['countAs'],
         sizeRange: options['sizeRange']
       })
-    }, 'granularity') as this;
+    }, 'detail') as this;
   }
 
   breakdown(detail: string | Record<string, unknown> | null = null, options: Record<string, unknown> = {}): this {
@@ -73,12 +68,12 @@ export class PointState extends IdiomState<PointViewState> {
       : { detail, ...options };
     const detailKey = config['detail'] || this.state['key'];
     return this.with({
-      granularity: definedState({
+      detail: definedState({
         mode: 'detail',
         key: config['key'] || detailKey,
         detail: detailKey
       })
-    }, 'granularity') as this;
+    }, 'detail') as this;
   }
 }
 

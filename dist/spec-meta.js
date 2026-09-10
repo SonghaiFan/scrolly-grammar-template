@@ -1,45 +1,45 @@
 import { defaultTransition } from './timing.js';
-export const NARRATIVE_KEY = 'narrative';
-const INTERNAL_STATE_FIELDS = ['focus', 'granularity', 'guide', 'sceneState'];
-export function getNarrative(spec) {
-    return mergeNarrative(spec[NARRATIVE_KEY] ?? {});
+export const SPEC_META_KEY = 'meta';
+const INTERNAL_STATE_FIELDS = ['selection', 'detail', 'axis', 'sceneState'];
+export function getSpecMeta(spec) {
+    return mergeSpecMeta(spec[SPEC_META_KEY] ?? {});
 }
-export function withNarrative(spec, extension) {
+export function withSpecMeta(spec, extension) {
     return {
         ...spec,
-        [NARRATIVE_KEY]: mergeNarrative(getNarrative(spec), extension)
+        [SPEC_META_KEY]: mergeSpecMeta(getSpecMeta(spec), extension)
     };
 }
-export function externalizeScrollyViewSpec(spec) {
+export function serializeViewSpec(spec) {
     if (!spec)
         return spec;
     const next = clonePlain(spec);
-    const narrative = getNarrative(next);
-    delete next[NARRATIVE_KEY];
+    const meta = getSpecMeta(next);
+    delete next[SPEC_META_KEY];
     if (next.key !== undefined) {
-        narrative.object = { ...(narrative.object ?? {}), key: next.key };
+        meta.object = { ...(meta.object ?? {}), key: next.key };
         delete next.key;
     }
     if (next.semanticKey !== undefined) {
-        narrative.object = {
-            ...(narrative.object ?? {}),
-            semantic: semanticToNarrative(next.semanticKey)
+        meta.object = {
+            ...(meta.object ?? {}),
+            semantic: semanticToMeta(next.semanticKey)
         };
         delete next.semanticKey;
     }
     if (next.transition !== undefined) {
-        narrative.transition = { ...(narrative.transition ?? {}), ...clonePlain(next.transition) };
+        meta.transition = { ...(meta.transition ?? {}), ...clonePlain(next.transition) };
         delete next.transition;
     }
     if (next.scroll !== undefined) {
-        narrative.action = { ...(narrative.action ?? {}), scroll: clonePlain(next.scroll) };
+        meta.action = { ...(meta.action ?? {}), scroll: clonePlain(next.scroll) };
         delete next.scroll;
     }
     if (next.unit !== undefined) {
-        narrative.unit = clonePlain(next.unit);
+        meta.unit = clonePlain(next.unit);
         delete next.unit;
     }
-    const state = { ...(narrative.state ?? {}) };
+    const state = { ...(meta.state ?? {}) };
     for (const field of INTERNAL_STATE_FIELDS) {
         if (next[field] !== undefined) {
             state[field] = next[field];
@@ -54,71 +54,71 @@ export function externalizeScrollyViewSpec(spec) {
     if (Object.keys(sceneState).length)
         state.sceneState = sceneState;
     if (Object.keys(state).length)
-        narrative.state = state;
-    const narrativeTransforms = narrative.transform;
-    if (narrativeTransforms?.length) {
-        next.transform = dedupeArray([...(next.transform ?? []), ...narrativeTransforms]);
-        delete narrative.transform;
+        meta.state = state;
+    const metaTransforms = meta.transform;
+    if (metaTransforms?.length) {
+        next.transform = dedupeArray([...(next.transform ?? []), ...metaTransforms]);
+        delete meta.transform;
     }
-    pruneDefaultNarrative(narrative);
+    pruneDefaultSpecMeta(meta);
     if (typeof next.data === 'string') {
         next.data = { name: next.data };
     }
-    if (Object.keys(narrative).length) {
-        next[NARRATIVE_KEY] = narrative;
+    if (Object.keys(meta).length) {
+        next[SPEC_META_KEY] = meta;
     }
     return next;
 }
-export function normalizeScrollyViewSpec(spec) {
-    const narrative = getNarrative(spec);
-    const state = narrative.state ?? {};
-    const object = narrative.object ?? {};
+export function normalizeViewSpec(spec) {
+    const meta = getSpecMeta(spec);
+    const state = meta.state ?? {};
+    const object = meta.object ?? {};
     const transforms = [
         ...(spec.transform ?? []),
-        ...(narrative.transform ?? [])
+        ...(meta.transform ?? [])
     ];
-    const { narrative: _narrative, ...baseSpec } = spec;
+    const { meta: _meta, ...baseSpec } = spec;
     return {
         ...baseSpec,
         key: object.key ?? (spec.encoding?.key?.field ?? null),
-        semanticKey: semanticFromNarrative(object.semantic) ?? null,
-        transition: (narrative.transition ?? {}),
-        scroll: narrative.action?.scroll,
-        unit: narrative.unit ?? null,
-        focus: state.focus ?? null,
-        guide: state.guide ?? null,
-        granularity: state.granularity ?? null,
+        semanticKey: semanticFromMeta(object.semantic) ?? null,
+        transition: (meta.transition ?? {}),
+        scroll: meta.action?.scroll,
+        unit: meta.unit ?? null,
+        selection: state.selection ?? null,
+        axis: state.axis ?? null,
+        detail: state.detail ?? null,
         sceneState: state.sceneState ?? {},
         ...(transforms.length ? { transform: dedupeArray(transforms) } : {})
     };
 }
-export function narrativeObjectKey(spec) {
-    const narrative = getNarrative(spec);
-    return narrative.object?.key ?? spec.encoding?.key?.field ?? null;
+export function specObjectKey(spec) {
+    const meta = getSpecMeta(spec);
+    return meta.object?.key ?? spec.encoding?.key?.field ?? null;
 }
-export function narrativeSemanticKey(spec) {
-    const narrative = getNarrative(spec);
-    return semanticFromNarrative(narrative.object?.semantic) ?? null;
+export function specSemanticKey(spec) {
+    const meta = getSpecMeta(spec);
+    return semanticFromMeta(meta.object?.semantic) ?? null;
 }
-export function narrativeTransition(spec) {
-    const narrative = getNarrative(spec);
-    return narrative.transition ?? {};
+export function specTransition(spec) {
+    const meta = getSpecMeta(spec);
+    return meta.transition ?? {};
 }
-export function narrativeScroll(spec) {
-    const narrative = getNarrative(spec);
-    return narrative.action?.scroll ?? null;
+export function specScroll(spec) {
+    const meta = getSpecMeta(spec);
+    return meta.action?.scroll ?? null;
 }
-export function narrativeUnit(spec) {
-    const narrative = getNarrative(spec);
-    return narrative.unit ?? null;
+export function specUnit(spec) {
+    const meta = getSpecMeta(spec);
+    return meta.unit ?? null;
 }
-export function narrativeState(spec) {
-    const narrative = getNarrative(spec);
-    const state = narrative.state ?? {};
+export function specState(spec) {
+    const meta = getSpecMeta(spec);
+    const state = meta.state ?? {};
     return {
-        focus: state.focus ?? null,
-        guide: state.guide ?? null,
-        granularity: state.granularity ?? null,
+        selection: state.selection ?? null,
+        axis: state.axis ?? null,
+        detail: state.detail ?? null,
         sceneState: state.sceneState ?? {}
     };
 }
@@ -128,7 +128,7 @@ export function dataName(dataSpec) {
     return dataSpec?.name ?? null;
 }
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-function mergeNarrative(...items) {
+function mergeSpecMeta(...items) {
     return items.reduce((merged, item) => mergePlain(merged, item ?? {}), {});
 }
 function mergePlain(base, next) {
@@ -143,32 +143,32 @@ function mergePlain(base, next) {
     }
     return merged;
 }
-function semanticToNarrative(semanticKey = {}) {
+function semanticToMeta(semanticKey = {}) {
     return {
-        ...(semanticKey.entity !== undefined ? { entity: semanticPartToNarrative(semanticKey.entity) } : {}),
-        ...(semanticKey.entities !== undefined ? { entity: semanticPartToNarrative(semanticKey.entities) } : {}),
-        ...(semanticKey.measure !== undefined ? { measure: semanticPartToNarrative(semanticKey.measure) } : {}),
-        ...(semanticKey.measures !== undefined ? { measure: semanticPartToNarrative(semanticKey.measures) } : {})
+        ...(semanticKey.entity !== undefined ? { entity: semanticPartToMeta(semanticKey.entity) } : {}),
+        ...(semanticKey.entities !== undefined ? { entity: semanticPartToMeta(semanticKey.entities) } : {}),
+        ...(semanticKey.measure !== undefined ? { measure: semanticPartToMeta(semanticKey.measure) } : {}),
+        ...(semanticKey.measures !== undefined ? { measure: semanticPartToMeta(semanticKey.measures) } : {})
     };
 }
-function semanticFromNarrative(semantic) {
+function semanticFromMeta(semantic) {
     if (!semantic)
         return null;
     return {
-        ...(semantic.entity !== undefined ? { entity: semanticPartFromNarrative(semantic.entity) } : {}),
-        ...(semantic.measure !== undefined ? { measure: semanticPartFromNarrative(semantic.measure) } : {})
+        ...(semantic.entity !== undefined ? { entity: semanticPartFromMeta(semantic.entity) } : {}),
+        ...(semantic.measure !== undefined ? { measure: semanticPartFromMeta(semantic.measure) } : {})
     };
 }
-function semanticPartToNarrative(part) {
+function semanticPartToMeta(part) {
     if (Array.isArray(part))
-        return part.map(semanticPartToNarrative);
+        return part.map(semanticPartToMeta);
     if (typeof part === 'string')
         return { field: part };
     return clonePlain(part);
 }
-function semanticPartFromNarrative(part) {
+function semanticPartFromMeta(part) {
     if (Array.isArray(part))
-        return part.map(semanticPartFromNarrative);
+        return part.map(semanticPartFromMeta);
     const p = part;
     if (p?.field)
         return p.field;
@@ -176,14 +176,14 @@ function semanticPartFromNarrative(part) {
         return { value: p.value };
     return clonePlain(part);
 }
-function pruneDefaultNarrative(narrative) {
-    if (narrative.transition !== undefined) {
-        const pruned = diffFromDefaultTransition(narrative.transition);
+function pruneDefaultSpecMeta(meta) {
+    if (meta.transition !== undefined) {
+        const pruned = diffFromDefaultTransition(meta.transition);
         if (!Object.keys(pruned).length) {
-            delete narrative.transition;
+            delete meta.transition;
         }
         else {
-            narrative.transition = pruned;
+            meta.transition = pruned;
         }
     }
 }

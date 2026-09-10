@@ -1,8 +1,8 @@
 import {
   cloneState,
-  externalizeScrollyViewSpec,
+  serializeViewSpec,
   inferTransition,
-  withNarrative
+  withSpecMeta
 } from 'visdelta/composition';
 import type {
   LayoutSpec,
@@ -143,7 +143,7 @@ function compileStep(
 ): StepSpec {
   const code = definition.code;
   const stepAction = normalizeStepActions(definition.action ?? action);
-  const compiledView = withNarrative(compileView(view), {
+  const compiledView = withSpecMeta(compileView(view), {
     annotation: {
       title: definition.title,
       ...(definition.body ? { description: definition.body } : {})
@@ -180,5 +180,5 @@ function compileView(view: ViewLike | null | undefined): ViewSpec {
     view && typeof (view as { toSpec?(): ViewSpec }).toSpec === 'function'
       ? (view as { toSpec(): ViewSpec }).toSpec()
       : cloneState((view ?? {}) as ViewSpec);
-  return externalizeScrollyViewSpec(spec);
+  return serializeViewSpec(spec);
 }

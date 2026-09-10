@@ -1,5 +1,5 @@
 import { keyAccessor, semanticKeyForDatum, semanticMeasureForDatum } from '../../identity/semantic-key.js';
-import { narrativeSemanticKey } from '../../scrolly-meta.js';
+import { specSemanticKey } from '../../spec-meta.js';
 import type { ChartContext, DataRow, ViewSpec } from '../../types/index.js';
 
 type KeyFn = (this: Element, d: DataRow, i: number) => string | number;
@@ -10,11 +10,11 @@ export function barKeyAccessor(
   fallbackField = 'id'
 ): KeyFn {
   const fallback = keyAccessor(spec, fallbackField) as KeyFn;
-  const keyPlan = (chart.transitionPlan as Record<string, unknown> | undefined)?.key as
+  const matchPlan = chart.transitionPlan?.match as
     | { mode?: string }
     | undefined;
 
-  if (keyPlan?.mode !== 'semantic' || !narrativeSemanticKey(spec)) {
+  if (matchPlan?.mode !== 'semantic' || !specSemanticKey(spec)) {
     return fallback;
   }
 

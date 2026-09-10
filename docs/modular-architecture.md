@@ -1,70 +1,59 @@
-# Module boundaries
+# Modules and bundle size
 
-VisDelta is now the visualization-transition package. Narrative page
-composition has been extracted to the private `scrollytelling/` package for
-later integration into ScrollyTale.
+VisDelta is split into small entry points so an application can load only what
+it uses.
 
-## Ownership
+## Public entries
 
-| Package | Owns |
+| Entry | What it provides |
 | --- | --- |
-| `visdelta` | Immutable visualization declarations, semantic delta, chart idioms, rendering, data transforms, and seekable pair transitions |
-| `scrollytelling/` | `story()`, `seq()`, multi-step chart composition, page shell, layout, theme mounting, navigation, scroll progress, resize, and hash restoration |
+| `visdelta` | All chart builders, differences, transitions, and plugin registration |
+| `visdelta/core` | Chart-state normalization and `delta()` without drawing anything |
+| `visdelta/bar` | The bar-chart builder |
+| `visdelta/transition` | `transition()`, progress, play, pause, resize, and destroy |
+| `visdelta/plugins` | Define and register another chart type |
+| `visdelta/browser` | The same API using dependencies supplied by the browser |
+| `visdelta/composition` | Advanced adapters for applications that provide their own controls |
 
-The dependency direction is one way:
+Most users need only the chart type they are using, the transition entry, D3,
+and the stylesheet:
 
-```text
-scrollytelling
-      ↓
-visdelta/composition
-      ↓
-VisDelta chart and transition internals
+```js
+import * as d3 from "d3";
+import { bar } from "visdelta/bar";
+import { transition } from "visdelta/transition";
+import "visdelta/style.css";
 ```
 
-VisDelta never imports the scrollytelling package. A focused transition can
-therefore be installed, bundled, and used without a Story shell or scroll
-driver.
+## Dependency direction
 
-## Public VisDelta entries
+```text
+Application control
+       ↓ progress 0…1
+visdelta/transition
+       ↓
+chart type + core difference
+```
 
-| Entry | Responsibility |
-| --- | --- |
-| `visdelta` | Visualization authoring, delta, transition, and plugin registration |
-| `visdelta/core` | DOM-free normalization and semantic delta |
-| `visdelta/bar` | Focused immutable bar authoring |
-| `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
-| `visdelta/plugins` | Plugin definition and registration |
-| `visdelta/browser` | The same transition API with browser-global dependency fallback |
-| `visdelta/composition` | Lower-level adapter surface for driver packages; not the beginner entry |
+The chart states do not depend on the control. A button, slider, timer, scroll
+position, gesture, or route can drive the same transition.
 
-`story`, `seq`, `createStory`, `createChart`, `createPage`, `render`, `chart`,
-and `page` are no longer exported by VisDelta. They currently belong to
-`@visdelta/scrollytelling` inside this repository.
+## Size checks
 
-## Size gates
+`npm run bundle:check` measures three useful bundles:
 
-`npm run bundle:check` measures three focused closures: core delta, bar
-authoring, and bar plus transition. The transition closure rejects the
-composition adapter, unrelated chart idioms, and the extracted scrollytelling
-directory.
+- core difference calculation;
+- bar authoring;
+- bar plus transition, including required shared and lazy-loaded code.
 
-The measured transition bundle excludes D3, optional Arquero, and CSS. D3 is a
-peer dependency. Arquero remains optional when no transform pipeline is
-declared.
+D3, optional Arquero, and CSS are measured separately. Arquero is needed only
+when a chart uses a data transform.
 
-## Remaining cleanup
+## Current boundaries
 
-- `NarrativeSpec` metadata and several legacy `scroll`-named internal helpers
-  still participate in transition compilation. They are compatibility wire
-  format, not ownership of the scroll driver.
-- The `visdelta/composition` surface is intentionally explicit but broad.
-  It should shrink into a smaller renderer/driver contract before ScrollyTale
-  consumes it permanently.
-- Story CSS lives in the temporary package. The core stylesheet contains only
-  visualization tokens, chart surfaces, marks, guides, legends, and tooltips.
-- Arquero should later sit behind a transform-engine interface or be replaced
-  for the supported subset by native arrays plus D3.
-
-This split changes package ownership. It does not by itself claim cross-idiom
-morphing, universal cached seeking, Shadow DOM isolation, or a published
-ScrollyTale integration.
+- The two endpoint states must use the same chart type.
+- Bar has cached frame data; line, point, unit, and custom chart types currently
+  rebuild a frame when progress changes.
+- `visdelta/composition` is an advanced integration entry, not the beginner API.
+- Adding a plugin registers drawing and transition behavior; it does not
+  automatically create a new chainable builder function.

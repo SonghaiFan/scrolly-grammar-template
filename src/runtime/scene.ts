@@ -1,6 +1,6 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { keyAccessor } from '../identity/semantic-key.js';
-import { narrativeState } from '../scrolly-meta.js';
+import { specState } from '../spec-meta.js';
 import { clearSceneTransitionProgress } from '../transition-progress.js';
 import { hasScene } from '../transitions/index.js';
 import { markAxisInactive } from './marks.js';
@@ -32,8 +32,8 @@ export function getScene(node, viewConfig, d3) {
     width,
     height
   };
-  scene.granularityLayer = markRoot.append('g').attr('class', 'sl-scene-layer sl-granularity-layer');
-  scene.guideLayer = frame.append('g').attr('class', 'sl-scene-layer sl-guide-layer');
+  scene.detailLayer = markRoot.append('g').attr('class', 'sl-scene-layer sl-detail-layer');
+  scene.axisLayer = frame.append('g').attr('class', 'sl-scene-layer sl-axis-layer');
   scene.empty = d3.select(node).append('div').attr('class', 'sl-empty').style('display', 'none');
   node.__visDeltaScene = scene;
   return scene;
@@ -56,8 +56,8 @@ export function resetSceneToEmptySource(scene) {
   scene.xLabel.interrupt().style('opacity', 0).text('');
   scene.yLabel.interrupt().style('opacity', 0).text('');
   scene.legend.interrupt().style('opacity', 0).selectAll('*').remove();
-  scene.guideLayer?.interrupt().selectAll('*').remove();
-  scene.granularityLayer?.interrupt().selectAll('*').remove();
+  scene.axisLayer?.interrupt().selectAll('*').remove();
+  scene.detailLayer?.interrupt().selectAll('*').remove();
   scene.markLayers?.forEach((layer) => { layer.interrupt().selectAll('*').remove(); });
   scene.unitLabel.interrupt().text('').style('opacity', 0);
   scene.textLayer.interrupt().html('').style('opacity', 0);
@@ -66,33 +66,33 @@ export function resetSceneToEmptySource(scene) {
 
 export function applySceneTransitions(chart, rows, spec) {
   const sceneTypes = chart.sceneTransition?.scene || [];
-  const state = narrativeState(spec);
+  const state = specState(spec);
   chart.scene.node.dataset.sceneTransition = sceneTypes.join(' ');
   chart.scene.node.dataset.sceneState = Object.keys(state.sceneState || {}).join(' ');
-  chart.scene.node.dataset.transitionPlan = chart.transitionPlan?.update?.stages
-    ? chart.transitionPlan.update.stages.map((stage) => stage.axis).join(' ')
+  chart.scene.node.dataset.transitionSteps = chart.transitionPlan?.steps
+    ? chart.transitionPlan.steps.map((step) => step.part).filter(Boolean).join(' ')
     : '';
-  clearSceneLayer(chart.scene.granularityLayer, chart.transition.base);
-  applyGuideScene(chart, rows, spec);
+  clearSceneLayer(chart.scene.detailLayer, chart.transition.base);
+  applyAxisScene(chart, rows, spec);
 }
 
-function applyGuideScene(chart, rows, spec) {
-  const enabled = hasScene(chart.sceneTransition, 'guide');
-  const cue = narrativeState(spec).guide?.cue;
-  const layer = chart.scene.guideLayer;
+function applyAxisScene(chart, rows, spec) {
+  const enabled = hasScene(chart.sceneTransition, 'axis');
+  const cue = specState(spec).axis?.cue;
+  const layer = chart.scene.axisLayer;
   if (!enabled || !cue || !chart.position || !rows.length) { clearSceneLayer(layer, chart.transition.base); return; }
-  const guideSpec = cue === true ? { select: 'max', by: spec.encoding?.y?.field } : cue;
-  const row = pickSceneRow(rows, guideSpec, spec.encoding || {});
+  const axisSpec = cue === true ? { select: 'max', by: spec.encoding?.y?.field } : cue;
+  const row = pickSceneRow(rows, axisSpec, spec.encoding || {});
   const x = row ? chart.position.x(row) : NaN;
   const y = row ? chart.position.y(row) : NaN;
   const data = Number.isFinite(x) && Number.isFinite(y) ? [{ row, x, y }] : [];
   layer.raise().interrupt().style('opacity', 1);
-  joinGuideLine(layer, 'sl-guide-rule-x', data, chart.transition.base, (d) => ({ x1: d.x, x2: d.x, y1: 0, y2: chart.innerHeight }));
-  joinGuideLine(layer, 'sl-guide-rule-y', data, chart.transition.base, (d) => ({ x1: 0, x2: chart.innerWidth, y1: d.y, y2: d.y }));
-  layer.selectAll('circle.sl-guide-dot')
+  joinAxisLine(layer, 'sl-axis-rule-x', data, chart.transition.base, (d) => ({ x1: d.x, x2: d.x, y1: 0, y2: chart.innerHeight }));
+  joinAxisLine(layer, 'sl-axis-rule-y', data, chart.transition.base, (d) => ({ x1: 0, x2: chart.innerWidth, y1: d.y, y2: d.y }));
+  layer.selectAll('circle.sl-axis-dot')
     .data(data, (d) => sceneRowKey(d.row, spec))
     .join(
-      (enter) => enter.append('circle').attr('class', 'sl-guide-dot')
+      (enter) => enter.append('circle').attr('class', 'sl-axis-dot')
         .attr('cx', (d) => d.x).attr('cy', (d) => d.y).attr('r', 0)
         .transition(chart.transition.base).attr('r', 5),
       (update) => update.transition(chart.transition.base).attr('cx', (d) => d.x).attr('cy', (d) => d.y).attr('r', 5),
@@ -100,14 +100,14 @@ function applyGuideScene(chart, rows, spec) {
     );
 }
 
-function joinGuideLine(layer, className, data, transition, attrs) {
+function joinAxisLine(layer, className, data, transition, attrs) {
   const setAttrs = (selection) => selection
     .attr('x1', (d) => attrs(d).x1).attr('x2', (d) => attrs(d).x2)
     .attr('y1', (d) => attrs(d).y1).attr('y2', (d) => attrs(d).y2);
   layer.selectAll(`line.${className}`)
     .data(data, (d) => sceneRowKey(d.row))
     .join(
-      (enter) => setAttrs(enter.append('line').attr('class', `sl-guide-rule ${className}`))
+      (enter) => setAttrs(enter.append('line').attr('class', `sl-axis-rule ${className}`))
         .style('opacity', 0).transition(transition).style('opacity', 1),
       (update) => setAttrs(update.transition(transition)).style('opacity', 1),
       (exit) => exit.transition(transition).style('opacity', 0).remove()
@@ -154,7 +154,7 @@ function rowMatchesScene(row, selector = {}, selectedRow = null) {
 }
 
 function sceneRowKey(row, spec = {}) {
-  if (!row) return 'guide';
+  if (!row) return 'axis';
   const key = keyAccessor(spec, spec.encoding?.x?.field || spec.encoding?.y?.field);
   return String(key(row, 0));
 }

@@ -1,9 +1,9 @@
 import type { BarOrientation, ChannelSpec, SpecCompiler, ViewSpec } from '../../types/index.js';
 import {
-  narrativeObjectKey,
-  narrativeSemanticKey,
-  narrativeState
-} from '../../scrolly-meta.js';
+  specObjectKey,
+  specSemanticKey,
+  specState
+} from '../../spec-meta.js';
 import {
   barOffsetChannelName,
   barOrientationFromEncoding
@@ -15,7 +15,7 @@ import {
   compileFilter,
   compileHighlight,
   identitySpec,
-  resolveGuideStaging,
+  resolveAxisOrder,
   withObject,
   withSceneState
 } from '../compiler-utils.js';
@@ -41,16 +41,16 @@ function compileBarBase(spec: ViewSpec, _context: AnyRecord = {}): ViewSpec {
   return withDefaultBarSemanticKey(identitySpec(spec));
 }
 
-function compileBarCoordinate(spec: ViewSpec, guideSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
+function compileBarCoordinate(spec: ViewSpec, axisSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
   let workingSpec = spec;
-  const layout = (guideSpec['layout'] as string) || null;
-  const flipsOrientation = Boolean(guideSpec['flip']);
+  const layout = (axisSpec['layout'] as string) || null;
+  const flipsOrientation = Boolean(axisSpec['flip']);
 
-  if (guideSpec['layout']) {
+  if (axisSpec['layout']) {
     const segmentField = barSegmentField(workingSpec);
-    const state = narrativeState(workingSpec);
+    const state = specState(workingSpec);
     const stateRecord = state as unknown as AnyRecord;
-    const granularity = (stateRecord['sceneState'] as AnyRecord | undefined)?.['granularity'] || stateRecord['granularity'] || {};
+    const detail = (stateRecord['sceneState'] as AnyRecord | undefined)?.['detail'] || stateRecord['detail'] || {};
     const orientation: BarOrientation = flipsOrientation
       ? oppositeOrientation(barOrientationFromEncoding(workingSpec.encoding as Encoding || {}))
       : barOrientationFromEncoding(workingSpec.encoding as Encoding || {});
@@ -58,11 +58,11 @@ function compileBarCoordinate(spec: ViewSpec, guideSpec: AnyRecord = {}, _contex
       ...workingSpec,
       encoding: encodingWithBarLayout(workingSpec.encoding as Encoding, layout, segmentField, orientation) as ViewSpec['encoding']
     }, {
-      guide: { layout, staging: resolveGuideStaging(guideSpec, orientation) },
-      ...(segmentField ? { granularity: { ...(granularity as AnyRecord), layout } } : {})
+      axis: { layout, ...resolveAxisOrder(axisSpec, orientation) },
+      ...(segmentField ? { detail: { ...(detail as AnyRecord), layout } } : {})
     });
 
-    if (!flipsOrientation && !guideSpec['scale']) return workingSpec;
+    if (!flipsOrientation && !axisSpec['scale']) return workingSpec;
   }
 
   let encoding = cloneEncoding(workingSpec.encoding) as Encoding;
@@ -74,21 +74,21 @@ function compileBarCoordinate(spec: ViewSpec, guideSpec: AnyRecord = {}, _contex
   const orientation: BarOrientation = flipsOrientation ? oppositeOrientation(currentOrientation) : currentOrientation;
 
   if (orientation === 'horizontal') {
-    encoding['x'] = { ...measure, ...((guideSpec['scale'] as AnyRecord | undefined) ? { domain: (guideSpec['scale'] as AnyRecord)['domain'] as unknown[] } : {}) };
+    encoding['x'] = { ...measure, ...((axisSpec['scale'] as AnyRecord | undefined) ? { domain: (axisSpec['scale'] as AnyRecord)['domain'] as unknown[] } : {}) };
     encoding['y'] = category;
   } else {
     encoding['x'] = category;
-    encoding['y'] = { ...measure, ...((guideSpec['scale'] as AnyRecord | undefined) ? { domain: (guideSpec['scale'] as AnyRecord)['domain'] as unknown[] } : {}) };
+    encoding['y'] = { ...measure, ...((axisSpec['scale'] as AnyRecord | undefined) ? { domain: (axisSpec['scale'] as AnyRecord)['domain'] as unknown[] } : {}) };
   }
 
-  const state = narrativeState(workingSpec);
+  const state = specState(workingSpec);
   const stateRecord = state as unknown as AnyRecord;
   const resolvedLayout =
     layout ||
-    (stateRecord['sceneState'] as AnyRecord | undefined)?.['granularity'] as AnyRecord | undefined && ((stateRecord['sceneState'] as AnyRecord)['granularity'] as AnyRecord)?.['layout'] ||
-    (stateRecord['granularity'] as AnyRecord | undefined)?.['layout'] ||
-    (stateRecord['sceneState'] as AnyRecord | undefined)?.['guide'] as AnyRecord | undefined && ((stateRecord['sceneState'] as AnyRecord)['guide'] as AnyRecord)?.['layout'] ||
-    (stateRecord['guide'] as AnyRecord | undefined)?.['layout'] ||
+    (stateRecord['sceneState'] as AnyRecord | undefined)?.['detail'] as AnyRecord | undefined && ((stateRecord['sceneState'] as AnyRecord)['detail'] as AnyRecord)?.['layout'] ||
+    (stateRecord['detail'] as AnyRecord | undefined)?.['layout'] ||
+    (stateRecord['sceneState'] as AnyRecord | undefined)?.['axis'] as AnyRecord | undefined && ((stateRecord['sceneState'] as AnyRecord)['axis'] as AnyRecord)?.['layout'] ||
+    (stateRecord['axis'] as AnyRecord | undefined)?.['layout'] ||
     null;
 
   encoding = encodingWithBarLayout(encoding, resolvedLayout as string | null, barSegmentField(workingSpec), orientation) as Encoding;
@@ -101,14 +101,14 @@ function compileBarCoordinate(spec: ViewSpec, guideSpec: AnyRecord = {}, _contex
     },
     encoding: encoding as ViewSpec['encoding']
   }, {
-    key: (guideSpec['key'] as string) || narrativeObjectKey(workingSpec) as string || (category as ChannelSpec).field || ''
+    key: (axisSpec['key'] as string) || specObjectKey(workingSpec) as string || (category as ChannelSpec).field || ''
   }), {
-    guide: {
+    axis: {
       ...(resolvedLayout ? { layout: resolvedLayout } : {}),
       orientation,
       ...(flipsOrientation ? { flip: true } : {}),
-      scale: guideSpec['scale'] || null,
-      staging: resolveGuideStaging(guideSpec, orientation)
+      scale: axisSpec['scale'] || null,
+      ...resolveAxisOrder(axisSpec, orientation)
     }
   });
 }
@@ -121,45 +121,45 @@ function compileBarLayout(spec: ViewSpec, operationSpec: AnyRecord = {}, context
   return compileBarCoordinate(spec, operationSpec, context);
 }
 
-function compileBarAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
+function compileBarAggregate(spec: ViewSpec, detailSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
   const encoding = spec.encoding as Encoding || {};
-  const categoryField = (granularitySpec['category'] as string) || (encoding['x'] as ChannelSpec)?.field || 'category';
-  const segmentField = (granularitySpec['segment'] as string) || (granularitySpec['segmentAs'] as string) || 'segment';
-  const valueField = (granularitySpec['value'] as string) || (granularitySpec['valueAs'] as string) || (encoding['y'] as ChannelSpec)?.field || 'value';
-  const sourceField = (granularitySpec['source'] as string) || (granularitySpec['sourceAs'] as string) || '__measure';
-  const fields = (granularitySpec['fields'] as string[]) || [];
-  const labels = (granularitySpec['labels'] as Record<string, string>) || {};
-  const segmentDomain = (granularitySpec['domain'] as string[]) ||
-    ((granularitySpec['color'] as AnyRecord | undefined)?.['domain'] as string[]) ||
+  const categoryField = (detailSpec['category'] as string) || (encoding['x'] as ChannelSpec)?.field || 'category';
+  const segmentField = (detailSpec['segment'] as string) || (detailSpec['segmentAs'] as string) || 'segment';
+  const valueField = (detailSpec['value'] as string) || (detailSpec['valueAs'] as string) || (encoding['y'] as ChannelSpec)?.field || 'value';
+  const sourceField = (detailSpec['source'] as string) || (detailSpec['sourceAs'] as string) || '__measure';
+  const fields = (detailSpec['fields'] as string[]) || [];
+  const labels = (detailSpec['labels'] as Record<string, string>) || {};
+  const segmentDomain = (detailSpec['domain'] as string[]) ||
+    ((detailSpec['color'] as AnyRecord | undefined)?.['domain'] as string[]) ||
     fields.map((field) => labels[field] || field);
-  const groupby = (granularitySpec['groupby'] as string[]) || [categoryField, sourceField, segmentField];
+  const groupby = (detailSpec['groupby'] as string[]) || [categoryField, sourceField, segmentField];
   const transform = [...(spec.transform || [])];
 
   if (fields.length) {
     transform.push({ fold: { fields, as: [segmentField, valueField], sourceAs: sourceField, labels } });
   }
 
-  if (granularitySpec['aggregate'] !== false) {
+  if (detailSpec['aggregate'] !== false) {
     transform.push({
       aggregate: {
         groupby,
-        fields: [{ op: (granularitySpec['op'] as string) || 'sum', field: valueField, as: valueField }]
+        fields: [{ op: (detailSpec['op'] as string) || 'sum', field: valueField, as: valueField }]
       }
     });
   }
 
-  const layout = (granularitySpec['layout'] as string) || 'stacked';
-  const color = explicitGranularityColor(
-    granularitySpec['color'],
+  const layout = (detailSpec['layout'] as string) || 'stacked';
+  const color = explicitDetailColor(
+    detailSpec['color'],
     (encoding['color'] as ChannelSpec | undefined),
     segmentField,
     segmentDomain,
-    granularitySpec['range'] as string[] | undefined
+    detailSpec['range'] as string[] | undefined
   );
   const newEncoding: Encoding = {
     ...cloneEncoding(spec.encoding) as Encoding,
-    x: channelFromField(categoryField, (granularitySpec['categoryTitle'] as string) || (encoding['x'] as ChannelSpec)?.title || null, 'nominal'),
-    y: channelFromField(valueField, (granularitySpec['valueTitle'] as string) || (encoding['y'] as ChannelSpec)?.title || null, 'quantitative'),
+    x: channelFromField(categoryField, (detailSpec['categoryTitle'] as string) || (encoding['x'] as ChannelSpec)?.title || null, 'nominal'),
+    y: channelFromField(valueField, (detailSpec['valueTitle'] as string) || (encoding['y'] as ChannelSpec)?.title || null, 'quantitative'),
     detail: { field: segmentField, type: 'nominal' },
     ...(color ? { color } : {})
   };
@@ -176,12 +176,12 @@ function compileBarAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, _c
     transform,
     encoding: newEncoding as ViewSpec['encoding']
   }, {
-    key: (granularitySpec['key'] as string) || [categoryField, segmentField] as unknown as string,
-    semantic: (granularitySpec['semantic'] as AnyRecord) ||
-      (granularitySpec['semanticKey'] as AnyRecord) ||
+    key: (detailSpec['key'] as string) || [categoryField, segmentField] as unknown as string,
+    semantic: (detailSpec['semantic'] as AnyRecord) ||
+      (detailSpec['semanticKey'] as AnyRecord) ||
       semanticKeyFromParts({ field: categoryField }, { field: sourceField }) as unknown
   }), {
-    granularity: {
+    detail: {
       layout,
       fields,
       segmentField,
@@ -192,7 +192,7 @@ function compileBarAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, _c
   });
 }
 
-function explicitGranularityColor(
+function explicitDetailColor(
   requested: unknown,
   inherited: ChannelSpec | undefined,
   segmentField: string,
@@ -229,7 +229,7 @@ function explicitGranularityColor(
 }
 
 function withDefaultBarSemanticKey(spec: ViewSpec): ViewSpec {
-  if (narrativeSemanticKey(spec)) return spec;
+  if (specSemanticKey(spec)) return spec;
   const semanticKey = semanticKeyFromEncoding(spec.encoding as Encoding || {});
   return semanticKey ? withObject(spec, { semantic: semanticKey as unknown as import('../../types/index.js').SemanticKey }) : spec;
 }

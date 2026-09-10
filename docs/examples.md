@@ -2,7 +2,7 @@
 
 Every example on this page is editable in place. Change a method on the left and the real VisDelta output updates on the right. Each editor owns its own transition controller, error state, progress slider, playback, and computed delta; there is no separate source file to inspect.
 
-## Encoding and immutable states
+## Mapping data and making immutable states
 
 Start with one visualization, derive another, and return both endpoints. Try changing the fields, titles, keys, colors, or transition timing.
 
@@ -14,21 +14,21 @@ Edit the selector or combine constraints. This example also exercises the real A
 
 <SyntaxPlayground initial="filter" compact />
 
-## Focus with `.highlight()`
+## Highlighting with `.highlight()`
 
 All marks remain present while the unmatched subset is visually de-emphasized.
 
 <SyntaxPlayground initial="highlight" compact />
 
-## Granularity with `.breakdown()` and `.rollup()`
+## Detail with `.breakdown()` and `.rollup()`
 
 Move between aggregate bars and segmented bars. Try changing the layout to `"grouped"`.
 
 <SyntaxPlayground initial="split" compact />
 
-## Guide change with `.flip()`
+## Axis and layout change with `.flip()`
 
-Change orientation and experiment with the staging order.
+Change orientation and experiment with the x/y step order.
 
 <SyntaxPlayground initial="flip" compact />
 
@@ -49,12 +49,6 @@ Edit quantitative channels, radius, color, or swap the axes.
 Edit unit count, columns, radius, label, or grouping.
 
 <SyntaxPlayground initial="unit" compact />
-
-## Scrollytelling examples
-
-Story and Seq examples moved to the private `scrollytelling/` package. The live
-examples on this site exercise only the standalone visualization-transition
-library.
 
 ## Local development
 

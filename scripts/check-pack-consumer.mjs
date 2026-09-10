@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const expectedApi = [
-  "availableChartIdioms",
+  "availableChartTypes",
   "bar",
-  "defineChartIdiom",
+  "defineChartType",
   "delta",
   "diffViewStates",
   "line",
   "point",
-  "registerChartIdiom",
+  "registerChartType",
   "registerChartModule",
   "transition",
   "unit",
@@ -76,10 +76,10 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import * as api from "visdelta";
 import * as browserApi from "visdelta/browser";
-import { bar as focusedBar } from "visdelta/bar";
-import { delta as focusedDelta } from "visdelta/core";
-import { transition as focusedTransition } from "visdelta/transition";
-import { defineChartIdiom as focusedPlugin } from "visdelta/plugins";
+import { bar as selectedBar } from "visdelta/bar";
+import { delta as selectedDelta } from "visdelta/core";
+import { transition as selectedTransition } from "visdelta/transition";
+import { defineChartType as selectedPlugin } from "visdelta/plugins";
 
 const expectedApi = ${JSON.stringify(expectedApi, null, 2)};
 const actualApi = Object.keys(api).sort();
@@ -87,11 +87,11 @@ assertSame(actualApi, expectedApi, "public API");
 assertSame(Object.keys(browserApi).sort(), expectedApi, "browser public API");
 assertSame(Object.keys(globalThis.VisDelta).sort(), expectedApi, "browser global API");
 if (globalThis.vd !== globalThis.VisDelta) throw new Error("vd global alias mismatch");
-assertSame(api.availableChartIdioms(), ["bar", "line", "point", "unit"], "chart idioms");
-if (typeof focusedBar !== "function") throw new Error("bar subpath did not export bar()");
-if (typeof focusedDelta !== "function") throw new Error("core subpath did not export delta()");
-if (typeof focusedTransition !== "function") throw new Error("transition subpath did not export transition()");
-if (typeof focusedPlugin !== "function") throw new Error("plugins subpath did not export defineChartIdiom()");
+assertSame(api.availableChartTypes(), ["bar", "line", "point", "unit"], "chart types");
+if (typeof selectedBar !== "function") throw new Error("bar subpath did not export bar()");
+if (typeof selectedDelta !== "function") throw new Error("core subpath did not export delta()");
+if (typeof selectedTransition !== "function") throw new Error("transition subpath did not export transition()");
+if (typeof selectedPlugin !== "function") throw new Error("plugins subpath did not export defineChartType()");
 
 const entry = fileURLToPath(import.meta.resolve("visdelta"));
 const browserEntry = fileURLToPath(import.meta.resolve("visdelta/browser"));

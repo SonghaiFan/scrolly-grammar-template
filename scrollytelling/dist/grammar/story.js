@@ -1,4 +1,4 @@
-import { cloneState, externalizeScrollyViewSpec, inferTransition, withNarrative } from 'visdelta/composition';
+import { cloneState, serializeViewSpec, inferTransition, withSpecMeta } from 'visdelta/composition';
 export function story(initialSpec = {}) {
     return new StoryBuilder(initialSpec);
 }
@@ -88,7 +88,7 @@ export class StoryBuilder {
 function compileStep(definition, view, scenes, isFirst, action) {
     const code = definition.code;
     const stepAction = normalizeStepActions(definition.action ?? action);
-    const compiledView = withNarrative(compileView(view), {
+    const compiledView = withSpecMeta(compileView(view), {
         annotation: {
             title: definition.title,
             ...(definition.body ? { description: definition.body } : {})
@@ -117,5 +117,5 @@ function compileView(view) {
     const spec = view && typeof view.toSpec === 'function'
         ? view.toSpec()
         : cloneState((view ?? {}));
-    return externalizeScrollyViewSpec(spec);
+    return serializeViewSpec(spec);
 }

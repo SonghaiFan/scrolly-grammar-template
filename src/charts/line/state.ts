@@ -1,9 +1,9 @@
-import type { ChannelSpec, FocusSpec, ViewSpec } from '../../types/index.js';
-import { narrativeState } from '../../scrolly-meta.js';
+import type { ChannelSpec, SelectionSpec, ViewSpec } from '../../types/index.js';
+import { specState } from '../../spec-meta.js';
 import { filterPredicate } from '../../data/filter.js';
 
 interface LineState {
-  focus: FocusSpec | null;
+  selection: SelectionSpec | null;
   seriesField: string | null;
 }
 
@@ -13,11 +13,11 @@ interface LineSeries {
 }
 
 export function lineState(spec: ViewSpec = {}, enc: Record<string, ChannelSpec> = {}): LineState {
-  const state = narrativeState(spec);
-  const granularity = (state.sceneState as Record<string, unknown> | undefined)?.['granularity'] as Record<string, unknown> | undefined ?? {};
+  const state = specState(spec);
+  const detail = (state.sceneState as Record<string, unknown> | undefined)?.['detail'] as Record<string, unknown> | undefined ?? {};
   return {
-    focus: ((state.sceneState as Record<string, unknown> | undefined)?.['focus'] || state.focus || null) as FocusSpec | null,
-    seriesField: (granularity['seriesField'] as string) || enc['color']?.field || null
+    selection: ((state.sceneState as Record<string, unknown> | undefined)?.['selection'] || state.selection || null) as SelectionSpec | null,
+    seriesField: (detail['seriesField'] as string) || enc['color']?.field || null
   };
 }
 
@@ -34,28 +34,28 @@ export function lineSeries(rows: Record<string, unknown>[], seriesField: string 
   return Array.from(grouped, ([key, values]) => ({ key, rows: values }));
 }
 
-export function focusedLineXScale(
+export function selectedLineXScale(
   rows: Record<string, unknown>[],
   channel: ChannelSpec | undefined,
   chart: Record<string, unknown>,
-  focus: FocusSpec | null,
+  selection: SelectionSpec | null,
   deps: Record<string, unknown>
 ): unknown {
   const { bandOrLinear, d3, niceExtent, position } = deps;
   const baseRange = [0, chart['innerWidth'] as number];
-  if (!focus?.filter || (focus as Record<string, unknown>)['mode'] !== 'rangeCrop') {
+  if (!selection?.filter || (selection as Record<string, unknown>)['mode'] !== 'rangeCrop') {
     return (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(rows, channel, baseRange, d3);
   }
 
-  const focusedRows = rows.filter(filterPredicate(focus.filter));
-  if (focusedRows.length < 2) {
+  const selectedRows = rows.filter(filterPredicate(selection.filter));
+  if (selectedRows.length < 2) {
     return (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(rows, channel, baseRange, d3);
   }
 
   const base = (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(rows, channel, baseRange, d3);
 
   if (channel?.type === 'quantitative' || channel?.type === 'temporal') {
-    const domain = focusedDomain(focusedRows, channel, d3 as unknown, niceExtent as unknown);
+    const domain = selectedDomain(selectedRows, channel, d3 as unknown, niceExtent as unknown);
     return (bandOrLinear as (rows: unknown[], ch: unknown, range: number[], d3: unknown) => unknown)(
       rows,
       { ...channel, domain },
@@ -65,7 +65,7 @@ export function focusedLineXScale(
   }
 
   const positionFn = position as (scale: unknown, value: unknown) => number;
-  const positions = focusedRows
+  const positions = selectedRows
     .map((row) => positionFn(base, row[channel?.field ?? '']))
     .filter(Number.isFinite);
   if (positions.length < 2) return base;
@@ -85,7 +85,7 @@ export function focusedLineXScale(
   );
 }
 
-function focusedDomain(
+function selectedDomain(
   rows: Record<string, unknown>[],
   channel: ChannelSpec,
   d3: unknown,

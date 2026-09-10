@@ -15,8 +15,8 @@ export function createUnitStory({ actionMode = ["step", "tooltip"] } = {}) {
     .action(actionMode)
     .layout("floatToText")
     .description(
-      "Demonstrates Focus and Guide layouts on repeated count units. " +
-      "Each circle is one hot day — guide changes how those circles are arranged."
+      "Demonstrates Selection and Axis layouts on repeated count units. " +
+      "Each circle is one hot day — axis changes how those circles are arranged."
     )
     .add(
       "Baseline: one unit per hot day",
@@ -27,26 +27,26 @@ export function createUnitStory({ actionMode = ["step", "tooltip"] } = {}) {
       }
     )
     .add(
-      "Focus: recent decades only",
+      "Selection: recent decades only",
       base.where({ period: "recent" }),
       {
-        body: "Focus filters rows before unit expansion — fewer decades, same unit idiom.",
+        body: "Filtering happens before unit expansion — fewer decades, same unit chart.",
         code: 'base.where({ period: "recent" })'
       }
     )
     .add(
-      "Guide: group units by period",
+      "Axis: group units by period",
       base.group("period", { color: { field: "period", type: "nominal" } }),
       {
-        body: "Guide changes the spatial layout — same circles now cluster by period.",
+        body: "Axis changes the spatial layout — same circles now cluster by period.",
         code: 'base.group("period", { color: { field: "period", type: "nominal" } })'
       }
     )
     .add(
-      "Guide: dodge along timeline",
+      "Axis: dodge along timeline",
       base.dodge("year"),
       {
-        body: "Guide changes layout again — units spread along a collision-dodged year axis.",
+        body: "Axis changes layout again — units spread along a collision-dodged year axis.",
         code: 'base.dodge("year")'
       }
     )

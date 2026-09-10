@@ -1,11 +1,11 @@
-import { IdiomState, normalizeDataSource } from '../authoring.js';
+import { ChartState, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createPointSpecCompiler } from './compile.js';
 const POINT_SPEC_COMPILER = createPointSpecCompiler();
 export function point(data) {
     return new PointState({ data: normalizeDataSource(data), mark: 'point', encoding: {} });
 }
-export class PointState extends IdiomState {
+export class PointState extends ChartState {
     compileSpec(spec) {
         return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
     }
@@ -22,25 +22,20 @@ export class PointState extends IdiomState {
         return this.pointSize(value);
     }
     flip(options = {}) {
-        return this.guide({
+        return this.axis({
             flip: true,
             ...(options['x'] ? { x: options['x'] } : {}),
             ...(options['y'] ? { y: options['y'] } : {}),
-            ...(options['staging'] || options['stage'] || options['order']
-                ? {
-                    staging: {
-                        ...(typeof options['staging'] === 'object' ? options['staging'] : {}),
-                        order: (options['order'] || options['stage'] || options['staging']?.['order'] || ['x', 'y'])
-                    }
-                }
-                : {})
+            ...(options['order'] ? { order: options['order'] } : {}),
+            ...(options['duration'] != null ? { duration: options['duration'] } : {}),
+            ...(options['stagger'] ? { stagger: options['stagger'] } : {})
         });
     }
     rollup(groupby, options = {}) {
         const fields = Array.isArray(groupby) ? groupby : [groupby].filter(Boolean);
         const key = options['key'] || (fields.length === 1 ? fields[0] : fields);
         return this.with({
-            granularity: definedState({
+            detail: definedState({
                 mode: 'aggregate',
                 groupby: fields,
                 key,
@@ -49,7 +44,7 @@ export class PointState extends IdiomState {
                 countAs: options['countAs'],
                 sizeRange: options['sizeRange']
             })
-        }, 'granularity');
+        }, 'detail');
     }
     breakdown(detail = null, options = {}) {
         const config = detail && typeof detail === 'object'
@@ -57,12 +52,12 @@ export class PointState extends IdiomState {
             : { detail, ...options };
         const detailKey = config['detail'] || this.state['key'];
         return this.with({
-            granularity: definedState({
+            detail: definedState({
                 mode: 'detail',
                 key: config['key'] || detailKey,
                 detail: detailKey
             })
-        }, 'granularity');
+        }, 'detail');
     }
 }
 function definedState(value) {

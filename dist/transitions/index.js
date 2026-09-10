@@ -1,29 +1,29 @@
 import { DEFAULT_TIMING } from '../timing.js';
-import { externalizeScrollyViewSpec, narrativeState, narrativeTransition, withNarrative } from '../scrolly-meta.js';
+import { serializeViewSpec, specState, specTransition, withSpecMeta } from '../spec-meta.js';
 import { compileViewWithCompiler } from '../charts/compile-view.js';
-export const SCENE_TRANSITIONS = ['focus', 'guide', 'granularity', 'observation'];
+export const SCENE_TRANSITIONS = ['selection', 'axis', 'detail', 'mapping'];
 export function resolveSceneTransition(viewSpec = {}, stepTransition = {}, compilerEntry) {
     const supportedScenes = compilerEntry?.scenes ?? SCENE_TRANSITIONS;
-    const state = narrativeState(viewSpec);
+    const state = specState(viewSpec);
     const scene = uniqueTokens([...(stepTransition.scene || [])]).filter((token) => SCENE_TRANSITIONS.includes(token) && supportedScenes.includes(token));
     return {
         scene,
-        focus: scene.includes('focus') ? (state.focus || null) : null,
-        guide: scene.includes('guide') ? (state.guide || null) : null,
-        granularity: scene.includes('granularity') ? (state.granularity || null) : null
+        selection: scene.includes('selection') ? (state.selection || null) : null,
+        axis: scene.includes('axis') ? (state.axis || null) : null,
+        detail: scene.includes('detail') ? (state.detail || null) : null
     };
 }
 export function withSceneTransitionDefaults(viewSpec, sceneTransition) {
-    const transition = { ...narrativeTransition(viewSpec) };
-    if ((hasScene(sceneTransition, 'observation') || hasScene(sceneTransition, 'granularity')) && transition.stagger == null) {
+    const transition = { ...specTransition(viewSpec) };
+    if ((hasScene(sceneTransition, 'mapping') || hasScene(sceneTransition, 'detail')) && transition.stagger == null) {
         transition.stagger = { ...DEFAULT_TIMING.scene.stagger };
     }
-    return withNarrative(viewSpec, { transition });
+    return withSpecMeta(viewSpec, { transition });
 }
 export function compileViewSpec(viewSpec, sceneTransition, compilerEntry) {
     if (!compilerEntry?.compiler)
         return viewSpec;
-    return externalizeScrollyViewSpec(compileViewWithCompiler(viewSpec, sceneTransition, compilerEntry.compiler, compilerEntry.stateOperations));
+    return serializeViewSpec(compileViewWithCompiler(viewSpec, sceneTransition, compilerEntry.compiler, compilerEntry.stateOperations));
 }
 export function hasScene(sceneTransition, type) {
     return Boolean(sceneTransition?.scene?.includes(type));

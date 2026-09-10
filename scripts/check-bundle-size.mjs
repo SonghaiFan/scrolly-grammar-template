@@ -38,7 +38,7 @@ for (const entry of cases) {
 }
 
 // Count the entry and all static dependencies required by the selected lazy
-// idiom. Measuring only stdin.js would hide shared/deferred download costs.
+// chart type. Measuring only stdin.js would hide shared/deferred download costs.
 const split = await esbuild.build({
   absWorkingDir: root,
   stdin: {
@@ -61,7 +61,7 @@ function include(path) {
 for (const [path, output] of Object.entries(outputs)) {
   if (output.entryPoint === '<stdin>' || output.entryPoint === 'src/charts/bar/plugin.ts') include(path);
 }
-if (!loaded.size) throw new Error('Missing focused transition output.');
+if (!loaded.size) throw new Error('Missing selected transition output.');
 const files = new Map(split.outputFiles.map(file => [file.path, file.contents]));
 let gzipBytes = 0;
 for (const path of loaded) {

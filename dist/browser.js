@@ -1,5 +1,5 @@
 import * as core from './index.js';
-export { availableChartIdioms, bar, delta, diffViewStates, defineChartIdiom, line, point, registerChartIdiom, registerChartModule, unit, visualizationSpec } from './index.js';
+export { availableChartTypes, bar, delta, diffViewStates, defineChartType, line, point, registerChartType, registerChartModule, unit, visualizationSpec } from './index.js';
 function dependencies(options) {
     const globals = globalThis;
     return { ...options, d3: options.d3 ?? globals['d3'],

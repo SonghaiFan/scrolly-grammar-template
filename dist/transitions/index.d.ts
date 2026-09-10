@@ -1,12 +1,12 @@
-import type { FocusSpec, GranularitySpec, GuideSpec, ViewSpec } from '../types/index.js';
+import type { SelectionSpec, DetailSpec, AxisSpec, ViewSpec } from '../types/index.js';
 import type { SpecCompilerEntry } from '../charts/index.js';
-export declare const SCENE_TRANSITIONS: readonly ["focus", "guide", "granularity", "observation"];
+export declare const SCENE_TRANSITIONS: readonly ["selection", "axis", "detail", "mapping"];
 export type SceneTransitionType = typeof SCENE_TRANSITIONS[number];
 interface SceneTransition {
     scene: string[];
-    focus?: FocusSpec | null;
-    guide?: GuideSpec | null;
-    granularity?: GranularitySpec | null;
+    selection?: SelectionSpec | null;
+    axis?: AxisSpec | null;
+    detail?: DetailSpec | null;
 }
 interface StepTransition {
     scene?: string[];

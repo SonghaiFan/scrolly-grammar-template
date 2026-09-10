@@ -1,18 +1,18 @@
 # Core Concepts
 
-VisDelta has four layers:
+VisDelta has four parts:
 
 <div class="ontology-flow">
-  <code>Visualization</code><span>to</span><code>Delta</code><span>to</span><code>Transition</code><span>to</span><code>Driver</code>
+  <code>Chart state</code><span>to</span><code>Difference</code><span>to</span><code>Transition</code><span>to</span><code>Control</code>
 </div>
 
-The first three belong to VisDelta. A driver is application code that supplies
+The first three belong to VisDelta. A control is application code that supplies
 time or normalized progress: a button, slider, scroll position, gesture, route,
 or test.
 
-## Visualization
+## Chart state
 
-A **visualization** is an immutable declaration produced by a chain such as:
+A **chart state** is an immutable declaration produced by a chain such as:
 
 ```js
 const revenue = bar(rows)
@@ -27,11 +27,11 @@ const profit = revenue.y("profit");
 an endpoint and does not mount a chart by itself. Calling `.toSpec()` compiles
 the chain to a serializable visualization spec.
 
-## Delta
+## Difference
 
-`delta(from, to)` compares the meaning of two same-idiom endpoints without
-touching the DOM. It reports changes to identity, data, encoding, focus, guide,
-transform, granularity, and transition metadata.
+`delta(from, to)` compares two states of the same chart type without touching
+the DOM. It reports changes to data, mappings, keys, filters, axes, layout,
+detail, and transition settings.
 
 ```js
 import { delta } from "visdelta/core";
@@ -66,10 +66,10 @@ pair.destroy();
 Progress is always normalized from `0` to `1`. The controller owns evaluation;
 the caller owns when and why progress changes.
 
-## Driver
+## Control
 
-A **driver** converts an interaction or clock into progress. It is deliberately
-outside VisDelta's core ontology:
+A **control** converts an interaction or clock into progress. It deliberately
+stays outside the transition:
 
 ```js
 slider.addEventListener("input", event => {
@@ -80,18 +80,17 @@ slider.addEventListener("input", event => {
 This boundary lets the same transition work for a click, a scrubber, scrolling,
 automated playback, or a static frame export.
 
-## Idiom
+## Chart type
 
-An **idiom** is a chart-type plugin. `bar`, `line`, `point`, and `unit` are
-built in. An idiom bundles a renderer, a spec compiler, supported semantic
-changes, and optional transition plans. A transition currently requires both
-endpoints to use the same idiom; cross-idiom morphing is not part of the public
-contract.
+A **chart type** is a family such as `bar`, `line`, `point`, or `unit`. Each
+chart type bundles a renderer, a spec compiler, the changes it supports, and an
+optional transition planner. Both endpoints must currently use the same chart
+type; bar-to-line transitions are not part of the public contract.
 
-See [Chart Idioms](./chart-idioms.md) and
+See [Chart types](./chart-types.md) and
 [Extending with Plugins](./extending-with-plugins.md).
 
-## Semantic identity
+## Matching items with `.key()`
 
 The key answers: “which mark at the first endpoint is the same object at the
 second endpoint?”
@@ -100,36 +99,27 @@ second endpoint?”
 bar(rows).x("category").y("value").key("category")
 ```
 
-Choose fields that remain stable through the change. Good identity lets marks
+Choose fields that remain stable through the change. Good matching lets marks
 move, resize, split, or merge while retaining object permanence. Ambiguous or
 unstable keys turn a meaningful transition into unrelated exits and enters.
 
-## Change taxonomy
+## Kinds of chart change
 
 VisDelta classifies endpoint differences into four semantic families:
 
 | Family | Question | Typical authoring trigger |
 | --- | --- | --- |
-| `focus` | Which observations are visible or emphasized? | `.where()`, `.highlight()` |
-| `guide` | How is the same data arranged or read? | `.flip()`, `.guide()`, `.layout()` |
-| `granularity` | What aggregation or grouping level is shown? | `.breakdown()`, `.rollup()`, `.segment()` |
-| `observation` | Which variable or channel is encoded? | `.x()`, `.y()`, `.color()` |
+| Filter or highlight | Which items are visible or emphasized? | `.where()`, `.highlight()` |
+| Axis or layout | How is the same data arranged or read? | `.flip()`, `.axis()`, `.layout()` |
+| Detail | Are we showing totals or their parts? | `.breakdown()`, `.rollup()`, `.segment()` |
+| Value or mapping | Which field is shown through x, y, color, or size? | `.x()`, `.y()`, `.color()` |
 
-The taxonomy describes *what changed*. The idiom's transition plan decides
-*how that change is staged*.
+These internal labels describe *what changed*. The chart's transition plan
+decides which plain ordered steps show the change.
 
 ## Authoring declaration vs compiled spec
 
 Builders retain authoring information used for defaults and inference.
-`.toSpec()` compiles shorthand, transform declarations, keys, guides, and
-idiom-specific options into a plain object. This separates a fluent authoring
+`.toSpec()` compiles shorthand, transform declarations, keys, axes, and
+chart-specific options into a plain object. This separates a fluent authoring
 surface from the normalized evaluator input.
-
-## Where Story and Seq went
-
-`story()`, `seq()`, layouts, navigation, and native scroll progress are
-composition concepts, not visualization-transition primitives. They now live
-in the repository's private `scrollytelling/` package for later integration
-into ScrollyTale. They are not exported from `visdelta`.
-
-See [Module Boundaries](./modular-architecture.md) for the ownership contract.

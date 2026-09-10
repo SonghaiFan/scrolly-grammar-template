@@ -1,19 +1,19 @@
-import type { ChartDeps, ChartIdiom, ChartPlugin, CompilerContext, SpecCompiler, StateOperations, ViewSpec } from '../types/index.js';
-export interface ChartIdiomRegistry {
-    register<S extends ViewSpec>(idiom: ChartIdiom<S>): this;
-    get<S extends ViewSpec = ViewSpec>(markOrSpec: string | ViewSpec): ChartIdiom<S> | undefined;
+import type { ChartDeps, ChartType, ChartPlugin, CompilerContext, SpecCompiler, StateOperations, ViewSpec } from '../types/index.js';
+export interface ChartTypeRegistry {
+    register<S extends ViewSpec>(chartType: ChartType<S>): this;
+    get<S extends ViewSpec = ViewSpec>(markOrSpec: string | ViewSpec): ChartType<S> | undefined;
     has(markOrSpec: string | ViewSpec): boolean;
     types(): string[];
 }
-export declare function createChartIdiomRegistry(): ChartIdiomRegistry;
+export declare function createChartTypeRegistry(): ChartTypeRegistry;
 export interface SpecCompilerEntry {
     compiler: SpecCompiler;
     scenes: string[];
     stateOperations: StateOperations;
 }
-export declare function registerChartModules(registry: ChartIdiomRegistry, modules: Array<{
+export declare function registerChartModules(registry: ChartTypeRegistry, modules: Array<{
     plugin: ChartPlugin;
-}>, deps?: ChartDeps): ChartIdiomRegistry;
+}>, deps?: ChartDeps): ChartTypeRegistry;
 export declare function createSpecCompilerRegistry(modules: Array<{
     plugin: ChartPlugin;
 }>, context?: CompilerContext): Record<string, SpecCompilerEntry>;

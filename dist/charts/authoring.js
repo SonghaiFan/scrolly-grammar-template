@@ -1,4 +1,4 @@
-import { externalizeScrollyViewSpec } from '../scrolly-meta.js';
+import { serializeViewSpec } from '../spec-meta.js';
 import { ViewState, cloneState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
 import { normalizeFilter } from '../data/filter.js';
@@ -27,12 +27,12 @@ function isDataUrl(s) {
         s.startsWith('/') ||
         /\.(csv|json|tsv|arrow)(\?.*)?$/i.test(s));
 }
-// ─── IdiomState ───────────────────────────────────────────────────────────────
-export class IdiomState extends ViewState {
+// ─── ChartState ───────────────────────────────────────────────────────────────
+export class ChartState extends ViewState {
     toSpec() {
-        return compileAuthoredView(this.compileSpec(externalizeScrollyViewSpec(super.toSpec())));
+        return compileAuthoredView(this.compileSpec(serializeViewSpec(super.toSpec())));
     }
-    /** Idiom subclasses override this without importing the global chart manifest. */
+    /** Chart subclasses override this without importing the global chart manifest. */
     compileSpec(spec) {
         return spec;
     }
@@ -84,19 +84,20 @@ export class IdiomState extends ViewState {
         return this.with({ transition: timing });
     }
     where(selector) {
-        return this.with({ focus: selectorFrom(selector) }, 'focus');
+        return this.with({ selection: selectorFrom(selector) }, 'selection');
     }
     highlight(selector, options = {}) {
         return this.with({
-            focus: {
+            selection: {
                 mode: 'highlight',
                 filter: selectorFrom(selector),
                 ...(options.opacity != null ? { opacity: options.opacity } : {})
             }
-        }, 'focus');
+        }, 'selection');
     }
-    guide(config = {}) {
-        return this.with({ guide: cloneState(config) }, 'guide');
+    /** Configure the chart axes, scales, orientation, and transition order. */
+    axis(config = {}) {
+        return this.with({ axis: cloneState(config) }, 'axis');
     }
 }
 function compileAuthoredView(spec) {
@@ -137,58 +138,57 @@ export function selectorFrom(selector = {}) {
         const [field, equal] = entries[0];
         return { field, equal };
     }
-    throw new Error('Use a single field comparison for this idiom selector.');
+    throw new Error('Use a single field comparison for this chart selector.');
 }
 // ─── Spec pruning ─────────────────────────────────────────────────────────────
 function pruneAuthoringSpec(spec) {
     const next = pruneEmpty(cloneState(spec));
     if (Array.isArray(next.transform) && !next.transform.length)
         delete next.transform;
-    const state = next.narrative?.state;
+    const state = next.meta?.state;
     if (!state)
         return next;
     const sceneState = (state.sceneState ?? {});
-    if (!sceneState.guide && shouldPreserveGuideState(state.guide)) {
-        sceneState.guide = state.guide;
+    if (!sceneState.axis && shouldPreserveAxisState(state.axis)) {
+        sceneState.axis = state.axis;
     }
-    delete state.focus;
-    delete state.guide;
-    delete state.granularity;
+    delete state.selection;
+    delete state.axis;
+    delete state.detail;
     state.sceneState = sceneState;
     pruneSceneStateDefaults(state.sceneState);
     state.sceneState = pruneEmpty(state.sceneState);
     if (!Object.keys(state.sceneState).length)
         delete state.sceneState;
     if (!Object.keys(state).length)
-        delete next.narrative.state;
-    if (next.narrative && !Object.keys(next.narrative).length)
-        delete next.narrative;
+        delete next.meta.state;
+    if (next.meta && !Object.keys(next.meta).length)
+        delete next.meta;
     return pruneEmpty(next);
 }
 function pruneSceneStateDefaults(sceneState) {
-    const guide = sceneState.guide;
-    if (guide) {
-        if (guide.xScale === 'linear')
-            delete guide.xScale;
-        if (guide.yScale === 'linear')
-            delete guide.yScale;
-        if (isDefaultStaging(guide.staging))
-            delete guide.staging;
+    const axis = sceneState.axis;
+    if (axis) {
+        if (axis.xScale === 'linear')
+            delete axis.xScale;
+        if (axis.yScale === 'linear')
+            delete axis.yScale;
+        if (isDefaultOrder(axis))
+            delete axis.order;
     }
 }
-function shouldPreserveGuideState(guide) {
-    if (!guide || typeof guide !== 'object' || Array.isArray(guide))
+function shouldPreserveAxisState(axis) {
+    if (!axis || typeof axis !== 'object' || Array.isArray(axis))
         return false;
     const semanticKeys = ['layout', 'x', 'y', 'group', 'value'];
-    return semanticKeys.some((k) => guide[k] != null);
+    return semanticKeys.some((k) => axis[k] != null);
 }
-function isDefaultStaging(staging) {
-    if (!staging || !Array.isArray(staging.order))
+function isDefaultOrder(axis) {
+    if (!Array.isArray(axis.order))
         return false;
-    const s = staging;
-    if (s.duration != null || s.stagger != null)
+    if (axis.duration != null || axis.stagger != null)
         return false;
-    return s.order.join('|') === 'x|y';
+    return axis.order.join('|') === 'x|y';
 }
 function pruneEmpty(value) {
     if (Array.isArray(value)) {

@@ -23,9 +23,9 @@ export function createSimpleBarRenderer(deps, kit) {
         const y = horizontal ? categoryScale : measureScale;
         const color = colorScale(domainRows, enc.color, d3);
         const geom = { x, y, categoryField, valueField, chart, horizontal, position };
-        const updatePlan = kit.updateStage(chart, orientation, d3);
-        const xAxisTransition = kit.axisTransition(updatePlan, 'x', d3) || chart.transition.base;
-        const yAxisTransition = kit.axisTransition(updatePlan, 'y', d3) || chart.transition.base;
+        const steps = kit.steps(chart, orientation, d3);
+        const xAxisTransition = kit.axisTransition(steps, 'x', d3) || chart.transition.base;
+        const yAxisTransition = kit.axisTransition(steps, 'y', d3) || chart.transition.base;
         const collapseLineage = kit.collapseLineage(chart, categoryField);
         const zeroBaselineExit = kit.baselineExitPlan(chart, 'zero-baseline');
         const geometry = simpleBarGeometryContract(geom, collapseLineage, kit.sourceBaselineExit, zeroBaselineExit);
@@ -46,7 +46,7 @@ export function createSimpleBarRenderer(deps, kit) {
             category: (d) => d[categoryField],
             className: 'sl-bar', orientation, rx: themeValue('--sl-bar-radius', 3),
             fill: (d) => color(d),
-            applyIdentity: applyBarIdentity, updatePlan, geometry
+            applyIdentity: applyBarIdentity, steps, geometry
         });
     };
 }

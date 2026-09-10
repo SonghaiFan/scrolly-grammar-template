@@ -3,7 +3,7 @@
 This page covers everything that shapes how a story *looks and feels* on the
 page, independent of its data and charts: the layout preset (where the chart
 sits relative to the text), theming (colors via CSS custom properties), and
-the scroll driver (how scrolling maps to step transitions).
+the scroll control (how scrolling maps to step transitions).
 
 All of this lives under `spec.layout` and `spec.theme`, set through the story
 builder's `.layout(...)` or written directly into a hand-authored spec.
@@ -51,7 +51,7 @@ These fields all live alongside `preset` in `spec.layout`:
 | `offset` | `number \| string` | Viewport activation line for scroll-driven steps — see [Understanding `offset`](#understanding-offset) |
 | `nav` | `boolean` | Render the clickable step-dot navigation rail |
 | `progress` | `boolean` | Render the top progress bar that fills as you advance through steps |
-| `scroll` | object | Scroll-driver configuration — see below |
+| `scroll` | object | Scroll-control configuration — see below |
 
 ## Understanding `offset`
 
@@ -84,13 +84,13 @@ step, low enough that the transition doesn't feel delayed.
 }
 ```
 
-`progress: "geometry"` is the (current) measurement strategy: the driver
+`progress: "geometry"` is the current measurement strategy: the control
 reads each step element's bounding box on every scroll/resize tick and
 derives `(index, progress, direction)` purely from layout geometry — no
 IntersectionObserver thresholds or manual breakpoints to tune.
 
 Updates are event-driven and coalesced per frame. ResizeObserver also watches
-document and step sizes; there is no continuous idle polling. Call the driver's
+document and step sizes; there is no continuous idle polling. Call the control's
 `refresh()` after position-only layout changes that its observers cannot detect.
 
 `navigation` controls what happens when the reader **jumps** to a step (via
@@ -101,7 +101,7 @@ the nav rail or a restored URL hash):
 | `behavior` | `"instant"` | Passed to `window.scrollTo({ behavior })` — `"instant"` or `"smooth"` |
 | `progress` | `0.98` | Where within the target step to land (`0` = just entering, `1` = about to exit) — landing near the end (`0.98`) means the step's transition has essentially completed when you arrive |
 
-> Internally the scroll-driver config schema also reserves `start`, `end`,
+> Internally the scroll-control config schema also reserves `start`, `end`,
 > `clamp`, and `snap` keys for future tuning of the geometry measurement and
 > snap-to-step behavior. As of this version they're normalized into the
 > config object but don't yet change runtime behavior — set `offset` and
@@ -119,7 +119,7 @@ builder's [`.action()`](./story-builder.md#actionactions):
 - `["scroll", "tooltip"]`: the transition is **continuously interpolated**
   as the reader scrolls through the step — scrolling down plays it forward,
   scrolling up plays it backward, and partial scroll positions show partial
-  transitions. Internally the scroll driver sends
+  transitions. Internally the scroll control sends
   `action({ type: "progress", step, value, direction })` on every scroll tick,
   which maps `value ∈ [0, 1]` onto the
   step's D3 transition schedule via `easeProgress`.
@@ -227,7 +227,7 @@ leading `--` are normalized to `--sl-*`, so `{ stepGap: "42px" }` becomes
 The default categorical palette (`--sl-series-1` through `--sl-series-10`) is
 **Tableau 10** — a perceptually balanced, widely-adopted scheme. Set
 `theme.series` (or `theme.palette`) to replace it without touching each chart
-idiom individually:
+chart type individually:
 
 ```js
 // Switch to D3 schemeCategory10
@@ -240,7 +240,7 @@ story().theme({
 ```
 
 Any domain-specific colours (e.g. hot/cold in a temperature dataset) should be
-set via the encoding `range` array on the individual chart idiom, not via the
+set via the encoding `range` array on the individual chart type, not via the
 theme system:
 
 ```js

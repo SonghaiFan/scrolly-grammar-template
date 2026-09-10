@@ -1,25 +1,22 @@
-import { IdiomState } from '../authoring.js';
-import type { BarLayout, ChannelSpec, FilterSpec, GranularitySpec, GuideSpec, SemanticKey, StageSpec, ViewSpec } from '../../types/index.js';
+import { ChartState } from '../authoring.js';
+import type { BarLayout, ChannelSpec, FilterSpec, DetailSpec, AxisSpec, SemanticKey, TransitionOrder, ViewSpec } from '../../types/index.js';
 export interface BarViewState extends ViewSpec {
     mark: 'bar';
     where?: FilterSpec[];
-    granularity?: GranularitySpec | null;
-    guide?: GuideSpec | null;
+    detail?: DetailSpec | null;
+    axis?: AxisSpec | null;
     aggregate?: unknown;
     semanticKey?: SemanticKey | null;
 }
 export declare function bar(data?: unknown): BarState;
-export declare class BarState extends IdiomState<BarViewState> {
+export declare class BarState extends ChartState<BarViewState> {
     toSpec(): Omit<BarViewState, '__grammar'>;
     x(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;
     y(field: string | ChannelSpec, options?: Partial<ChannelSpec> | string): this;
     where(selector: string | Record<string, unknown> | FilterSpec | null): this;
-    flip(options?: {
+    flip(options?: TransitionOrder & {
         domain?: unknown[];
         scale?: Record<string, unknown>;
-        staging?: StageSpec;
-        stage?: Array<'x' | 'y'>;
-        order?: Array<'x' | 'y'>;
     }): this;
     breakdown(segment?: string, options?: {
         category?: string;
@@ -69,9 +66,5 @@ export declare class BarState extends IdiomState<BarViewState> {
         key?: string | string[];
         tooltip?: unknown;
     }, maybeConfig?: Record<string, unknown>): this;
-    layout(layout: BarLayout, options?: {
-        staging?: StageSpec;
-        stage?: Array<'x' | 'y'>;
-    }): this;
-    stage(order: Array<'x' | 'y'>, options?: Partial<StageSpec>): this;
+    layout(layout: BarLayout, options?: TransitionOrder): this;
 }

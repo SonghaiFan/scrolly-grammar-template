@@ -17,7 +17,7 @@ export function createPointStory({ actionMode = ["step", "tooltip"] } = {}) {
     .action(actionMode)
     .layout("floatToText")
     .description(
-      "Demonstrates Focus, Guide, Observation, and Granularity on scatter points. " +
+      "Demonstrates Selection, Axis, Mapping, and Detail on scatter points. " +
       "Circles carry semantic identity across axis and variable changes."
     )
     .add(
@@ -29,42 +29,42 @@ export function createPointStory({ actionMode = ["step", "tooltip"] } = {}) {
       }
     )
     .add(
-      "Focus: filter to recent decades",
+      "Selection: filter to recent decades",
       base.where({ period: "recent" }),
       {
-        body: "Focus removes older decades. The same circles shrink to the recent subset.",
+        body: "Selection removes older decades. The same circles shrink to the recent subset.",
         code: 'base.where({ period: "recent" })'
       }
     )
     .add(
-      "Guide: flip axes, log scale",
+      "Axis: flip axes, log scale",
       base.flip({ x: { scale: { type: "log" } } }),
       {
-        body: "Guide flips x and y and applies a log scale — the same circles, read differently.",
+        body: "Axis flips x and y and applies a log scale — the same circles, read differently.",
         code: 'base.flip({ x: { scale: { type: "log" } } })'
       }
     )
     .add(
-      "Observation: hot/cold axes",
+      "Mapping: hot/cold axes",
       hotCold,
       {
-        body: "Observation remaps both axes — x becomes hot days, y becomes cold days. Circles keep their decade identity.",
+        body: "Mapping remaps both axes — x becomes hot days, y becomes cold days. Circles keep their decade identity.",
         code: 'base.x("hot_days").y("cold_days")'
       }
     )
     .add(
-      "Granularity: merge to periods",
+      "Detail: merge to periods",
       hotCold.rollup("period"),
       {
-        body: "Granularity merges decade circles into three aggregate period circles.",
+        body: "Detail merges decade circles into three aggregate period circles.",
         code: 'hotCold.rollup("period")'
       }
     )
     .add(
-      "Granularity: split back to decades",
+      "Detail: split back to decades",
       hotCold.breakdown("decade"),
       {
-        body: "Granularity splits each period circle back into its constituent decades.",
+        body: "Detail splits each period circle back into its constituent decades.",
         code: 'hotCold.breakdown("decade")'
       }
     )

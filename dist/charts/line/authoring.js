@@ -1,11 +1,11 @@
-import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createLineSpecCompiler } from './compile.js';
 const LINE_SPEC_COMPILER = createLineSpecCompiler();
 export function line(data) {
     return new LineState({ data: normalizeDataSource(data), mark: 'line', encoding: {} });
 }
-export class LineState extends IdiomState {
+export class LineState extends ChartState {
     compileSpec(spec) {
         return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
     }
@@ -25,23 +25,18 @@ export class LineState extends IdiomState {
         return this.with({ pointSize: value });
     }
     flip(options = {}) {
-        return this.guide({
+        return this.axis({
             flip: true,
             ...(options['x'] ? { x: options['x'] } : {}),
             ...(options['y'] ? { y: options['y'] } : {}),
-            ...(options['staging'] || options['stage'] || options['order']
-                ? {
-                    staging: {
-                        ...(typeof options['staging'] === 'object' ? options['staging'] : {}),
-                        order: (options['order'] || options['stage'] || options['staging']?.['order'] || ['x', 'y'])
-                    }
-                }
-                : {})
+            ...(options['order'] ? { order: options['order'] } : {}),
+            ...(options['duration'] != null ? { duration: options['duration'] } : {}),
+            ...(options['stagger'] ? { stagger: options['stagger'] } : {})
         });
     }
     breakdown(field, options = {}) {
         return this.with({
-            granularity: {
+            detail: {
                 mode: 'series',
                 series: field,
                 ...(options['color']
@@ -51,17 +46,17 @@ export class LineState extends IdiomState {
                     : {}),
                 ...(options['range'] ? { range: options['range'] } : {})
             }
-        }, 'granularity');
+        }, 'detail');
     }
     rollup(groupbyOrOptions = {}) {
         const options = groupbyOrOptions && typeof groupbyOrOptions === 'object'
             ? groupbyOrOptions
             : {};
         return this.with({
-            granularity: {
+            detail: {
                 mode: 'single',
                 ...(options['color'] ? { color: colorFrom(options['color']) } : {})
             }
-        }, 'granularity');
+        }, 'detail');
     }
 }

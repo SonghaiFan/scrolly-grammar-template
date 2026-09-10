@@ -1,10 +1,10 @@
 import type { SemanticKey, ViewSpec } from '../types/index.js';
-import { narrativeObjectKey, narrativeSemanticKey } from '../scrolly-meta.js';
+import { specObjectKey, specSemanticKey } from '../spec-meta.js';
 
 type KeyFn = (d: Record<string, unknown>, i: number) => string | number;
 
 export function keyAccessor(spec: ViewSpec, fallbackField = 'id'): KeyFn {
-  const key = narrativeObjectKey(spec) || fallbackField;
+  const key = specObjectKey(spec) || fallbackField;
   if (Array.isArray(key)) {
     return (d: Record<string, unknown>, i: number) =>
       (key as string[]).map((field) => d[field]).join('|') || String(i);
@@ -15,7 +15,7 @@ export function keyAccessor(spec: ViewSpec, fallbackField = 'id'): KeyFn {
 }
 
 export function semanticKeyForDatum(datum: Record<string, unknown> | null, spec: ViewSpec = {}): string | null {
-  const semanticKey = narrativeSemanticKey(spec);
+  const semanticKey = specSemanticKey(spec);
   if (!semanticKey || !datum) return null;
 
   const parts = [
@@ -28,7 +28,7 @@ export function semanticKeyForDatum(datum: Record<string, unknown> | null, spec:
 }
 
 export function semanticMeasureForDatum(datum: Record<string, unknown> | null, spec: ViewSpec = {}): unknown {
-  const semanticKey = narrativeSemanticKey(spec);
+  const semanticKey = specSemanticKey(spec);
   if (!semanticKey || !datum) return null;
   return semanticKeyParts(semanticKey.measure ?? (semanticKey as Record<string, unknown>)['measures'], datum, 'value')[0] ?? null;
 }

@@ -1,7 +1,7 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey } from './index.js';
-import { narrativeState } from '../../../scrolly-meta.js';
+import { specState } from '../../../spec-meta.js';
 export function createStackedBarRenderer(deps, kit) {
     const { bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, position, themeValue, updateGrid } = deps;
     return function renderStackedBar(chart, rows, spec, tooltip, d3, segmentField) {
@@ -14,8 +14,8 @@ export function createStackedBarRenderer(deps, kit) {
         const measureChannel = barMeasureChannel(enc);
         const categoryField = categoryChannel?.field;
         const valueField = measureChannel?.field;
-        const state = narrativeState(spec);
-        const stateSegments = state.sceneState?.granularity?.segments || state.granularity?.segments;
+        const state = specState(spec);
+        const stateSegments = state.sceneState?.detail?.segments || state.detail?.segments;
         const categories = channelDomain(rows, categoryChannel);
         const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
         const color = colorScale(domainRows, enc.color, d3);
@@ -33,9 +33,9 @@ export function createStackedBarRenderer(deps, kit) {
         const x = horizontal ? measureScale : categoryScale;
         const y = horizontal ? categoryScale : measureScale;
         const geom = { x, y, categoryField, valueField, chart, horizontal };
-        const updatePlan = kit.updateStage(chart, rendererOrientation, d3);
-        const xAxisTransition = kit.axisTransition(updatePlan, 'x', d3) || chart.transition.base;
-        const yAxisTransition = kit.axisTransition(updatePlan, 'y', d3) || chart.transition.base;
+        const steps = kit.steps(chart, rendererOrientation, d3);
+        const xAxisTransition = kit.axisTransition(steps, 'x', d3) || chart.transition.base;
+        const yAxisTransition = kit.axisTransition(steps, 'y', d3) || chart.transition.base;
         const geometry = stackedSegmentGeometryContract(geom, splitLineage, stackBaseEnter, stackBaseExit, kit.sourceBaselineExit);
         chart.scales = { x, y, color, orientation: rendererOrientation };
         chart.channels = enc;
@@ -55,7 +55,7 @@ export function createStackedBarRenderer(deps, kit) {
             className: 'sl-bar sl-bar-segment sl-bar-stacked',
             orientation: rendererOrientation, rx: themeValue('--sl-bar-radius', 3),
             fill: (d) => color(d),
-            applyIdentity: applyBarIdentity, updatePlan, geometry
+            applyIdentity: applyBarIdentity, steps, geometry
         });
         const seamRows = stackedInternalSeams(stackedRows, categoryField);
         kit.renderBarSeams({

@@ -1,4 +1,4 @@
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, isSegmentLayout } from './layout/index.js';
 export function semanticBarState(spec, semanticStateArg = null) {
     const enc = (spec.encoding ?? {});
@@ -9,16 +9,16 @@ export function semanticBarState(spec, semanticStateArg = null) {
     const categoryField = barCategoryChannel(enc).field ?? null;
     const measureField = barMeasureChannel(enc).field ?? null;
     const segmentField = barSegmentField(spec, state);
-    const guide = barGuideState({ orientation, layout, state });
-    const granularity = barGranularityState({ layout, categoryField, measureField, segmentField, state });
+    const axis = barAxisState({ orientation, layout, state });
+    const detail = barDetailState({ layout, categoryField, measureField, segmentField, state });
     const geometry = barGeometryState({ enc, filters: resolveFilters(spec, state), layout, orientation, categoryField, measureField, segmentField });
     return {
         orientation,
         layout,
         categoryField,
         measureField,
-        guide,
-        granularity,
+        axis,
+        detail,
         aggregate,
         segmentField,
         xGeometry: geometry.x,
@@ -28,10 +28,10 @@ export function semanticBarState(spec, semanticStateArg = null) {
 export function barLayoutState(spec, state = semanticStateFromSpec(spec), aggregate = barAggregateState(spec)) {
     const enc = (spec.encoding ?? {});
     const sceneState = state.sceneState ?? {};
-    const stateLayout = sceneState.guide?.layout ??
-        sceneState.granularity?.layout ??
-        state.guide?.layout ??
-        state.granularity?.layout;
+    const stateLayout = sceneState.axis?.layout ??
+        sceneState.detail?.layout ??
+        state.axis?.layout ??
+        state.detail?.layout;
     if (stateLayout)
         return stateLayout;
     if (enc.xOffset?.field || enc.yOffset?.field)
@@ -40,22 +40,22 @@ export function barLayoutState(spec, state = semanticStateFromSpec(spec), aggreg
         return 'stacked';
     return 'simple';
 }
-export function barGuideState({ orientation, layout, state = {} }) {
+export function barAxisState({ orientation, layout, state = {} }) {
     const sceneState = state.sceneState ?? {};
-    const explicit = sceneState.guide ?? state.guide;
+    const explicit = sceneState.axis ?? state.axis;
     if (explicit)
         return explicit;
     if (orientation === 'horizontal') {
-        return { orientation, staging: { order: ['y', 'x'] } };
+        return { orientation, order: ['y', 'x'] };
     }
     if (layout === 'grouped') {
-        return { layout, staging: { order: ['x', 'y'] } };
+        return { layout, order: ['x', 'y'] };
     }
     return null;
 }
-export function barGranularityState({ layout, categoryField, measureField, segmentField, state = {} }) {
+export function barDetailState({ layout, categoryField, measureField, segmentField, state = {} }) {
     const sceneState = state.sceneState ?? {};
-    const explicit = sceneState.granularity ?? state.granularity;
+    const explicit = sceneState.detail ?? state.detail;
     if (explicit)
         return explicit;
     if (!isSegmentLayout(layout) || !segmentField)
@@ -78,8 +78,8 @@ export function barAggregateState(spec) {
 }
 export function barSegmentField(spec, state = semanticStateFromSpec(spec)) {
     const sceneState = state.sceneState ?? {};
-    return (sceneState.granularity?.segmentField ??
-        state.granularity?.segmentField ??
+    return (sceneState.detail?.segmentField ??
+        state.detail?.segmentField ??
         spec.encoding?.detail?.field ??
         spec.encoding?.xOffset?.field ??
         spec.encoding?.yOffset?.field ??
@@ -88,7 +88,7 @@ export function barSegmentField(spec, state = semanticStateFromSpec(spec)) {
 }
 // ─── Internal ─────────────────────────────────────────────────────────────────
 function semanticStateFromSpec(spec) {
-    const state = narrativeState(spec);
+    const state = specState(spec);
     const transforms = (spec.transform ?? []);
     return {
         ...state,

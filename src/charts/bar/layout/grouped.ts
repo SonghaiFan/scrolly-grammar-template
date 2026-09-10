@@ -3,7 +3,7 @@ import { applyBarIdentity, barKeyAccessor } from '../keys.js';
 import {
   barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey
 } from './index.js';
-import { narrativeState } from '../../../scrolly-meta.js';
+import { specState } from '../../../spec-meta.js';
 
 export function createGroupedBarRenderer(deps, kit) {
   const { bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, quantitativeDomain, themeValue, updateGrid } = deps;
@@ -18,8 +18,8 @@ export function createGroupedBarRenderer(deps, kit) {
     const measureChannel = barMeasureChannel(enc);
     const categoryField = categoryChannel?.field;
     const valueField = measureChannel?.field;
-    const state = narrativeState(spec);
-    const stateSegments = state.sceneState?.granularity?.segments || state.granularity?.segments;
+    const state = specState(spec);
+    const stateSegments = state.sceneState?.detail?.segments || state.detail?.segments;
     const categories = channelDomain(rows, categoryChannel);
     const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
     const color = colorScale(domainRows, enc.color, d3);
@@ -40,9 +40,9 @@ export function createGroupedBarRenderer(deps, kit) {
     const x1 = horizontal ? null : segmentScale;
     const y1 = horizontal ? segmentScale : null;
     const geom = { x, y, x1, y1, categoryField, segmentField, valueField, chart, horizontal };
-    const updatePlan = kit.updateStage(chart, rendererOrientation, d3);
-    const xAxisTransition = kit.axisTransition(updatePlan, 'x', d3) || chart.transition.base;
-    const yAxisTransition = kit.axisTransition(updatePlan, 'y', d3) || chart.transition.base;
+    const steps = kit.steps(chart, rendererOrientation, d3);
+    const xAxisTransition = kit.axisTransition(steps, 'x', d3) || chart.transition.base;
+    const yAxisTransition = kit.axisTransition(steps, 'y', d3) || chart.transition.base;
     const geometry = groupedSegmentGeometryContract(geom, splitLineage, zeroBaselineEnter, kit.sourceBaselineExit, zeroBaselineExit);
 
     chart.scales = { x, ...(x1 ? { x1 } : {}), y, ...(y1 ? { y1 } : {}), color, orientation: rendererOrientation };
@@ -63,7 +63,7 @@ export function createGroupedBarRenderer(deps, kit) {
       className: 'sl-bar sl-bar-segment sl-bar-grouped',
       orientation: rendererOrientation, rx: themeValue('--sl-bar-radius', 3),
       fill: (d) => color(d),
-      applyIdentity: applyBarIdentity, updatePlan, geometry
+      applyIdentity: applyBarIdentity, steps, geometry
     });
   };
 }

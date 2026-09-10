@@ -10,12 +10,12 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
-for (const idiom of ['bar', 'line', 'point', 'unit']) {
+for (const chartType of ['bar', 'line', 'point', 'unit']) {
   for (const layout of ['floatToText', 'textOverVis']) {
-    test(`${idiom} / ${layout}: every weather step renders through real navigation`, async ({ page }) => {
+    test(`${chartType} / ${layout}: every weather step renders through real navigation`, async ({ page }) => {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      await page.goto(`/scrollytelling/examples/weather/?story=${idiom}&layout=${layout}&theme=dark`);
+      await page.goto(`/scrollytelling/examples/weather/?story=${chartType}&layout=${layout}&theme=dark`);
       await page.waitForFunction(() => Boolean(window.__scrollytellingStory));
       const buttons = page.locator('.sl-nav button');
       const count = await buttons.count();

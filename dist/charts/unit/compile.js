@@ -1,5 +1,5 @@
-import { cloneEncoding, compileFilter, compileHighlight, copyDefined, identitySpec, resolveGuideStaging, withObject, withSceneState } from '../compiler-utils.js';
-import { narrativeObjectKey, narrativeUnit, withNarrative } from '../../scrolly-meta.js';
+import { cloneEncoding, compileFilter, compileHighlight, copyDefined, identitySpec, resolveAxisOrder, withObject, withSceneState } from '../compiler-utils.js';
+import { specObjectKey, specUnit, withSpecMeta } from '../../spec-meta.js';
 export function createUnitSpecCompiler(_context = {}) {
     return {
         base: compileUnitBase,
@@ -15,27 +15,27 @@ export function createUnitSpecCompiler(_context = {}) {
 function compileUnitBase(spec, _context = {}) {
     return identitySpec(spec);
 }
-function compileUnitLayout(spec, guideSpec = {}, _context = {}) {
+function compileUnitLayout(spec, axisSpec = {}, _context = {}) {
     const unit = {
-        ...(narrativeUnit(spec) || {}),
-        ...copyDefined(guideSpec, [
+        ...(specUnit(spec) || {}),
+        ...copyDefined(axisSpec, [
             'layout', 'columns', 'groupColumns', 'radius', 'x', 'y',
             'group', 'value', 'label', 'maxUnits'
         ])
     };
     const encoding = cloneEncoding(spec.encoding);
-    if (guideSpec['color'])
-        encoding['color'] = guideSpec['color'];
-    return withSceneState(withObject(withNarrative({ ...spec, encoding: encoding }, { unit }), {
-        key: guideSpec['key'] || narrativeObjectKey(spec)
+    if (axisSpec['color'])
+        encoding['color'] = axisSpec['color'];
+    return withSceneState(withObject(withSpecMeta({ ...spec, encoding: encoding }, { unit }), {
+        key: axisSpec['key'] || specObjectKey(spec)
     }), {
-        guide: {
+        axis: {
             layout: unit['layout'] || 'grid',
             x: unit['x'] || null,
             y: unit['y'] || null,
             group: unit['group'] || null,
             value: unit['value'] || null,
-            staging: resolveGuideStaging(guideSpec, 'unit')
+            ...resolveAxisOrder(axisSpec, 'unit')
         }
     });
 }

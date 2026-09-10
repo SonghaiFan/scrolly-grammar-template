@@ -1,11 +1,11 @@
 import { createUnitSpecCompiler } from './compile.js';
 import { createUnitRenderer } from './render.js';
 import { createDefaultTransitionPlan } from '../transition-plan.js';
-import { defineChartIdiom } from '../plugin.js';
-export const plugin = defineChartIdiom({
+import { defineChartType } from '../plugin.js';
+export const plugin = defineChartType({
     key: 'unit',
-    scenes: ['focus', 'guide'],
-    stateOperations: { guide: 'layout' },
+    scenes: ['selection', 'axis'],
+    stateOperations: { axis: 'layout' },
     createRenderer: createUnitRenderer,
     createSpecCompiler: createUnitSpecCompiler,
     transition: {

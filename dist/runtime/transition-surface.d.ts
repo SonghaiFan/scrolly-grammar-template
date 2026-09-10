@@ -1,6 +1,6 @@
 import type { AnyRecord } from '../types.js';
-import type { ChartIdiomRegistry } from '../charts/index.js';
-export declare function createTransitionSurface(from: AnyRecord, to: AnyRecord, options: AnyRecord, idioms: ChartIdiomRegistry): {
+import type { ChartTypeRegistry } from '../charts/index.js';
+export declare function createTransitionSurface(from: AnyRecord, to: AnyRecord, options: AnyRecord, chartTypes: ChartTypeRegistry): {
     view: Element;
     commitMount(): void;
     rollbackMount(): void;

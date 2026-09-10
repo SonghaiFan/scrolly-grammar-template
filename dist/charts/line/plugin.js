@@ -1,10 +1,10 @@
 import { createLineSpecCompiler } from './compile.js';
 import { createLineRenderer } from './render.js';
 import { createDefaultTransitionPlan } from '../transition-plan.js';
-import { defineChartIdiom } from '../plugin.js';
-export const plugin = defineChartIdiom({
+import { defineChartType } from '../plugin.js';
+export const plugin = defineChartType({
     key: 'line',
-    scenes: ['focus', 'guide', 'granularity', 'observation'],
+    scenes: ['selection', 'axis', 'detail', 'mapping'],
     createRenderer: createLineRenderer,
     createSpecCompiler: createLineSpecCompiler,
     transition: {

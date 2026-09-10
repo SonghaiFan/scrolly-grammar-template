@@ -67,7 +67,7 @@ export class Seq {
     return this;
   }
 
-  /** Add a state: chart grammar object + optional narrative text */
+  /** Add a state: chart grammar object + optional text */
   add(viewSpec: ViewLike, text = '', opts: { title?: string } = {}): this {
     const index = this._entries.length;
     viewSpec = cloneState(typeof (viewSpec as { toSpec?: () => ViewSpec }).toSpec === 'function'

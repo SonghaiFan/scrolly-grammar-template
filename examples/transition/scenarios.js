@@ -25,7 +25,7 @@ function sample(id, label, description, setup, from, to) {
 }
 
 export const scenarios = [
-  sample('measure', '01 · Change measure', 'Keep category identity and change the y field from value to other.', basic, 'base', 'base.y("other")'),
+  sample('measure', '01 · Change measure', 'Keep the same categories and change the y field from value to other.', basic, 'base', 'base.y("other")'),
   sample('filter', '02 · Filter members', 'Keep type one. B exits; drag back to restore it.', basic, 'base', 'base.where({ type: "one" })'),
   sample('highlight', '03 · Highlight', 'Emphasize B while keeping all three categories in the data.', basic, 'base', 'base.highlight({ category: "B" })'),
   sample('color', '04 · Change color', 'Change a constant color without changing the data or encoding fields.', basic, 'base.color("#336699")', 'base.color("#cc6633")'),

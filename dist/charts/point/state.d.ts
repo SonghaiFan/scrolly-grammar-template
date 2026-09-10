@@ -1,7 +1,7 @@
 import type { ChannelSpec, ViewSpec } from '../../types/index.js';
 interface PointState {
     parentField: string | string[] | null;
-    granularityMode: string | null;
+    detailMode: string | null;
 }
 interface ParentAnchor {
     x: number;

@@ -7,20 +7,20 @@ const chartsDir = join(root, "src", "charts");
 const manifestPath = join(chartsDir, "manifest.ts");
 
 const entries = await readdir(chartsDir);
-const idioms = [];
+const chartTypes = [];
 
 for (const entry of entries) {
   const fullPath = join(chartsDir, entry);
   if (!(await stat(fullPath)).isDirectory()) continue;
   const hasPlugin = await stat(join(fullPath, "plugin.ts")).then(() => true).catch(() => false)
     || await stat(join(fullPath, "plugin.js")).then(() => true).catch(() => false);
-  if (hasPlugin) idioms.push(entry);
+  if (hasPlugin) chartTypes.push(entry);
 }
 
-idioms.sort();
+chartTypes.sort();
 
-await writeFile(manifestPath, manifestSource(idioms));
-console.log(`Wrote manifest for ${idioms.length} idioms.`);
+await writeFile(manifestPath, manifestSource(chartTypes));
+console.log(`Wrote manifest for ${chartTypes.length} chart types.`);
 
 function manifestSource(names) {
   const importLines = names.map((name) => `import * as ${identifier(name)} from "./${name}/plugin.js";`);
@@ -28,7 +28,7 @@ function manifestSource(names) {
   return `${[
     "import type { ChartPlugin } from '../types/index.js';",
     "// Generated from src/charts/*/plugin.ts.",
-    "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart idiom folder.",
+    "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart-type folder.",
     ...importLines,
     "",
     "// eslint-disable-next-line @typescript-eslint/no-explicit-any",

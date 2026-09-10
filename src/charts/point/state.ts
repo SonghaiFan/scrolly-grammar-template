@@ -1,10 +1,10 @@
 import type { ChannelSpec, ViewSpec } from '../../types/index.js';
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 import { colorField } from './encoding.js';
 
 interface PointState {
   parentField: string | string[] | null;
-  granularityMode: string | null;
+  detailMode: string | null;
 }
 
 interface ParentAnchor {
@@ -20,13 +20,13 @@ interface DodgeCircle {
 }
 
 export function pointState(spec: ViewSpec = {}, enc: Record<string, ChannelSpec> = {}): PointState {
-  const state = narrativeState(spec);
-  const granularity = ((state.sceneState as Record<string, unknown> | undefined)?.['granularity'] as Record<string, unknown> | undefined)
-    || (state.granularity as Record<string, unknown> | undefined)
+  const state = specState(spec);
+  const detail = ((state.sceneState as Record<string, unknown> | undefined)?.['detail'] as Record<string, unknown> | undefined)
+    || (state.detail as Record<string, unknown> | undefined)
     || {};
   return {
-    parentField: parentFromGroupby(granularity['groupby'] as string[] | null) || (granularity['parentField'] as string | null) || colorField(enc),
-    granularityMode: (granularity['mode'] as string) || null
+    parentField: parentFromGroupby(detail['groupby'] as string[] | null) || (detail['parentField'] as string | null) || colorField(enc),
+    detailMode: (detail['mode'] as string) || null
   };
 }
 

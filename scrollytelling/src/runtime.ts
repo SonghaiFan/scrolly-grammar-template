@@ -1,9 +1,9 @@
 // @ts-nocheck — Story composition runtime built on VisDelta's driver surface.
 import {
   applyTransforms,
-  availableChartIdioms,
+  availableChartTypes,
   chartModules,
-  chartRegistry as BUILT_IN_CHART_IDIOMS,
+  chartRegistry as BUILT_IN_CHART_TYPES,
   clamp,
   clearSceneTransitionProgress,
   createChartRuntimeDeps,
@@ -15,7 +15,7 @@ import {
   loadData,
   normalizeActionEvent,
   normalizeActionTokens,
-  registerChartIdiom,
+  registerChartType,
   registerChartModule,
   renderChartShell,
   VISDELTA_TRANSITION_NAME,
@@ -35,7 +35,7 @@ import { applyTheme } from './runtime/theme.js';
 import { restoreHashPosition, setupNav, setupResize, setupScroll } from './runtime/navigation.js';
 import { compileSpec, storySignature } from './runtime/spec.js';
 import { renderShell } from './runtime/shell.js';
-export { registerChartIdiom, registerChartModule, availableChartIdioms };
+export { registerChartType, registerChartModule, availableChartTypes };
 export async function createStory(spec: AnyRecord, options: RuntimeOptions): Promise<StoryRuntime> {
   const runtime = resolveRuntimeDependencies(options);
   const compiled = compileSpec(spec);
@@ -52,7 +52,7 @@ export async function createStory(spec: AnyRecord, options: RuntimeOptions): Pro
     mount.disposeTheme();
   };
   try {
-    const shell = renderShell(target, compiled, { debug: options.debug === true, idioms: runtime.idioms });
+    const shell = renderShell(target, compiled, { debug: options.debug === true, chartTypes: runtime.chartTypes });
     renderer = createRenderer(shell, compiled, data, runtime);
     renderer.action({ type: 'enter', step: 0, force: true });
     scrollDriver = setupScroll(compiled, shell, renderer);
@@ -76,7 +76,7 @@ export async function createPage(spec: AnyRecord, options: PageOptions = {}): Pr
   const target = resolveTarget(options.target ?? '#app');
   const mount = await prepareMount(target, compiled);
   try {
-    const shell = renderShell(target, compiled, { debug: options.debug === true, idioms: BUILT_IN_CHART_IDIOMS });
+    const shell = renderShell(target, compiled, { debug: options.debug === true, chartTypes: BUILT_IN_CHART_TYPES });
     mount.commit();
     return { spec: compiled, shell, root: shell.root, story: shell.story, steps: shell.steps,
       views: shell.views, tooltip: shell.tooltip, destroy: mount.disposeTheme };
@@ -133,8 +133,8 @@ async function prepareMount(target, compiled, data = null, runtime = null) {
     if (runtime) {
       const context = { root: target, colors: null };
       runtime.context = context;
-      runtime.idioms = snapshotChartRegistry(createChartRuntimeDeps(context));
-      context.colors = buildColorRegistry(compiled, data, runtime.aq, target, runtime.idioms);
+      runtime.chartTypes = snapshotChartRegistry(createChartRuntimeDeps(context));
+      context.colors = buildColorRegistry(compiled, data, runtime.aq, target, runtime.chartTypes);
       installTransitionProgress(runtime.d3);
     }
     target.replaceChildren();
@@ -154,7 +154,7 @@ async function prepareMount(target, compiled, data = null, runtime = null) {
 // Story/chart composition supplies discrete and scroll actions to the shared renderer.
 function createRenderer(shell: AnyRecord, spec: AnyRecord, datasets: AnyRecord, runtime: AnyRecord) {
   const { d3, aq } = runtime;
-  const { drawView, applyScrollAction } = createViewRenderer(runtime.idioms);
+  const { drawView, applyScrollAction } = createViewRenderer(runtime.chartTypes);
   const applyStepScrollProgress = (shell, spec, index, progress, d3, options) => {
     const step = spec.steps[index];
     if (!step || (!options.force && !hasScrollAction(step))) return;
@@ -286,7 +286,7 @@ function createRenderer(shell: AnyRecord, spec: AnyRecord, datasets: AnyRecord, 
     resizeFrame = window.requestAnimationFrame(() => {
       resizeFrame = null;
       if (destroyed) return;
-      runtime.context.colors = buildColorRegistry(spec, datasets, aq, runtime.context.root, runtime.idioms);
+      runtime.context.colors = buildColorRegistry(spec, datasets, aq, runtime.context.root, runtime.chartTypes);
       if (activeIndex >= 0) applyDiscreteStep(activeIndex, { force: true });
     });
   };
@@ -352,19 +352,19 @@ function resolveThemePalette(root: Element): string[] {
 // the same color across all scenes, regardless of which subset appears in each.
 //
 // Strategy per scene (highest-priority first):
-//   1. Idiom-compiled explicit domain + explicit range → use that ordering directly.
+//   1. Chart-compiled explicit domain + explicit range -> use that ordering directly.
 //   2. Explicit color.field with no range → collect union of values across scenes.
 //   3. No color channel → no registry entry; undeclared color is black.
 //
 // Final assignment is always sequential (series-1, series-2, …) in the order
 // keys are first encountered, so the Nth distinct key always maps to series-N —
-// matching the stacked/grouped bar idiom's hardcoded 'var(--sl-series-N)' range.
+// matching the stacked/grouped bar chart's hardcoded 'var(--sl-series-N)' range.
 function buildColorRegistry(
   compiled: AnyRecord,
   datasets: AnyRecord,
   aq: AnyRecord,
   root: Element,
-  idioms: AnyRecord
+  chartTypes: AnyRecord
 ): Map<string, Map<string, string>> {
   // fieldOrder tracks insertion order; fieldRanges tracks explicit var→color for a domain slot.
   const fieldOrder  = new Map<string, string[]>();   // field → ordered unique keys
@@ -387,9 +387,9 @@ function buildColorRegistry(
     for (const rawViewSpec of Object.values(step.views || {})) {
       const rawSpec = rawViewSpec as AnyRecord;
 
-      // Run the idiom's prepareSpec to get the same encoding that the renderer sees.
-      const idiom = idioms.get(rawSpec);
-      const spec  = (idiom?.prepareSpec?.(rawSpec) || rawSpec) as AnyRecord;
+      // Run the chart type's prepareSpec to get the same encoding that the renderer sees.
+      const chartType = chartTypes.get(rawSpec);
+      const spec  = (chartType?.prepareSpec?.(rawSpec) || rawSpec) as AnyRecord;
 
       const source = viewRows(spec.data ?? rawSpec.data, datasets);
       if (!source?.length) continue;
@@ -475,5 +475,5 @@ function resolveRuntimeDependencies(options: AnyRecord = {}) {
 
 
 chartModules.forEach(module => {
-  if (!BUILT_IN_CHART_IDIOMS.has(module.plugin.key)) registerChartModule(module);
+  if (!BUILT_IN_CHART_TYPES.has(module.plugin.key)) registerChartModule(module);
 });

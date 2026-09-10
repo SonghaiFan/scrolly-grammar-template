@@ -24,14 +24,13 @@ A `source` is one of:
 | Inline rows (object form) | `{ values: [{ a: 1 }, { a: 2 }] }` | Used directly, no request |
 | Inline rows (array form) | `[{ a: 1 }, { a: 2 }]` | Same as `{ values: [...] }` |
 
-The same source declaration can be attached with `.data(source)`. Named
-composition-level datasets belong to the extracted scrollytelling package and
-are not resolved by standalone VisDelta unless a driver supplies the matching
-data map to `transition(..., { data })`.
+The same source declaration can be attached with `.data(source)`. For a named
+source such as `bar("sales")`, pass the matching data map to
+`transition(..., { data: { sales: rows } })`.
 
 ### Tidy data works best
 
-VisDelta's built-in idioms assume **long ("tidy") format**: one row per
+VisDelta's built-in chart types assume **long ("tidy") format**: one row per
 observation, with separate columns for the category, the measure, and the
 value — rather than one column per measure. For example:
 
@@ -63,10 +62,10 @@ an internal utility invoked by the renderer. Arquero is optional only when no
 transforms are declared. Cached bar pair transitions evaluate transforms during
 compilation and resize, not on every progress frame.
 
-Most transforms get attached for you by chart-idiom methods (`.where()` →
+Most transforms get attached for you by chart methods (`.where()` →
 `filter`, `.sort()` → `sort`, `.breakdown()`/`.rollup()` → `aggregate`/`fold`,
 …). You can also provide raw transform objects in a view spec when a builder
-method doesn't cover your case; `.channel()` and `.guide()` are not transform
+method doesn't cover your case; `.channel()` and `.axis()` are not transform
 setters.
 
 Each array entry must contain exactly one supported operation. Entries execute

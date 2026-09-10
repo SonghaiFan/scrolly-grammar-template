@@ -1,23 +1,22 @@
 # Extending with plugins
 
-A **ChartPlugin** is a factory/configuration object. A **ChartIdiom** is the
-runtime object it produces: renderer, compiler, supported transition scenes,
-and transition planning hooks. They are different objects, not interchangeable
-registration arguments.
+A **ChartPlugin** is a recipe for adding a chart type. A **ChartType** is the
+working chart object created from that recipe. It knows how to prepare data,
+draw the chart, and plan supported changes. These are two different objects.
 
 ## Register a plugin
 
-The focused entry avoids importing Story and built-in renderers:
+The focused entry avoids importing built-in renderers:
 
 ```js
-import { defineChartIdiom, registerChartModule } from "visdelta/plugins";
+import { defineChartType, registerChartModule } from "visdelta/plugins";
 
-const plugin = defineChartIdiom({
+const plugin = defineChartType({
   key: "area",
   createRenderer: deps => areaRenderer,
   createSpecCompiler: context => areaCompiler,
   prepareSpec: spec => spec,
-  scenes: ["focus", "guide", "observation"]
+  scenes: ["selection", "axis", "mapping"]
 });
 
 registerChartModule({ plugin });
@@ -28,16 +27,15 @@ functions supplied by VisDelta. Renderer dependencies are injected helpers;
 D3 and optional Arquero are supplied to the runtime when creating a visualization.
 Compiler context is separate from renderer dependencies.
 
-Alternatively, `registerChartIdiom(idiom)` accepts an already-created runtime
-**ChartIdiom**, not the result of `defineChartIdiom()`. Root-package exports
-remain available for compatibility but import the full composition API.
+Alternatively, `registerChartType(chartType)` accepts an already-created runtime
+**ChartType**, not the result of `defineChartType()`.
 
-Register before calling `transition()` or creating a Story. Pair transitions
-snapshot the selected idiom: later registration affects new pairs, not existing
-pairs or their `resize()`. Story also snapshots registered idioms at initialization.
+Register before calling `transition()`. Pair transitions
+snapshot the selected chart type: later registration affects new pairs, not
+existing pairs or their `resize()`.
 Registration is shared only as the source for new instances. Module factories
-receive per-instance helper contexts; direct runtime idioms own their dependencies. Importing Story
-does not overwrite an explicitly registered idiom with the same built-in key.
+receive per-instance helper contexts; direct runtime chart types own their
+dependencies.
 
 ## Use a custom visualization
 
@@ -62,22 +60,23 @@ const to = { ...from, encoding: {
 const change = await transition(from, to, { target: "#chart", d3 });
 ```
 
-Both endpoints must resolve to the same idiom. Registering a plugin does not
-automatically create an `area()` builder, nor provide cross-idiom morphing.
+Both endpoints must resolve to the same chart type. Registering a plugin does
+not automatically create an `area()` builder or a bar-to-area transition.
 Internal authoring classes are implementation references, not public package
 subpaths; do not import `visdelta/charts/authoring`.
 
 ## Compiler and transition contract
 
 `createSpecCompiler(context)` returns a `SpecCompiler` with a `base(spec)`
-normalizer and optional operation compilers. The registered idiom's compiler is
-used by both Story rendering and standalone transitions. Scene names currently
-include `focus`, `guide`, `granularity`, and `observation`; unsupported scenes
-are filtered by the idiom's declared scene list.
+normalizer and optional operation compilers. The registered chart type's compiler is
+used by transitions. Change labels currently
+include `selection`, `axis`, `detail`, and `mapping`; unsupported scenes
+are filtered by the chart type's declared scene list.
 
-Optional hooks on `defineChartIdiom`:
+Optional hooks on `defineChartType`:
 
-- `transition.plan(previous, next)`: renderer staging plan.
+- `transition.plan(previous, next)`: returns matching information, enter/exit
+  actions, ordered steps, and timing.
 - `transition.intermediateSpecs(previous, next)`: intermediate visualization phases.
 - `defaults.margin(spec)`: default chart margins.
 - `inspect`: debug metadata.
@@ -85,18 +84,18 @@ Optional hooks on `defineChartIdiom`:
 
 Cached evaluation is an advanced renderer contract, not a generic performance
 switch: the renderer must express motion through the runtime's capturable
-property tracks and tolerate reversible phase/endpoint DOM restoration.
-Built-in bar opts in. Line, point, unit, and unspecified custom idioms reconstruct
+property changes and tolerate reversible phase/endpoint DOM restoration.
+Built-in bar opts in. Line, point, unit, and unspecified custom chart types reconstruct
 their frame on seek. Validate parity, random reverse seeking, entry/exit,
 `resize()`, and cleanup before opting a custom renderer into caching.
 
-## Contributing a built-in idiom
+## Contributing a built-in chart type
 
 See [the chart folder contract](https://github.com/SonghaiFan/scrollylite/blob/main/src/charts/README.md) and the TypeScript
 implementations under `src/charts/{bar,line,point,unit}/`.
-Story uses the static manifest; standalone transitions use the lazy loader map
-in `src/runtime/chart-registry.ts`. A new built-in must be wired into both.
+The main entry uses the static manifest; focused transitions use the lazy loader
+map in `src/runtime/chart-registry.ts`. A new built-in must be wired into both.
 Run `npm run manifest:check`, `npm test`, and `npm run test:browser`.
 
-`availableChartIdioms()` lists built-in keys plus explicitly registered custom
+`availableChartTypes()` lists built-in keys plus explicitly registered custom
 keys. A listed built-in is available on demand; it need not have been loaded yet.

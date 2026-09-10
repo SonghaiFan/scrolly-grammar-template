@@ -1,7 +1,7 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { BaseChart } from '../base.js';
 import { linePointKeyAccessor, lineSeriesKey } from './keys.js';
-import { focusedLineXScale, lineSeries, lineState } from './state.js';
+import { selectedLineXScale, lineSeries, lineState } from './state.js';
 
 export function createLineRenderer(deps) {
   return new LineChart(deps).renderer();
@@ -28,7 +28,7 @@ class LineChart extends BaseChart {
     const t = chart.transition.base;
     const state = lineState(spec, enc);
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
-    const x = focusedLineXScale(rows, enc.x, chart, state.focus, {
+    const x = selectedLineXScale(rows, enc.x, chart, state.selection, {
       bandOrLinear, d3, niceExtent, position
     });
     const y = quantitativeScale(rows, enc.y, [chart.innerHeight, 0], d3);

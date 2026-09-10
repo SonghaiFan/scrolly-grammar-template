@@ -1,7 +1,7 @@
 # Developer guide
 
-VisDelta is the visualization state, delta, renderer, and seekable pair
-transition package. Narrative layout and scroll orchestration are separate.
+VisDelta describes chart states, finds their difference, draws the chart, and
+controls the transition between two states.
 
 ## Install
 
@@ -37,18 +37,14 @@ change.destroy();
 
 ```text
 src/
-  charts/             idiom authoring, compilation, rendering, and transition plans
+  charts/             chart authoring, compilation, rendering, and transition plans
   data/               validation and transform execution
   grammar/            immutable view state, diff, and transition inference
   identity/           semantic object identity
   runtime/            chart surface, scene rendering, and progress evaluation
   transitions/        scene and intermediate-state compilation
-  composition.ts      explicit adapter surface for external driver packages
+  composition.ts      explicit adapter surface for external control packages
 ```
-
-The private `scrollytelling/` folder contains Story, Seq, layout, navigation,
-theme mounting, and native scroll handling. It imports only
-`visdelta/composition`; VisDelta never imports it.
 
 ## Commands
 
@@ -56,10 +52,9 @@ theme mounting, and native scroll handling. It imports only
 npm test
 npm run test:browser
 npm run pack:check
-npm --prefix scrollytelling test
 ```
 
-The focused bundle gate rejects Story code, unrelated idioms, and the
-composition adapter from the bar-plus-transition closure. See [Module
+The focused bundle gate rejects unrelated chart types and the advanced adapter
+from the bar-plus-transition closure. See [Module
 boundaries](./modular-architecture.md), [Visualization transitions](./visualization-transitions.md),
 and [Plugins](./extending-with-plugins.md).

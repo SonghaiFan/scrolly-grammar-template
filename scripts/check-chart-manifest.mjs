@@ -7,32 +7,32 @@ const chartsDir = join(root, "src", "charts");
 const manifestPath = join(chartsDir, "manifest.ts");
 
 const entries = await readdir(chartsDir);
-const idioms = [];
+const chartTypes = [];
 
 for (const entry of entries) {
   const fullPath = join(chartsDir, entry);
   if (!(await stat(fullPath)).isDirectory()) continue;
   const hasPlugin = await stat(join(fullPath, "plugin.ts")).then(() => true).catch(() => false)
     || await stat(join(fullPath, "plugin.js")).then(() => true).catch(() => false);
-  if (hasPlugin) idioms.push(entry);
+  if (hasPlugin) chartTypes.push(entry);
 }
 
-idioms.sort();
+chartTypes.sort();
 
-const expected = manifestSource(idioms);
+const expected = manifestSource(chartTypes);
 const actual = await readFile(manifestPath, "utf8");
 
 if (actual !== expected) {
   throw new Error("src/charts/manifest.ts is stale. Run node scripts/sync-chart-manifest.mjs.");
 }
 
-console.log(`Chart manifest covers ${idioms.length} idioms.`);
+console.log(`Chart manifest covers ${chartTypes.length} chart types.`);
 
 const registrySource = await readFile(join(root, 'src/runtime/chart-registry.ts'), 'utf8');
-const lazyIdioms = [...registrySource.matchAll(/import\('\.\.\/charts\/([^/]+)\/plugin\.js'\)/g)]
+const lazyChartTypes = [...registrySource.matchAll(/import\('\.\.\/charts\/([^/]+)\/plugin\.js'\)/g)]
   .map(match => match[1]).sort();
-if (JSON.stringify(lazyIdioms) !== JSON.stringify(idioms)) {
-  throw new Error('The standalone lazy idiom loaders must match the built-in manifest.');
+if (JSON.stringify(lazyChartTypes) !== JSON.stringify(chartTypes)) {
+  throw new Error('The standalone lazy chart-type loaders must match the built-in manifest.');
 }
 
 function manifestSource(names) {
@@ -41,7 +41,7 @@ function manifestSource(names) {
   return `${[
     "import type { ChartPlugin } from '../types/index.js';",
     "// Generated from src/charts/*/plugin.ts.",
-    "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart idiom folder.",
+    "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart-type folder.",
     ...importLines,
     "",
     "// eslint-disable-next-line @typescript-eslint/no-explicit-any",

@@ -1,5 +1,5 @@
 // @ts-nocheck — DOM rendering and inspection utilities
-import { createViewCompiler, dash, diffViewStates, escapeHtml, externalizeScrollyViewSpec } from 'visdelta/composition';
+import { createViewCompiler, dash, diffViewStates, escapeHtml, serializeViewSpec } from 'visdelta/composition';
 import { layoutClasses } from '../layouts/index.js';
 export function renderShell(target, spec, options = {}) {
     target.className = ['sl-root', ...layoutClasses(spec.layout)].join(' ');
@@ -115,17 +115,17 @@ function renderStepTransitionInspector(steps = [], index, options = {}) {
         return '';
     const previousStep = steps[index - 1];
     const currentStep = steps[index];
-    const previousSpec = stepEffectiveViewSpec(previousStep, options.idioms);
-    const currentSpec = stepEffectiveViewSpec(currentStep, options.idioms);
+    const previousSpec = stepEffectiveViewSpec(previousStep, options.chartTypes);
+    const currentSpec = stepEffectiveViewSpec(currentStep, options.chartTypes);
     if (!previousSpec || !currentSpec)
         return '';
-    const idiom = options.idioms?.get?.(currentSpec) || null;
-    const previousPlanSpec = prepareIdiomSpec(idiom, previousSpec);
-    const currentPlanSpec = prepareIdiomSpec(idiom, currentSpec);
+    const chartType = options.chartTypes?.get?.(currentSpec) || null;
+    const previousPlanSpec = prepareChartSpec(chartType, previousSpec);
+    const currentPlanSpec = prepareChartSpec(chartType, currentSpec);
     const diff = diffViewStates(previousPlanSpec, currentPlanSpec);
     const transitionScenes = currentStep.transition?.scene || [];
-    const transitionPlan = idiom?.resolveTransitionPlan?.(previousPlanSpec, currentPlanSpec) || {};
-    const transitionPlanKey = idiom?.inspect?.transitionPlanKey || 'transitionPlan';
+    const transitionPlan = chartType?.resolveTransitionPlan?.(previousPlanSpec, currentPlanSpec) || {};
+    const transitionPlanKey = chartType?.inspect?.transitionPlanKey || 'transitionPlan';
     const summary = transitionScenes.length ? transitionScenes.join(' + ') : 'ordinary update';
     const transitionDebug = {
         from: stepLabel(index - 1), to: stepLabel(index),
@@ -165,18 +165,18 @@ function stepCompiledViewSpec(step = {}) {
     const viewSpec = step.views?.main || Object.values(step.views || {})[0] || null;
     if (!viewSpec?.mark || viewSpec.mark === 'text')
         return null;
-    return externalizeScrollyViewSpec(viewSpec);
+    return serializeViewSpec(viewSpec);
 }
-function stepEffectiveViewSpec(step = {}, idioms) {
+function stepEffectiveViewSpec(step = {}, chartTypes) {
     const viewSpec = stepCompiledViewSpec(step);
     if (!viewSpec)
         return null;
-    return idioms ? createViewCompiler(idioms).compileEffectiveView(viewSpec, step.transition || {}).effectiveViewSpec : viewSpec;
+    return chartTypes ? createViewCompiler(chartTypes).compileEffectiveView(viewSpec, step.transition || {}).effectiveViewSpec : viewSpec;
 }
-function prepareIdiomSpec(idiom, spec) {
+function prepareChartSpec(chartType, spec) {
     if (!spec)
         return null;
-    return idiom?.prepareSpec?.(spec) || spec;
+    return chartType?.prepareSpec?.(spec) || spec;
 }
 function stepLabel(index) { return `Step ${String(index + 1).padStart(2, '0')}`; }
 function summarizeDelta(delta = {}) {
@@ -185,11 +185,8 @@ function summarizeDelta(delta = {}) {
 function compactTransitionPlan(plan = {}) {
     const compact = { ...plan };
     delete compact.diff;
-    if (plan.update) {
-        compact.update = { mode: plan.update.mode, reason: plan.update.reason, target: plan.update.target, changedAxes: plan.update.changedAxes, stages: plan.update.stages, timing: plan.update.timing };
-    }
-    if (plan.key)
-        compact.key = plan.key;
+    if (plan.match)
+        compact.match = plan.match;
     if (plan.enter)
         compact.enter = plan.enter;
     if (plan.exit)

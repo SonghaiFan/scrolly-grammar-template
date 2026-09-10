@@ -1,29 +1,28 @@
 import { diffViewStates } from '../grammar/diff.js';
-import { narrativeTransition } from '../scrolly-meta.js';
+import { specTransition } from '../spec-meta.js';
 import { defaultTransition } from '../timing.js';
 export function createDefaultTransitionPlan(previousSpec, nextSpec, options = {}) {
     if (!previousSpec || !nextSpec)
         return {};
     const diff = diffViewStates(previousSpec, nextSpec);
     const timing = defaultTransition({
-        ...narrativeTransition(previousSpec),
-        ...narrativeTransition(nextSpec)
+        ...specTransition(previousSpec),
+        ...specTransition(nextSpec)
     });
+    const reason = options.reason || 'default-chart-transition';
     return {
         diff: diff.deltas.map(({ type, action, previous, next }) => ({ type, action, previous, next })),
-        update: {
-            mode: 'ordinary',
-            reason: options.reason || 'default-idiom-update',
-            timing,
-            totalDuration: (timing.duration ?? 0) + staggerMax(timing.stagger)
-        },
+        reason,
+        steps: [{ changes: ['scale', 'axis', 'marks', 'exit', 'enter'] }],
+        timing,
+        totalDuration: (timing.duration ?? 0) + staggerMax(timing.stagger),
         enter: {
             mode: 'ordinary',
-            reason: options.reason || 'default-idiom-enter'
+            reason
         },
         exit: {
             mode: 'ordinary',
-            reason: options.reason || 'default-idiom-exit'
+            reason
         }
     };
 }

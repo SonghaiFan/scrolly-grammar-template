@@ -1,21 +1,23 @@
 // @ts-nocheck — D3 rendering pattern; typed via deps injection
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 import { matchesFilter as rowMatchesFilter } from '../../data/filter.js';
 
 export function createBarRenderKit(deps) {
   const { easeFor, staggerDelay, themeValue } = deps;
 
-  function updateStage(chart, rendererOrientation, d3) {
-    const update = chart.transitionPlan?.update;
-    if (update?.mode !== 'staged') return null;
-    if (update.target?.renderer !== rendererOrientation) return null;
-    const stages = Array.isArray(update.stages)
-      ? update.stages.filter((stage) => stage.axis === 'x' || stage.axis === 'y')
+  function steps(chart, rendererOrientation, d3) {
+    const plan = chart.transitionPlan;
+    if (!plan?.steps?.length) return null;
+    if (plan.target?.renderer !== rendererOrientation) return null;
+    const ordered = Array.isArray(plan.steps)
+      ? plan.steps.filter((step) =>
+          (step.part === 'x' || step.part === 'y') &&
+          step.changes.includes('marks'))
       : [];
-    if (!stages.length) return null;
-    const timing = update.timing || {};
+    if (!ordered.length) return null;
+    const timing = plan.timing || {};
     return {
-      stages,
+      ordered,
       duration: timing.duration || chart.transition.duration,
       ease: easeFor(timing.ease || chart.transition.ease, d3),
       stagger: timing.stagger,
@@ -23,47 +25,48 @@ export function createBarRenderKit(deps) {
     };
   }
 
-  function stagedUpdate(selection, stage, spec, dimensions, baseAttrs) {
+  function applyMarkSteps(selection, steps, spec, markGeometry, baseAttrs) {
     let current = null;
-    stage.stages.forEach((step, index) => {
-      const applyDimension = dimensions[step.axis];
-      if (!applyDimension) return;
+    steps.ordered.forEach((step, index) => {
+      const applyMarks = markGeometry[step.part];
+      if (!applyMarks) return;
       current = index === 0
         ? selection
-            .transition(stage.transitionName)
-            .duration(stage.duration)
-            .ease(stage.ease)
-            .delay((d, i) => staggerDelay(spec, d, i, stage.stagger))
-        : current.transition().duration(stage.duration).ease(stage.ease);
+            .transition(steps.transitionName)
+            .duration(steps.duration)
+            .ease(steps.ease)
+            .delay((d, i) => staggerDelay(spec, d, i, steps.stagger))
+        : current.transition().duration(steps.duration).ease(steps.ease);
       if (index === 0 && baseAttrs) baseAttrs(current);
-      applyDimension(current);
+      applyMarks(current);
     });
     return current || selection;
   }
 
-  function axisTransition(stage, axis, d3) {
-    if (!stage?.stages?.length) return null;
-    const index = stage.stages.findIndex((step) => step.axis === axis);
+  function axisTransition(steps, part, d3) {
+    if (!steps?.ordered?.length) return null;
+    const index = steps.ordered.findIndex((step) =>
+      step.part === part && step.changes.includes('axis'));
     if (index < 0) return null;
-    return d3.transition(stage.transitionName)
-      .duration(stage.duration)
-      .ease(stage.ease)
-      .delay(index * stage.duration);
+    return d3.transition(steps.transitionName)
+      .duration(steps.duration)
+      .ease(steps.ease)
+      .delay(index * steps.duration);
   }
 
   return {
+    applyMarkSteps,
     axisTransition,
     baselineEnterPlan,
     baselineExitPlan,
-    barFocusOpacity,
+    barSelectionOpacity,
     collapseLineage,
     renderBarJoin,
     renderBarSeams,
     setRectGeometry,
     splitLineage,
     sourceBaselineExit,
-    stagedUpdate,
-    updateStage
+    steps
   };
 
   function renderBarJoin(options) {
@@ -72,8 +75,8 @@ export function createBarRenderKit(deps) {
       rx = 3, fill, geometry,
       startGeometry = geometry?.start,
       targetGeometry = geometry?.target,
-      updatePlan,
-      dimensions = geometry ? { x: geometry.applyX, y: geometry.applyY } : undefined,
+      steps,
+      markGeometry = geometry ? { x: geometry.applyX, y: geometry.applyY } : undefined,
       applyGeometry = geometry?.apply,
       exitGeometry = geometry?.exit
     } = options;
@@ -93,7 +96,7 @@ export function createBarRenderKit(deps) {
           .each(function(d) { setRectGeometry(d3.select(this), startGeometry(d)); })
           .transition(chart.transition.base)
           .delay((d, i) => staggerDelay(spec, d, i))
-          .style('opacity', (d) => barFocusOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
+          .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
           .attr('x', targetGeometry.x)
           .attr('y', targetGeometry.y)
           .attr('width', targetGeometry.width)
@@ -104,14 +107,14 @@ export function createBarRenderKit(deps) {
             .attr('data-orientation', orientation)
             .call(options.applyIdentity, spec, key, category)
             .call(bindTooltip, spec, tooltip);
-          if (updatePlan) {
-            return stagedUpdate(prepared, updatePlan, spec, dimensions,
-              (selection) => selection.style('opacity', (d) => barFocusOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22))).attr('fill', fill));
+          if (steps) {
+            return applyMarkSteps(prepared, steps, spec, markGeometry,
+              (selection) => selection.style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22))).attr('fill', fill));
           }
           return prepared
             .transition(chart.transition.base)
             .delay((d, i) => staggerDelay(spec, d, i))
-            .style('opacity', (d) => barFocusOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
+            .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
             .call(applyGeometry)
             .attr('fill', fill);
         },
@@ -218,10 +221,10 @@ function sourceValue(d, value) {
   return Number.isFinite(resolved) ? resolved : 1;
 }
 
-export function barFocusOpacity(row, spec = {}, dimOpacity = 0.22) {
-  const focus = narrativeState(spec).sceneState?.focus || narrativeState(spec).focus || null;
-  if (focus?.mode !== 'highlight' || !focus.filter) return 1;
-  return rowMatchesFilter(row?.__row || row, focus.filter) ? 1 : Number(focus.opacity ?? dimOpacity);
+export function barSelectionOpacity(row, spec = {}, dimOpacity = 0.22) {
+  const selection = specState(spec).sceneState?.selection || specState(spec).selection || null;
+  if (selection?.mode !== 'highlight' || !selection.filter) return 1;
+  return rowMatchesFilter(row?.__row || row, selection.filter) ? 1 : Number(selection.opacity ?? dimOpacity);
 }
 
 function rectGeometry(node) {

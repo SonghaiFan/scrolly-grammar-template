@@ -1,9 +1,9 @@
 // @ts-nocheck — complex layout algorithms with D3-style scale patterns
-import { narrativeObjectKey, narrativeUnit } from '../../scrolly-meta.js';
+import { specObjectKey, specUnit } from '../../spec-meta.js';
 export function expandUnits(rows, spec, d3) {
-    const unit = narrativeUnit(spec) || {};
+    const unit = specUnit(spec) || {};
     const valueKey = unit.value;
-    const rowKey = unit.key || narrativeObjectKey(spec) || 'id';
+    const rowKey = unit.key || specObjectKey(spec) || 'id';
     const maxUnits = unit.maxUnits || 240;
     const units = [];
     rows.forEach((row, rowIndex) => {
@@ -22,7 +22,7 @@ export function expandUnits(rows, spec, d3) {
 }
 export function unitLayout(units, chart, spec, deps) {
     const { bandOrLinear, d3, drawGrid, drawXAxis, drawYAxis, niceExtent, position, updateGrid } = deps;
-    const unit = narrativeUnit(spec) || {};
+    const unit = specUnit(spec) || {};
     const layout = unit.layout || 'grid';
     const columns = unit.columns || Math.max(8, Math.floor(Math.sqrt(units.length) * 1.4));
     const requestedRadius = unit.radius || 12;

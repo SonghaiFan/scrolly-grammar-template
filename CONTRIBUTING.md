@@ -1,7 +1,7 @@
 # Contributing
 
 VisDelta keeps the public surface small. Before adding API, prefer making an
-existing idiom, compiler helper, or plugin capability clearer.
+existing chart type, compiler helper, or plugin capability clearer.
 
 ## Local Checks
 
@@ -17,7 +17,7 @@ npm run release:check
 ```
 
 `npm test` runs syntax checks, builds `dist/`, and compiles the built-in chart
-idioms through the registry.
+chart types through the registry.
 `npm test` also checks size budgets, documentation paths/versions and unit tests.
 `npm run release:check` additionally runs real-browser behavior tests, executes
 the documentation's CDN HTML against the candidate tarball, and verifies installed
@@ -31,13 +31,13 @@ change the current checkout's dependencies.
 
 For release changes, update `CHANGELOG.md` in the same pull request.
 
-## Chart Idioms
+## Chart types
 
-Each idiom lives under `src/charts/<idiom>/` and exposes exactly one
+Each chart type lives under `src/charts/<chart-type>/` and exposes exactly one
 `plugin.ts` (compiled to `plugin.js`):
 
 ```js
-export const plugin = defineChartIdiom({
+export const plugin = defineChartType({
   key,
   createRenderer,
   createSpecCompiler,
@@ -46,15 +46,15 @@ export const plugin = defineChartIdiom({
 });
 ```
 
-After adding or removing an idiom folder, run:
+After adding or removing a chart-type folder, run:
 
 ```sh
 node scripts/sync-chart-manifest.mjs
 ```
 
 Also update the lazy loader map in `src/runtime/chart-registry.ts`; the manifest
-check requires the eager and lazy inventories to agree. Keep standalone loading
-independent of Story and unrelated idioms, and cover that boundary in browser tests.
+check requires the eager and lazy inventories to agree. Keep focused loading
+independent of unrelated chart types, and cover that boundary in browser tests.
 
 Do not add alias keys, empty hook bags, or mark-specific switch statements in
 the transition runtime. Capabilities belong to the plugin.

@@ -1,4 +1,4 @@
-import { dataName } from '../scrolly-meta.js';
+import { dataName } from '../spec-meta.js';
 export async function loadData(dataSpec, d3) {
     if (!d3) {
         throw new Error('VisDelta data loading requires D3. Pass { d3 } to transition() or the driver runtime.');

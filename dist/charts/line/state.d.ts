@@ -1,6 +1,6 @@
-import type { ChannelSpec, FocusSpec, ViewSpec } from '../../types/index.js';
+import type { ChannelSpec, SelectionSpec, ViewSpec } from '../../types/index.js';
 interface LineState {
-    focus: FocusSpec | null;
+    selection: SelectionSpec | null;
     seriesField: string | null;
 }
 interface LineSeries {
@@ -9,5 +9,5 @@ interface LineSeries {
 }
 export declare function lineState(spec?: ViewSpec, enc?: Record<string, ChannelSpec>): LineState;
 export declare function lineSeries(rows: Record<string, unknown>[], seriesField: string | null): LineSeries[];
-export declare function focusedLineXScale(rows: Record<string, unknown>[], channel: ChannelSpec | undefined, chart: Record<string, unknown>, focus: FocusSpec | null, deps: Record<string, unknown>): unknown;
+export declare function selectedLineXScale(rows: Record<string, unknown>[], channel: ChannelSpec | undefined, chart: Record<string, unknown>, selection: SelectionSpec | null, deps: Record<string, unknown>): unknown;
 export {};

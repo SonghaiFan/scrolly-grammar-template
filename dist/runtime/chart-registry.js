@@ -1,8 +1,8 @@
-import { createChartIdiomRegistry, registerChartModules } from '../charts/index.js';
+import { createChartTypeRegistry, registerChartModules } from '../charts/index.js';
 import { CHART_RUNTIME_DEPS } from './chart-deps.js';
 // Explicit registrations are shared for compatibility. Each transition takes a
 // registry snapshot so a later registration cannot change its compiled frames.
-export const chartRegistry = createChartIdiomRegistry();
+export const chartRegistry = createChartTypeRegistry();
 const factories = new Map();
 const builtins = {
     bar: () => import('../charts/bar/plugin.js'),
@@ -10,43 +10,43 @@ const builtins = {
     point: () => import('../charts/point/plugin.js'),
     unit: () => import('../charts/unit/plugin.js')
 };
-export function registerChartIdiom(idiom) {
-    chartRegistry.register(idiom);
-    factories.delete(chartRegistry.get(idiom.key).key);
+export function registerChartType(chartType) {
+    chartRegistry.register(chartType);
+    factories.delete(chartRegistry.get(chartType.key).key);
 }
 export function registerChartModule(module) {
     registerChartModules(chartRegistry, [module], CHART_RUNTIME_DEPS);
-    const idiom = chartRegistry.get(module.plugin.key);
-    factories.set(idiom.key, { idiom, plugin: module.plugin });
+    const chartType = chartRegistry.get(module.plugin.key);
+    factories.set(chartType.key, { chartType, plugin: module.plugin });
 }
 function instantiate(key, deps) {
-    const idiom = chartRegistry.get(key);
-    const factory = idiom && factories.get(idiom.key);
-    return factory && factory.idiom === idiom ? factory.plugin.createChartIdiom(deps) : idiom;
+    const chartType = chartRegistry.get(key);
+    const factory = chartType && factories.get(chartType.key);
+    return factory && factory.chartType === chartType ? factory.plugin.createChartType(deps) : chartType;
 }
 export function snapshotChartRegistry(deps) {
-    const registry = createChartIdiomRegistry();
+    const registry = createChartTypeRegistry();
     for (const key of chartRegistry.types())
         registry.register(instantiate(key, deps));
     return registry;
 }
-export function availableChartIdioms() {
+export function availableChartTypes() {
     return [...new Set([...Object.keys(builtins), ...chartRegistry.types()])].sort();
 }
 export async function transitionRegistry(spec, deps = CHART_RUNTIME_DEPS) {
     const key = String(spec.mark ?? '');
-    let idiom = instantiate(key, deps);
-    if (!idiom) {
+    let chartType = instantiate(key, deps);
+    if (!chartType) {
         const load = builtins[key];
         if (!load)
-            throw new Error(`Unsupported chart idiom: ${key}`);
+            throw new Error(`Unsupported chart type: ${key}`);
         const module = await load();
         // Honor a registration made while the built-in module was loading.
-        idiom = instantiate(key, deps) ?? module.plugin.createChartIdiom(deps);
+        chartType = instantiate(key, deps) ?? module.plugin.createChartType(deps);
     }
-    const registry = createChartIdiomRegistry();
-    if (!idiom)
-        throw new Error(`Unsupported chart idiom: ${key}`);
-    registry.register(idiom);
+    const registry = createChartTypeRegistry();
+    if (!chartType)
+        throw new Error(`Unsupported chart type: ${key}`);
+    registry.register(chartType);
     return registry;
 }

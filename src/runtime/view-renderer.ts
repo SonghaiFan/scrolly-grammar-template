@@ -1,7 +1,7 @@
 // @ts-nocheck — extracted rendering pipeline; D3 scene internals remain dynamic.
 import { applyTransforms } from '../data/transforms.js';
 import { resolveMarkRendererKey } from '../charts/index.js';
-import { externalizeScrollyViewSpec, narrativeScroll, narrativeState } from '../scrolly-meta.js';
+import { serializeViewSpec, specScroll, specState } from '../spec-meta.js';
 import { easeProgress, hasScrollAction, normalizeScrollAction } from './actions.js';
 import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effectiveTransitionSpec, fadeLayers, transitionSpec } from './marks.js';
 
@@ -11,11 +11,11 @@ import { clamp } from './utils.js';
 import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
 import { createViewCompiler } from './view-compile.js';
 import type { AnyRecord } from '../types.js';
-import type { ChartIdiomRegistry } from '../charts/index.js';
+import type { ChartTypeRegistry } from '../charts/index.js';
 
 /** Per-instance rendering pipeline, shared by standalone transitions and stories. */
-export function createViewRenderer(idioms: ChartIdiomRegistry) {
-const { compileEffectiveView, compileTransitionSource } = createViewCompiler(idioms);
+export function createViewRenderer(chartTypes: ChartTypeRegistry) {
+const { compileEffectiveView, compileTransitionSource } = createViewCompiler(chartTypes);
 return { drawView, applyScrollAction, prepareScrollSourceState, compileTransitionSource,
   renderVirtualScrollPhase, applyVirtualScrollSequence };
 function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, stepTransition: AnyRecord = {}, stepAction: string[] = [], options: AnyRecord = {}) {
@@ -59,13 +59,13 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
   const rawSourceSpec = scrollDrivenStep
     ? transitionSource.effectiveViewSpec
     : scene.previousSpec;
-  const idiom = idioms.get(effectiveViewSpec);
-  const targetForPlan = prepareIdiomSpec(idiom, effectiveViewSpec);
-  const sourceForPlan = prepareIdiomSpec(idiom, rawSourceSpec);
-  const intermediatePhases = intermediateRenderPhases(idiom, sourceForPlan, targetForPlan);
+  const chartType = chartTypes.get(effectiveViewSpec);
+  const targetForPlan = prepareChartSpec(chartType, effectiveViewSpec);
+  const sourceForPlan = prepareChartSpec(chartType, rawSourceSpec);
+  const intermediatePhases = intermediateRenderPhases(chartType, sourceForPlan, targetForPlan);
   if (intermediatePhases.length) {
     const renderPhases = renderPhaseConfigs(intermediatePhases, {
-      idiom,
+      chartType,
       node,
       finalSpec: effectiveViewSpec,
       viewConfig,
@@ -110,12 +110,12 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     );
   }
   clearSceneTransitionProgress(scene, { finish: !scrollDriven });
-  const idiom = idioms.get(effectiveViewSpec);
-  const renderSpec = idiom?.prepareSpec?.(effectiveViewSpec) || effectiveViewSpec;
+  const chartType = chartTypes.get(effectiveViewSpec);
+  const renderSpec = chartType?.prepareSpec?.(effectiveViewSpec) || effectiveViewSpec;
   const previousRawSpec = scrollDriven
     ? renderOptions.transitionSource?.effectiveViewSpec || null
     : scene.previousSpec;
-  const previousSpec = prepareIdiomSpec(idiom, previousRawSpec);
+  const previousSpec = prepareChartSpec(chartType, previousRawSpec);
   const source = viewRows(renderSpec.data, datasets);
   const rows = applyTransforms(source, renderSpec.transform || [], aq);
   const domainRows = applyTransforms(source, domainTransforms(renderSpec.transform || []), aq);
@@ -149,11 +149,11 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
       right: 44,   // extra breathing room prevents last-bar clipping at narrow widths
       bottom: 64,
       left: 68,
-      ...(idiom?.defaultMargin?.(renderSpec) || {}),
+      ...(chartType?.defaultMargin?.(renderSpec) || {}),
       ...(effectiveViewSpec.margin || {})
     },
     transition: transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 } as AnyRecord),
-    transitionPlan: idiom?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
+    transitionPlan: chartType?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
     sceneTransition,
     scrollDriven,
     scrollTransitionName: VISDELTA_TRANSITION_NAME,
@@ -173,9 +173,9 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     scene.unitLabel.transition(chart.transition.base).style("opacity", 0);
   }
 
-  const renderer = idiom?.renderer;
+  const renderer = chartType?.renderer;
   if (renderer) renderer(chart, rows, renderSpec, tooltip, d3);
-  else drawUnsupported(chart, renderSpec, idioms.types());
+  else drawUnsupported(chart, renderSpec, chartTypes.types());
 
   if (rendererKey === "unit") hideUnitMetaLabel(scene);
 
@@ -188,20 +188,20 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   scene.previousSpec = renderSpec;
 }
 
-function prepareIdiomSpec(idiom, spec) {
+function prepareChartSpec(chartType, spec) {
   if (!spec) return null;
-  return idiom?.prepareSpec?.(spec) || spec;
+  return chartType?.prepareSpec?.(spec) || spec;
 }
 
-function intermediateRenderPhases(idiom, sourceSpec, targetSpec) {
-  const raw = idiom?.intermediateSpecs?.(sourceSpec, targetSpec) ??
-    idiom?.intermediateSpec?.(sourceSpec, targetSpec) ??
+function intermediateRenderPhases(chartType, sourceSpec, targetSpec) {
+  const raw = chartType?.intermediateSpecs?.(sourceSpec, targetSpec) ??
+    chartType?.intermediateSpec?.(sourceSpec, targetSpec) ??
     [];
   const phases = Array.isArray(raw) ? raw : raw?.sequence || [raw];
   return phases
     .map((phase) => ({
       ...phase,
-      spec: externalizeScrollyViewSpec(phase?.spec || null)
+      spec: serializeViewSpec(phase?.spec || null)
     }))
     .filter((phase) => phase.spec);
 }
@@ -210,7 +210,7 @@ function renderPhaseConfigs(intermediatePhases, context) {
   let source = context.transitionSource;
   const phases = intermediatePhases.map((phase) => {
     const sceneTransition = sceneTransitionForPhase(phase);
-    const transitionPlanDuration = transitionPlanDurationForPhase(context.idiom, source?.effectiveViewSpec, phase.spec);
+    const transitionPlanDuration = transitionPlanDurationForPhase(context.chartType, source?.effectiveViewSpec, phase.spec);
     const config = {
       node: context.node,
       spec: phase.spec,
@@ -242,24 +242,24 @@ function renderPhaseConfigs(intermediatePhases, context) {
     stepAction: context.stepAction,
     sceneTransition: context.finalSceneTransition,
     transitionSource: source,
-    transitionPlanDuration: transitionPlanDurationForPhase(context.idiom, source?.effectiveViewSpec, context.finalSpec)
+    transitionPlanDuration: transitionPlanDurationForPhase(context.chartType, source?.effectiveViewSpec, context.finalSpec)
   });
 
   return phases;
 }
 
-function transitionPlanDurationForPhase(idiom, previousSpec, nextSpec) {
-  const plan = idiom?.resolveTransitionPlan?.(
-    prepareIdiomSpec(idiom, previousSpec),
-    prepareIdiomSpec(idiom, nextSpec)
+function transitionPlanDurationForPhase(chartType, previousSpec, nextSpec) {
+  const plan = chartType?.resolveTransitionPlan?.(
+    prepareChartSpec(chartType, previousSpec),
+    prepareChartSpec(chartType, nextSpec)
   );
-  const duration = Number(plan?.update?.totalDuration);
+  const duration = Number(plan?.totalDuration);
   return Number.isFinite(duration) ? duration : null;
 }
 
 function sceneTransitionForPhase(phase) {
-  const sceneType = phase.scene || "guide";
-  const state = narrativeState(phase.spec);
+  const sceneType = phase.scene || "axis";
+  const state = specState(phase.spec);
   return {
     scene: [sceneType],
     [sceneType]:
@@ -305,14 +305,14 @@ function virtualRenderDelay(phaseOrSpec: AnyRecord = {}) {
   const transition = effectiveTransitionSpec(spec);
   const duration = Number(transition.duration);
   const fallbackDuration = Number(effectiveTransitionSpec({}).duration) || 900;
-  const guideStaging = narrativeState(spec).sceneState?.guide?.staging || narrativeState(spec).guide?.staging || {};
-  const stageOrder = Array.isArray(guideStaging.order)
-    ? guideStaging.order.filter((axis) => axis === "x" || axis === "y")
+  const axis = specState(spec).sceneState?.axis || specState(spec).axis || {};
+  const stepOrder = Array.isArray(axis.order)
+    ? axis.order.filter((part) => part === "x" || part === "y")
     : [];
-  const stagedDuration = Number(guideStaging.duration);
+  const perStepDuration = Number(axis.duration);
   const effectiveDuration =
-    stageOrder.length > 1 && Number.isFinite(stagedDuration)
-      ? stagedDuration * stageOrder.length
+    stepOrder.length > 1 && Number.isFinite(perStepDuration)
+      ? perStepDuration * stepOrder.length
       : duration;
   const stagger = transition.stagger;
   const staggerMax =
@@ -414,7 +414,7 @@ function applyScrollAction(node, viewSpec, progress, d3) {
   const scene = node.__visDeltaScene;
   if (!scene || !viewSpec?.mark) return;
 
-  const action = normalizeScrollAction(narrativeScroll(viewSpec)) as AnyRecord;
+  const action = normalizeScrollAction(specScroll(viewSpec)) as AnyRecord;
   const eased = easeProgress(progress, action.ease, d3);
   if (applyVirtualScrollSequence(scene, eased)) return;
   scene.transitionProgress?.progress(eased);

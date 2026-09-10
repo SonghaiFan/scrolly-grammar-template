@@ -23,7 +23,7 @@ export declare class Seq {
     data(name: string, source: unknown): this;
     /** Set view dimensions, same as story().view('main', opts) */
     view(opts: ViewSpec): this;
-    /** Add a state: chart grammar object + optional narrative text */
+    /** Add a state: chart grammar object + optional text */
     add(viewSpec: ViewLike, text?: string, opts?: {
         title?: string;
     }): this;

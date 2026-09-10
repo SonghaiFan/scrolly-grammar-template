@@ -28,5 +28,5 @@ export interface VisualizationTransition {
     resize(): VisualizationTransition;
     destroy(): void;
 }
-/** Compile two same-idiom visualizations into a standalone, seekable transition. */
+/** Compile two states of the same chart type into a standalone, seekable transition. */
 export declare function transition(from: Visualization, to: Visualization, options: TransitionOptions): Promise<VisualizationTransition>;

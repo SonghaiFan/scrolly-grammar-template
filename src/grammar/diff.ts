@@ -1,12 +1,12 @@
-import { narrativeObjectKey, narrativeSemanticKey, narrativeState } from '../scrolly-meta.js';
+import { specObjectKey, specSemanticKey, specState } from '../spec-meta.js';
 import type {
   Delta,
   DeltaAction,
   DiffResult,
   EncodingSpec,
   FilterSpec,
-  GranularitySpec,
-  NarrativeSceneState,
+  DetailSpec,
+  ChartChangeState,
   SemanticDiffResult,
   SemanticViewState,
   ViewSpec
@@ -29,8 +29,8 @@ export function diffViewStates(
   for (const channel of encodingChannels(prev, curr)) {
     if (!sameValue(prev.encoding?.[channel], curr.encoding?.[channel])) changed.push(`encoding.${channel}`);
   }
-  if (!sameValue(prev.guide, curr.guide)) changed.push('guide');
-  if (!sameValue(prev.granularity, curr.granularity)) changed.push('granularity');
+  if (!sameValue(prev.axis, curr.axis)) changed.push('axis');
+  if (!sameValue(prev.detail, curr.detail)) changed.push('detail');
 
   const semantic = diffSemanticViewStates(prev, curr);
 
@@ -91,9 +91,9 @@ export function diffSemanticViewStates(
   for (const channel of encodingChannels(previous, next)) {
     pushDelta(deltas, `encoding.${channel}`, prev.encoding[channel], curr.encoding[channel]);
   }
-  pushStateDelta(deltas, 'focus', prev.focus, curr.focus);
-  pushStateDelta(deltas, 'guide', prev.guide, curr.guide);
-  pushStateDelta(deltas, 'granularity', prev.granularity, curr.granularity);
+  pushStateDelta(deltas, 'selection', prev.selection, curr.selection);
+  pushStateDelta(deltas, 'axis', prev.axis, curr.axis);
+  pushStateDelta(deltas, 'detail', prev.detail, curr.detail);
 
   if (prev.mark === 'bar' || curr.mark === 'bar') {
     appendBarSemanticDeltas(deltas, prev, curr, { pushDelta, pushStateDelta });
@@ -111,23 +111,23 @@ export function diffSemanticViewStates(
 }
 
 function toSemanticState(spec: ViewSpec): SemanticViewState {
-  const stateFields = narrativeState(spec);
-  const sceneState: NarrativeSceneState = stateFields.sceneState ?? {};
+  const stateFields = specState(spec);
+  const sceneState: ChartChangeState = stateFields.sceneState ?? {};
   const transforms = (spec.transform ?? []) as Array<Record<string, unknown>>;
 
   const state: SemanticViewState = {
     mark: spec.mark ?? null,
-    key: narrativeObjectKey(spec),
-    semanticKey: narrativeSemanticKey(spec),
+    key: specObjectKey(spec),
+    semanticKey: specSemanticKey(spec),
     encoding: (spec.encoding ?? {}) as EncodingSpec,
     filters: [
       ...(spec.filter ? [spec.filter as FilterSpec] : []),
       ...transforms.filter((t) => t.filter).map((t) => t.filter as FilterSpec)
     ],
     nonFilterTransforms: transforms.filter((t) => !t.filter),
-    focus: sceneState.focus ?? stateFields.focus ?? null,
-    guide: sceneState.guide ?? stateFields.guide ?? null,
-    granularity: (sceneState.granularity ?? stateFields.granularity ?? null) as GranularitySpec | null
+    selection: sceneState.selection ?? stateFields.selection ?? null,
+    axis: sceneState.axis ?? stateFields.axis ?? null,
+    detail: (sceneState.detail ?? stateFields.detail ?? null) as DetailSpec | null
   };
 
   if (String(spec.mark ?? '').toLowerCase() === 'bar') {

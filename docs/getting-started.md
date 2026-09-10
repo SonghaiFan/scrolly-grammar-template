@@ -1,8 +1,7 @@
 # Getting started
 
-VisDelta declares immutable visualization states and creates a seekable
-transition between two states of the same chart idiom. Scroll is only one
-possible external driver.
+VisDelta declares immutable chart states and creates a seekable transition
+between two states of the same chart type. Scroll is only one possible control.
 
 ## Install
 
@@ -44,7 +43,7 @@ const profit = revenue.y("profit");
 
 The second declaration branches from the first. It does not mutate `revenue`.
 
-## Create and drive the transition
+## Create and control the transition
 
 ```js
 const change = await transition(revenue, profit, {
@@ -63,11 +62,5 @@ change.destroy();
 `progress(value)` accepts a normalized value from 0 through 1. A range input,
 button, gesture, route, timer, or scroll adapter can provide that value.
 
-## What is not in this package
-
-VisDelta no longer exports Story, Seq, page layouts, navigation, or a scroll
-driver. Those modules are in the repository's private `scrollytelling/`
-package, which will later be integrated into ScrollyTale.
-
-Continue with the [interactive reference](/reference), [chart idioms](/chart-idioms),
+Continue with the [interactive reference](/reference), [chart types](/chart-types),
 and [module boundaries](/modular-architecture).

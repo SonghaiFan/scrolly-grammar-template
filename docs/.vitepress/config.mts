@@ -12,10 +12,6 @@ export default defineConfig({
   base,
   cleanUrls: false,
   lastUpdated: true,
-  srcExclude: [
-    'release-0.2.0.md',
-    'migrating-to-0.2.md'
-  ],
   head: [
     ['meta', { name: 'theme-color', content: '#f7f8fc' }],
     ['link', {
@@ -55,7 +51,7 @@ export default defineConfig({
       {
         text: 'Authoring language',
         items: [
-          { text: 'Chart idioms', link: '/chart-idioms' },
+          { text: 'Chart types', link: '/chart-types' },
           { text: 'Data sources', link: '/data-sources-and-transforms' },
           { text: 'Transform grammar', link: '/data-transforms' },
           { text: 'Color guide', link: '/color-guide' }
@@ -65,7 +61,7 @@ export default defineConfig({
         text: 'Animation and runtime',
         items: [
           { text: 'Visualization transitions', link: '/visualization-transitions' },
-          { text: 'Delta and transition planning', link: '/scenes-and-transitions' },
+          { text: 'Differences and steps', link: '/scenes-and-transitions' },
           { text: 'Transition runtime', link: '/runtime-api' },
           { text: 'Transition performance', link: '/transition-performance' }
         ]

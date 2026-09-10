@@ -17,6 +17,8 @@ const staleTextTargets = [
   "README.md",
   "docs",
   "examples",
+  "scrollytelling",
+  "tests",
   "src"
 ];
 const forbiddenRepoText = [
@@ -24,7 +26,30 @@ const forbiddenRepoText = [
   'src="https://cdn.jsdelivr.net/npm/visdelta@0.1.1"',
   "src/data/weather",
   "src/specs/",
-  "scatter-story"
+  "scatter-story",
+  "StageSpec",
+  ".stage(",
+  "staging",
+  "plan.update",
+  "changedAxes",
+  "TransitionPlanUpdate",
+  "TransitionPlanEnterExit",
+  "choreograph",
+  "Choreograph",
+  "ChartIdiom",
+  "defineChartIdiom",
+  "registerChartIdiom",
+  "availableChartIdioms",
+  "createChartIdiom",
+  ".guide(",
+  "same-idiom",
+  "cross-idiom",
+  "scrolly-meta",
+  "externalizeScrollyViewSpec",
+  "normalizeScrollyViewSpec",
+  "NarrativeSpec",
+  "NARRATIVE_KEY",
+  ".narrative"
 ];
 const files = [];
 const textFiles = [];
@@ -49,6 +74,7 @@ for (const file of files.sort()) {
 }
 
 for (const file of textFiles.sort()) {
+  if (file === fileURLToPath(import.meta.url)) continue;
   const text = await readFile(file, "utf8");
   const forbidden = forbiddenRepoText.find((token) => text.includes(token));
   if (forbidden) {

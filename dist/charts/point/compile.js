@@ -1,4 +1,4 @@
-import { narrativeObjectKey } from '../../scrolly-meta.js';
+import { specObjectKey } from '../../spec-meta.js';
 import { titleize } from '../../labels.js';
 import { colorField } from './encoding.js';
 import { aggregateFieldSpec, compileCartesianCoordinate, compileCartesianScale, compileFilter, compileHighlight, identitySpec, mergeXYChannel, withObject, withSceneState } from '../compiler-utils.js';
@@ -24,45 +24,45 @@ function compilePointCoordinate(spec, operationSpec = {}, _context = {}) {
 function compilePointScale(spec, operationSpec = {}, _context = {}) {
     return compileCartesianScale(spec, operationSpec);
 }
-function compilePointAggregate(spec, granularitySpec = {}, _context = {}) {
-    const mode = granularitySpec['mode'] || 'detail';
-    const authoredGroupby = normalizeFields(granularitySpec['groupby']);
-    const parentField = granularitySpec['parentField'] ||
+function compilePointAggregate(spec, detailSpec = {}, _context = {}) {
+    const mode = detailSpec['mode'] || 'detail';
+    const authoredGroupby = normalizeFields(detailSpec['groupby']);
+    const parentField = detailSpec['parentField'] ||
         parentFromGroupby(authoredGroupby) ||
         colorField(spec.encoding);
-    const detail = granularitySpec['detail'] ||
-        narrativeObjectKey(spec) ||
+    const detail = detailSpec['detail'] ||
+        specObjectKey(spec) ||
         spec.encoding?.['key']?.field ||
         spec.encoding?.['x']?.field;
     if (mode === 'aggregate') {
         const groupby = authoredGroupby.length ? authoredGroupby : [parentField].filter(Boolean);
-        const x = mergeXYChannel(spec.encoding?.['x'], granularitySpec['x'] || spec.encoding?.['x'], 'quantitative');
-        const y = mergeXYChannel(spec.encoding?.['y'], granularitySpec['y'] || spec.encoding?.['y'], 'quantitative');
-        const xAs = granularitySpec['x']?.as || x.field;
-        const yAs = granularitySpec['y']?.as || y.field;
-        const countAs = granularitySpec['countAs'] || 'count';
-        const xAggregate = aggregateFieldSpec(granularitySpec['x'], x.field, xAs, 'mean');
-        const yAggregate = aggregateFieldSpec(granularitySpec['y'], y.field, yAs, 'mean');
+        const x = mergeXYChannel(spec.encoding?.['x'], detailSpec['x'] || spec.encoding?.['x'], 'quantitative');
+        const y = mergeXYChannel(spec.encoding?.['y'], detailSpec['y'] || spec.encoding?.['y'], 'quantitative');
+        const xAs = detailSpec['x']?.as || x.field;
+        const yAs = detailSpec['y']?.as || y.field;
+        const countAs = detailSpec['countAs'] || 'count';
+        const xAggregate = aggregateFieldSpec(detailSpec['x'], x.field, xAs, 'mean');
+        const yAggregate = aggregateFieldSpec(detailSpec['y'], y.field, yAs, 'mean');
         const fields = [xAggregate, yAggregate, { op: 'count', as: countAs }];
         return withSceneState(withObject({
             ...spec,
             transform: [...(spec.transform || []), { aggregate: { groupby, fields } }],
             encoding: {
                 ...spec.encoding,
-                x: { ...x, field: xAs, title: granularitySpec['x']?.title || aggregateTitle(xAggregate.op, x.title || x.field) },
-                y: { ...y, field: yAs, title: granularitySpec['y']?.title || aggregateTitle(yAggregate.op, y.title || y.field) },
-                ...(granularitySpec['size'] !== false
-                    ? { size: { field: countAs, type: 'quantitative', ...(granularitySpec['sizeRange'] ? { range: granularitySpec['sizeRange'] } : {}) } }
+                x: { ...x, field: xAs, title: detailSpec['x']?.title || aggregateTitle(xAggregate.op, x.title || x.field) },
+                y: { ...y, field: yAs, title: detailSpec['y']?.title || aggregateTitle(yAggregate.op, y.title || y.field) },
+                ...(detailSpec['size'] !== false
+                    ? { size: { field: countAs, type: 'quantitative', ...(detailSpec['sizeRange'] ? { range: detailSpec['sizeRange'] } : {}) } }
                     : {})
             }
-        }, { key: granularitySpec['key'] || groupby }), {
-            granularity: { mode, groupby, countAs }
+        }, { key: detailSpec['key'] || groupby }), {
+            detail: { mode, groupby, countAs }
         });
     }
     return withSceneState(withObject({ ...spec }, {
-        key: granularitySpec['key'] || detail
+        key: detailSpec['key'] || detail
     }), {
-        granularity: { mode: 'detail', detail }
+        detail: { mode: 'detail', detail }
     });
 }
 function compilePointLayout(spec, _operationSpec = {}, _context = {}) {

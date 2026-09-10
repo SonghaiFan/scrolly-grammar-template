@@ -62,7 +62,7 @@ Each `source` may be:
 
 Multiple `.data()` calls merge into `spec.data` (later calls add/override
 dataset names; they don't clear earlier ones). Reference a dataset by name
-from a chart idiom builder: `bar("weatherDays")`.
+from a chart builder: `bar("weatherDays")`.
 
 ## `.layout(presetOrConfig, options?)`
 
@@ -208,9 +208,9 @@ Appends one step. Three call shapes:
 ```
 
 `view` may be:
-- a **chart idiom builder** (e.g. `bar(...)`, the result of chaining `.x()`,
+- a **chart builder** (e.g. `bar(...)`, the result of chaining `.x()`,
   `.where()`, …) — its `.toSpec()` is called for you
-- a **raw view spec object** — used as-is (after `externalizeScrollyViewSpec`
+- a **raw view spec object** — used as-is (after `serializeViewSpec`
   normalization)
 
 `.add()` stores a definition and returns the mutable Story builder; it does not
@@ -243,7 +243,7 @@ await createStory(spec, { target: "#app", d3, aq });
 
 ## Reusable bases and branching narratives
 
-Because chart-idiom builders are immutable (`.x()` etc. return *new* states),
+Because chart builders are immutable (`.x()` etc. return *new* states),
 you can build a `base` chain once and branch off it for each step — exactly
 the pattern the bundled examples use:
 

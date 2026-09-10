@@ -1,5 +1,5 @@
 import type { TransformSpec } from '../types/index.js';
-import { dataName } from '../scrolly-meta.js';
+import { dataName } from '../spec-meta.js';
 type AnyRecord = Record<string, unknown>;
 
 export async function loadData(dataSpec: Record<string, unknown>, d3: AnyRecord): Promise<Record<string, unknown[]>> {

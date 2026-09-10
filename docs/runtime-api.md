@@ -1,7 +1,7 @@
 # Transition runtime API
 
-VisDelta's runtime owns one seekable transition between two same-idiom
-visualization states. It does not own narrative layout or scrolling.
+VisDelta's runtime owns one seekable transition between two states of the same chart type
+visualization states.
 
 ## `transition(from, to, options)`
 
@@ -39,7 +39,7 @@ const change = await transition(first, second, {
 | `height` | no | Explicit chart height |
 | `reconstruct` | no | Force reconstruction instead of a supported cached evaluator |
 
-The endpoint chart idioms must match. Cross-idiom morphing is not supported.
+The endpoint chart types must match. Transitions between chart types are not supported.
 
 ## Controller
 
@@ -58,7 +58,7 @@ The endpoint chart idioms must match. Cross-idiom morphing is not supported.
 `progress`, `play`, `pause`, and `resize` return the controller for chaining.
 `destroy` is idempotent.
 
-## Driver independence
+## Control independence
 
 ```js
 slider.addEventListener("input", event => {
@@ -70,9 +70,8 @@ button.addEventListener("click", () => {
 });
 ```
 
-The driver may be UI state, a gesture, a route, a timer, or scroll geometry.
-VisDelta only consumes progress; the extracted `scrollytelling/` package
-currently owns the Story shell and native scroll adapter.
+The control may be UI state, a gesture, a route, a timer, or scroll position.
+VisDelta only needs a progress value from `0` to `1`.
 
 ## Lifecycle and errors
 
@@ -86,7 +85,7 @@ currently owns the Story shell and native scroll adapter.
 Common errors are intentional:
 
 ```text
-transition() requires two visualizations of the same chart idiom.
+transition() requires two states of the same chart type.
 Pass { target, d3 } to transition().
 transition(): missing dataset "name".
 VisDelta target not found: selector

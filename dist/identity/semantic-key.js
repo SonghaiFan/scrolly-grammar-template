@@ -1,6 +1,6 @@
-import { narrativeObjectKey, narrativeSemanticKey } from '../scrolly-meta.js';
+import { specObjectKey, specSemanticKey } from '../spec-meta.js';
 export function keyAccessor(spec, fallbackField = 'id') {
-    const key = narrativeObjectKey(spec) || fallbackField;
+    const key = specObjectKey(spec) || fallbackField;
     if (Array.isArray(key)) {
         return (d, i) => key.map((field) => d[field]).join('|') || String(i);
     }
@@ -9,7 +9,7 @@ export function keyAccessor(spec, fallbackField = 'id') {
     return (d, i) => (d[key] ?? d['__unitKey'] ?? i);
 }
 export function semanticKeyForDatum(datum, spec = {}) {
-    const semanticKey = narrativeSemanticKey(spec);
+    const semanticKey = specSemanticKey(spec);
     if (!semanticKey || !datum)
         return null;
     const parts = [
@@ -21,7 +21,7 @@ export function semanticKeyForDatum(datum, spec = {}) {
     return parts.map((part) => String(part)).join('|');
 }
 export function semanticMeasureForDatum(datum, spec = {}) {
-    const semanticKey = narrativeSemanticKey(spec);
+    const semanticKey = specSemanticKey(spec);
     if (!semanticKey || !datum)
         return null;
     return semanticKeyParts(semanticKey.measure ?? semanticKey['measures'], datum, 'value')[0] ?? null;

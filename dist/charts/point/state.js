@@ -1,13 +1,13 @@
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 import { colorField } from './encoding.js';
 export function pointState(spec = {}, enc = {}) {
-    const state = narrativeState(spec);
-    const granularity = state.sceneState?.['granularity']
-        || state.granularity
+    const state = specState(spec);
+    const detail = state.sceneState?.['detail']
+        || state.detail
         || {};
     return {
-        parentField: parentFromGroupby(granularity['groupby']) || granularity['parentField'] || colorField(enc),
-        granularityMode: granularity['mode'] || null
+        parentField: parentFromGroupby(detail['groupby']) || detail['parentField'] || colorField(enc),
+        detailMode: detail['mode'] || null
     };
 }
 export function parentAnchors(rows, parentField, positionForRow) {

@@ -1,10 +1,10 @@
-import { externalizeScrollyViewSpec, narrativeState } from '../scrolly-meta.js';
+import { serializeViewSpec, specState } from '../spec-meta.js';
 import { cloneViewSpec } from './compiler-utils.js';
 /**
- * Compile one view with one explicitly selected idiom compiler.
+ * Compile one view with one explicitly selected chart-type compiler.
  *
  * Keeping the compiler explicit is important: authoring `bar()` must not load
- * the manifest (and therefore every other built-in idiom) just to emit a spec.
+ * the manifest (and therefore every other built-in chart type) just to emit a spec.
  */
 export function compileViewWithCompiler(viewSpec, sceneTransition, compiler, stateOperations = {}) {
     const rendererKey = String(viewSpec.mark ?? '');
@@ -13,17 +13,17 @@ export function compileViewWithCompiler(viewSpec, sceneTransition, compiler, sta
         const handler = compiler.operations[entry.operation];
         return handler ? handler(compiledSpec, entry.operationSpec, context) : compiledSpec;
     }, compiler.base(cloneViewSpec(viewSpec), context));
-    return externalizeScrollyViewSpec(pruneCompiledViewSpec(pruneConsumedSceneState(compiled)));
+    return serializeViewSpec(pruneCompiledViewSpec(pruneConsumedSceneState(compiled)));
 }
-const STATE_APPLICATION_ORDER = ['focus', 'granularity', 'guide'];
+const STATE_APPLICATION_ORDER = ['selection', 'detail', 'axis'];
 const DEFAULT_STATE_OPERATION = {
-    focus: 'filter',
-    guide: 'coordinate',
-    granularity: 'aggregate'
+    selection: 'filter',
+    axis: 'coordinate',
+    detail: 'aggregate'
 };
 function stateOperationOrder(viewSpec, sceneTransition, compiler, configuredOperations) {
     const supported = Object.keys(compiler.operations);
-    const state = narrativeState(viewSpec);
+    const state = specState(viewSpec);
     const transition = sceneTransition;
     const operations = {
         ...DEFAULT_STATE_OPERATION,
@@ -38,7 +38,7 @@ function stateOperationOrder(viewSpec, sceneTransition, compiler, configuredOper
         .filter((entry) => entry.operationSpec != null && supported.includes(entry.operation));
 }
 function operationForState(stateKey, operationSpec, operations) {
-    if (stateKey === 'focus' && operationSpec?.['mode'] === 'highlight')
+    if (stateKey === 'selection' && operationSpec?.['mode'] === 'highlight')
         return 'highlight';
     return operations[stateKey] || DEFAULT_STATE_OPERATION[stateKey];
 }
@@ -52,13 +52,13 @@ function pruneCompiledViewSpec(spec) {
 }
 function pruneConsumedSceneState(spec) {
     const next = cloneViewSpec(spec);
-    const state = next.narrative?.['state'];
+    const state = next.meta?.['state'];
     if (!state)
         return next;
-    delete state['focus'];
-    delete state['guide'];
-    delete state['granularity'];
+    delete state['selection'];
+    delete state['axis'];
+    delete state['detail'];
     if (!Object.keys(state).length)
-        delete next.narrative?.['state'];
+        delete next.meta?.['state'];
     return next;
 }

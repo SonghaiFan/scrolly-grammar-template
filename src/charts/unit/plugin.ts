@@ -2,13 +2,13 @@ import type { ChartPlugin } from '../../types/index.js';
 import { createUnitSpecCompiler } from './compile.js';
 import { createUnitRenderer } from './render.js';
 import { createDefaultTransitionPlan } from '../transition-plan.js';
-import { defineChartIdiom } from '../plugin.js';
+import { defineChartType } from '../plugin.js';
 import type { UnitViewState } from './authoring.js';
 
-export const plugin: ChartPlugin<UnitViewState> = defineChartIdiom<UnitViewState>({
+export const plugin: ChartPlugin<UnitViewState> = defineChartType<UnitViewState>({
   key: 'unit',
-  scenes: ['focus', 'guide'],
-  stateOperations: { guide: 'layout' },
+  scenes: ['selection', 'axis'],
+  stateOperations: { axis: 'layout' },
   createRenderer: createUnitRenderer,
   createSpecCompiler: createUnitSpecCompiler,
   transition: {

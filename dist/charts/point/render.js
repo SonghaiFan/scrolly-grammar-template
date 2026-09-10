@@ -17,7 +17,7 @@ class PointChart extends BaseChart {
         const color = colorScale(domainRows, enc.color, d3);
         const radius = radiusScale(rows, enc.size, defaultPointRadius(rows.length), d3, quantitativeDomain);
         const key = pointKeyAccessor(spec, enc.x?.field || enc.y?.field);
-        // Anchor tracking for gather/scatter animation across granularity transitions.
+        // Anchor tracking for gather/scatter animation across detail transitions.
         // When rolling up (detail → aggregate), exiting points fly to the next cluster centroid.
         // When breaking down (aggregate → detail), entering points start at the previous cluster centroid.
         const previousAnchors = chart.scene.pointAnchors || { byParent: new Map() };

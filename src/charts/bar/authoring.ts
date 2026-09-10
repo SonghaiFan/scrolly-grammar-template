@@ -1,26 +1,26 @@
-import { externalizeScrollyViewSpec } from '../../scrolly-meta.js';
+import { serializeViewSpec } from '../../spec-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { normalizeFilter } from '../../data/filter.js';
 import { labelFromValue, titleize } from '../../labels.js';
-import { IdiomState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
 import type {
   BarLayout,
   ChannelSpec,
   FilterSpec,
-  GranularitySpec,
-  GuideSpec,
+  DetailSpec,
+  AxisSpec,
   SemanticKey,
-  StageSpec,
+  TransitionOrder,
   ViewSpec
 } from '../../types/index.js';
 
 export interface BarViewState extends ViewSpec {
   mark: 'bar';
   where?: FilterSpec[];
-  granularity?: GranularitySpec | null;
-  guide?: GuideSpec | null;
+  detail?: DetailSpec | null;
+  axis?: AxisSpec | null;
   aggregate?: unknown;
   semanticKey?: SemanticKey | null;
 }
@@ -31,7 +31,7 @@ export function bar(data?: unknown): BarState {
 
 const BAR_SPEC_COMPILER = createBarSpecCompiler();
 
-export class BarState extends IdiomState<BarViewState> {
+export class BarState extends ChartState<BarViewState> {
   override toSpec(): Omit<BarViewState, '__grammar'> {
     const spec = cloneState(this.state) as BarViewState & { __grammar?: unknown };
     delete spec.__grammar;
@@ -48,13 +48,13 @@ export class BarState extends IdiomState<BarViewState> {
     }
     delete spec.where;
     delete spec.filter;
-    if (spec.granularity == null) delete spec.granularity;
-    if (spec.guide == null) delete spec.guide;
+    if (spec.detail == null) delete spec.detail;
+    if (spec.axis == null) delete spec.axis;
     delete spec.aggregate;
     if (spec.semanticKey == null) delete spec.semanticKey;
 
     return pruneAuthoringState(
-      compileViewWithCompiler(externalizeScrollyViewSpec(spec as ViewSpec), { scene: [] }, BAR_SPEC_COMPILER)
+      compileViewWithCompiler(serializeViewSpec(spec as ViewSpec), { scene: [] }, BAR_SPEC_COMPILER)
     ) as Omit<BarViewState, '__grammar'>;
   }
 
@@ -84,7 +84,7 @@ export class BarState extends IdiomState<BarViewState> {
 
   where(selector: string | Record<string, unknown> | FilterSpec | null): this {
     if (selector == null) {
-      return this.with({ where: [] } as Partial<BarViewState>, 'focus');
+      return this.with({ where: [] } as Partial<BarViewState>, 'selection');
     }
     const selectors = normalizeSelectors(selector);
     const identity = identityFromSelectors(this.state as BarViewState, selectors);
@@ -111,27 +111,24 @@ export class BarState extends IdiomState<BarViewState> {
           ? { measureSelector: { title: measureTitle, fields: selectors.map((s) => s.field) } }
           : {})
       }
-    } as Partial<BarViewState>, 'focus');
+    } as Partial<BarViewState>, 'selection');
   }
 
-  flip(options: {
+  flip(options: TransitionOrder & {
     domain?: unknown[];
     scale?: Record<string, unknown>;
-    staging?: StageSpec;
-    stage?: Array<'x' | 'y'>;
-    order?: Array<'x' | 'y'>;
   } = {}): this {
     const domain = options.domain ?? (options.scale as Record<string, unknown> | undefined)?.domain;
     const scale = domain || options.scale
       ? { ...(options.scale ?? {}), ...(domain ? { domain } : {}) }
       : undefined;
-    const staging = options.staging ?? options.stage ?? options.order
-      ? {
-          ...(typeof options.staging === 'object' ? options.staging : {}),
-          order: options.order ?? options.stage ?? options.staging?.order ?? ['y', 'x']
-        }
-      : undefined;
-    return this.guide({ flip: true, ...(scale ? { scale } : {}), ...(staging ? { staging } : {}) });
+    return this.axis({
+      flip: true,
+      ...(scale ? { scale } : {}),
+      ...(options.order ? { order: options.order } : {}),
+      ...(options.duration != null ? { duration: options.duration } : {}),
+      ...(options.stagger ? { stagger: options.stagger } : {})
+    });
   }
 
   breakdown(
@@ -257,7 +254,7 @@ export class BarState extends IdiomState<BarViewState> {
     return this.with({
       key: config.key ?? [category, segment],
       where: tidy ? clearConstraint(state.where ?? [], segment) : state.where,
-      granularity: {
+      detail: {
         category,
         categoryTitle: config.categoryTitle ?? state.encoding?.x?.title,
         fields,
@@ -271,41 +268,30 @@ export class BarState extends IdiomState<BarViewState> {
         range: config.range,
         source: tidy ? segment : config.source,
         groupby: tidy ? [category, segment].filter(Boolean) as string[] : config.groupby
-      } as GranularitySpec,
+      } as DetailSpec,
       ...(config.tooltip
         ? { encoding: { tooltip: cloneState(config.tooltip) } }
         : {})
-    } as Partial<BarViewState>, 'granularity');
+    } as Partial<BarViewState>, 'detail');
   }
 
-  layout(layout: BarLayout, options: { staging?: StageSpec; stage?: Array<'x' | 'y'> } = {}): this {
+  layout(layout: BarLayout, options: TransitionOrder = {}): this {
     const state = this.state as BarViewState;
     const next = this.with({
-      granularity: state.granularity
-        ? { ...state.granularity, layout }
+      detail: state.detail
+        ? { ...state.detail, layout }
         : undefined,
-      guide: {
-        ...(state.guide ?? {}),
+      axis: {
+        ...(state.axis ?? {}),
         layout,
-        staging: options.staging ?? (state.guide as GuideSpec | null | undefined)?.staging
-      } as GuideSpec
+        ...(options.order ? { order: options.order } : {}),
+        ...(options.duration != null ? { duration: options.duration } : {}),
+        ...(options.stagger ? { stagger: options.stagger } : {})
+      } as AxisSpec
     } as Partial<BarViewState>);
-    return options.stage ? next.stage(options.stage) : next.with({} as Partial<BarViewState>, 'guide');
+    return next.with({} as Partial<BarViewState>, 'axis');
   }
 
-  stage(order: Array<'x' | 'y'>, options: Partial<StageSpec> = {}): this {
-    const state = this.state as BarViewState;
-    return this.with({
-      guide: {
-        ...(state.guide ?? {}),
-        staging: {
-          ...((state.guide as GuideSpec | null | undefined)?.staging ?? {}),
-          ...options,
-          order
-        } as StageSpec
-      } as GuideSpec
-    } as Partial<BarViewState>, 'guide');
-  }
 }
 
 function channelFields(channel: ChannelSpec | undefined): string[] {
@@ -348,7 +334,7 @@ function aggregateBarState(
     return view.with({
       key: normalized.key ?? [normalized.category, segment],
       where: clearConstraint((view.state as BarViewState).where ?? [], segment),
-      granularity: {
+      detail: {
         category: normalized.category,
         categoryTitle: normalized.categoryTitle,
         fields: [],
@@ -363,16 +349,16 @@ function aggregateBarState(
         source: segment,
         groupby,
         op: normalized.op
-      } as GranularitySpec,
+      } as DetailSpec,
       __grammar: { measureSelector: null },
       ...(normalized.tooltip ? { encoding: { tooltip: cloneState(normalized.tooltip) } } : {})
-    } as Partial<BarViewState>, 'granularity');
+    } as Partial<BarViewState>, 'detail');
   }
 
   return view.with({
     key: normalized.key ?? (groupby.length === 1 ? groupby[0] : groupby),
-    granularity: null,
-    guide: null,
+    detail: null,
+    axis: null,
     semanticKey: normalized.semanticKey ?? null,
     where: (view.state as BarViewState).where,
     transform: [
@@ -385,7 +371,7 @@ function aggregateBarState(
       }
     ],
     __grammar: { measureSelector: null }
-  } as Partial<BarViewState>, 'granularity');
+  } as Partial<BarViewState>, 'detail');
 }
 
 function normalizeSelectors(
@@ -508,7 +494,7 @@ function asArray<T>(value: T | T[] | null | undefined): (T | undefined)[] {
 function pruneAuthoringState(spec: ViewSpec): ViewSpec {
   const next = cloneState(spec) as ViewSpec;
   delete next.margin;
-  const state = (next.narrative as Record<string, unknown> | undefined)?.state as
+  const state = (next.meta as Record<string, unknown> | undefined)?.state as
     | Record<string, unknown>
     | undefined;
   if (!state) return next;
@@ -516,39 +502,40 @@ function pruneAuthoringState(spec: ViewSpec): ViewSpec {
   const sceneState = (state.sceneState ?? {}) as Record<string, unknown>;
   const preservedSceneState: Record<string, unknown> = {};
 
-  const focus = sceneState.focus ?? state.focus;
-  const guide = sceneState.guide ?? state.guide;
+  const selection = sceneState.selection ?? state.selection;
+  const axis = sceneState.axis ?? state.axis;
 
-  if ((focus as Record<string, unknown> | undefined)?.mode === 'highlight') {
-    preservedSceneState.focus = focus;
+  if ((selection as Record<string, unknown> | undefined)?.mode === 'highlight') {
+    preservedSceneState.selection = selection;
   }
-  if (hasCustomGuideStaging(guide as Record<string, unknown> | null)) {
-    const g = guide as Record<string, unknown>;
-    preservedSceneState.guide = {
+  if (hasCustomAxisOrder(axis as Record<string, unknown> | null)) {
+    const g = axis as Record<string, unknown>;
+    preservedSceneState.axis = {
       ...(g.layout ? { layout: g.layout } : {}),
       ...(g.orientation ? { orientation: g.orientation } : {}),
-      staging: g.staging
+      ...(g.order ? { order: g.order } : {}),
+      ...(g.duration != null ? { duration: g.duration } : {}),
+      ...(g.stagger ? { stagger: g.stagger } : {})
     };
   }
 
-  delete state.focus;
-  delete state.guide;
-  delete state.granularity;
+  delete state.selection;
+  delete state.axis;
+  delete state.detail;
   state.sceneState = preservedSceneState;
   if (!Object.keys(state.sceneState as object).length) delete state.sceneState;
-  if (!Object.keys(state).length) delete (next.narrative as Record<string, unknown>).state;
-  if (next.narrative && !Object.keys(next.narrative as object).length) delete next.narrative;
+  if (!Object.keys(state).length) delete (next.meta as Record<string, unknown>).state;
+  if (next.meta && !Object.keys(next.meta as object).length) delete next.meta;
   return next;
 }
 
-function hasCustomGuideStaging(guide: Record<string, unknown> | null): boolean {
-  if (!guide?.staging) return false;
-  const staging = guide.staging as Record<string, unknown>;
-  if (staging.duration != null || staging.stagger != null) return true;
-  if (!Array.isArray(staging.order)) return false;
-  return (staging.order as string[]).join('|') !== defaultGuideOrder(guide).join('|');
+function hasCustomAxisOrder(axis: Record<string, unknown> | null): boolean {
+  if (!axis) return false;
+  if (axis.duration != null || axis.stagger != null) return true;
+  if (!Array.isArray(axis.order)) return false;
+  return (axis.order as string[]).join('|') !== defaultAxisOrder(axis).join('|');
 }
 
-function defaultGuideOrder(guide: Record<string, unknown>): string[] {
-  return guide.orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y'];
+function defaultAxisOrder(axis: Record<string, unknown>): string[] {
+  return axis.orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y'];
 }

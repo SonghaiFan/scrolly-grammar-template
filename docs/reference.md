@@ -1,11 +1,14 @@
 # Interactive reference
 
-This is the canonical map of VisDelta's visualization-transition language. It connects immutable visualization declarations, semantic delta, and seekable transition evaluation.
+This is the canonical map of VisDelta's chart-transition language. It connects
+immutable chart states, their differences, and seekable transitions.
 
-For the normative ontology, grammar families, implementation status, missing capabilities, and development milestones, start with the [Language framework and roadmap](/language-framework). This page is the detailed API-level companion.
+For the language model, grammar groups, implementation status, missing
+capabilities, and development milestones, start with the [Language framework
+and roadmap](/language-framework). This page is the detailed API companion.
 
 <div class="ontology-flow">
-  <code>Visualization</code><span>to</span><code>Delta</code><span>to</span><code>Transition</code><span>to</span><code>Driver</code>
+  <code>Chart state</code><span>to</span><code>Difference</code><span>to</span><code>Transition</code><span>to</span><code>Control</code>
 </div>
 
 <TransitionWorkbench />
@@ -14,15 +17,21 @@ The workbench above imports the same built modules that an application imports. 
 
 ## Edit the grammar live
 
-Change any chainable method below and the chart recompiles after a short pause. Choose a preset to explore measure changes, filtering, highlighting, breakdown, orientation, or another chart idiom. The editor runs the real package from this checkout and reports invalid grammar instead of substituting a mock result.
+Change any chainable method below and the chart recompiles after a short pause.
+Choose a preset to explore value changes, filtering, highlighting, breakdown,
+orientation, or another chart type. The editor runs the real package from this
+checkout and reports invalid grammar instead of showing a mock result.
 
 <SyntaxPlayground />
 
-The playground expects two immutable, same-idiom states. Return them as `{ from, to }`; the surrounding driver owns rendering, progress, playback, resize, and cleanup. Press <kbd>Command</kbd> or <kbd>Control</kbd> + <kbd>Enter</kbd> to run immediately.
+The playground expects two immutable states of the same chart type. Return them
+as `{ from, to }`; the surrounding controls own rendering, progress, playback,
+resize, and cleanup. Press <kbd>Command</kbd> or <kbd>Control</kbd> + <kbd>Enter</kbd>
+to run immediately.
 
 ## Mental model
 
-### Visualization
+### Chart state
 
 A visualization is an immutable declaration such as:
 
@@ -37,9 +46,10 @@ const profit = base.y("profit");
 
 `base` and `profit` are independent objects. Chaining does not render and does not touch the DOM. Calling `.toSpec()` produces a serializable `ViewSpec`.
 
-### Delta
+### Difference
 
-A delta compares the meaning of two same-idiom endpoints. It records top-level and semantic changes, including encoding, identity, transforms, focus, guides, and granularity.
+A delta compares two states of the same chart type. It records changes to data,
+field mappings, matching keys, filters, axes, layout, and detail.
 
 ```js
 import { delta } from "visdelta/core";
@@ -49,8 +59,8 @@ const result = delta(base, profit);
 result.changed;
 result.deltas;
 result.has("encoding");
-result.hasDelta("guide");
-result.delta("granularity");
+result.hasDelta("encoding.y");
+result.delta("data");
 result.semantic.previous;
 result.semantic.next;
 ```
@@ -59,17 +69,22 @@ result.semantic.next;
 
 ### Transition
 
-A transition resolves data, selects the matching chart idiom, compiles the endpoints, and creates a controller that can evaluate any normalized frame from 0 through 1.
+A transition resolves data, selects the matching chart type, compiles the
+endpoints, and creates a controller that can evaluate any normalized frame from
+0 through 1.
 
-### Driver
+### Control
 
-A driver supplies time, progress, or a destination state. It may be a button, slider, scroll position, gesture, route, timer, keyboard command, or application event. Scrolling is one driver, not the definition of the animation system.
+A control supplies time, progress, or a destination state. It may be a button,
+slider, scroll position, gesture, route, timer, keyboard command, or application
+event. Scrolling is one control, not the definition of the animation system.
 
-## Visualization grammar
+## Chart grammar
 
-All four built-in idioms extend the same immutable authoring base.
+All four built-in chart types share the same base methods. Every method creates
+a new chart state and leaves the previous state untouched.
 
-| Method | Meaning | Compiled state |
+| Method | Meaning | Saved as |
 | --- | --- | --- |
 | `.data(source)` | Bind rows, `{ values }`, a URL, or a named dataset | `data` |
 | `.x(field, options?)` | Bind the x channel | `encoding.x` |
@@ -77,14 +92,14 @@ All four built-in idioms extend the same immutable authoring base.
 | `.channel(name, field, options?)` | Bind an arbitrary channel | `encoding[name]` |
 | `.color(valueOrField, options?)` | Bind a literal color or nominal field | `encoding.color` |
 | `.size(field, options?)` | Bind a quantitative size channel | `encoding.size` |
-| `.key(fieldOrFields)` | Declare stable object identity | `key` |
+| `.key(fieldOrFields)` | Tell VisDelta how to match the same item | `key` |
 | `.tooltip(items)` | Declare tooltip fields | `encoding.tooltip` |
 | `.sort(field, order?)` | Append a sort transform | `transform[]` |
-| `.where(selector)` | Select a semantic subset | focus or filter state |
-| `.highlight(selector, options?)` | De-emphasize nonmatching bars | focus state |
-| `.guide(config)` | Configure scales, axes, orientation, or staging | guide state |
+| `.where(selector)` | Keep matching rows or a matching range | selection or filter state |
+| `.highlight(selector, options?)` | De-emphasize nonmatching bars | selection state |
+| `.axis(config)` | Configure scales, axes, orientation, or transition order | axis state |
 | `.transition(timing)` | Configure duration, easing, and stagger | transition metadata |
-| `.toSpec()` | Compile to a detached view specification | `ViewSpec` |
+| `.toSpec()` | Return the plain JavaScript object behind the chart state | `ViewSpec` |
 
 ### Data source forms
 
@@ -110,38 +125,45 @@ base.x({
 });
 ```
 
-## Chart idioms
+## Chart types
 
 ### `bar()`
 
-Categorical comparison and composition. X defaults to nominal and y defaults to quantitative. Bar currently has the richest semantic transition support and is the only built-in idiom using cached seek evaluation.
+Categorical comparison and composition. X defaults to nominal and y defaults to
+quantitative. Bar currently has the richest transition support and is the only
+built-in chart type using cached frame evaluation.
 
 | Method | Purpose |
 | --- | --- |
-| `.flip(options?)` | Switch vertical and horizontal orientation with optional axis staging |
-| `.breakdown(segment, options?)` | Increase granularity into stacked or grouped segments; color remains explicit |
+| `.flip(options?)` | Switch vertical and horizontal orientation; optionally set x/y step order |
+| `.breakdown(segment, options?)` | Split totals into stacked or grouped detail; color remains explicit |
 | `.rollup(groupby, options?)` | Aggregate rows into fewer bars |
 | `.segment(config)` | Configure tidy or wide-data segmentation, labels, layout, and color |
 | `.layout(mode, options?)` | Select simple, grouped, or stacked geometry |
-| `.stage(order, options?)` | Configure multi-axis transition order and timing |
 
 ### `line()`
 
-Trends and series. X defaults to nominal and y to quantitative. Idiom methods are `.curve()`, `.strokeWidth()`, `.pointSize()`, `.flip()`, `.breakdown(series)`, and `.rollup()`.
+Trends and series. X defaults to nominal and y to quantitative. Chart-specific
+methods are `.curve()`, `.strokeWidth()`, `.pointSize()`, `.flip()`,
+`.breakdown(series)`, and `.rollup()`.
 
 ### `point()`
 
-Relationships and distributions. Both x and y default to quantitative. Idiom methods are `.pointSize()`, `.radius()`, `.flip()`, `.rollup(groupby)`, and `.breakdown(detail)`.
+Relationships and distributions. Both x and y default to quantitative.
+Chart-specific methods are `.pointSize()`, `.radius()`, `.flip()`,
+`.rollup(groupby)`, and `.breakdown(detail)`.
 
 ### `unit()`
 
-One mark per unit or count. Idiom methods are `.value()`, `.label()`, `.columns()`, `.radius()`, `.group()`, `.timeline()`, and `.dodge()`.
+One mark per unit or count. Chart-specific methods are `.value()`, `.label()`,
+`.columns()`, `.radius()`, `.group()`, `.timeline()`, and `.dodge()`.
 
-See [Chart idioms](/chart-idioms) for every overload and option.
+See [Chart types](/chart-types) for every overload and option.
 
 ## Standalone transition API
 
-Use `transition()` when you have exactly two same-idiom endpoints and your application owns the trigger.
+Use `transition()` when you have exactly two states of the same chart type and
+your application owns the trigger.
 
 ```js
 import * as d3 from "d3";
@@ -190,13 +212,6 @@ change.destroy();
 
 `progress()`, `play()`, `pause()`, and `resize()` return the controller for chaining. `destroy()` is idempotent.
 
-## Scrollytelling composition
-
-Story, Seq, page layout, navigation, and scroll ownership have moved out of
-this package. They currently live in the private `scrollytelling/` folder and
-will later be integrated into ScrollyTale. VisDelta itself accepts any
-external driver that supplies transition progress.
-
 ## Data and transforms
 
 D3 loads inline, CSV, and JSON data. Arquero is required only when the resolved view contains transforms. Entries execute in declared array order and invalid grammar throws instead of falling back silently.
@@ -221,7 +236,7 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/transition` | Pair initialization, seek, play, resize, and destroy |
 | `visdelta/plugins` | Plugin definition and registration |
-| `visdelta/composition` | Adapter contract used by external driver packages |
+| `visdelta/composition` | Adapter contract used by external control packages |
 | `visdelta` | Visualization grammar, delta, transition, and plugin API |
 | `visdelta/browser` | Transition API with browser-global dependency fallback |
 
@@ -229,24 +244,28 @@ Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for bar
 
 ## Plugin boundary
 
-`ChartPlugin` is a configuration and factory object. `ChartIdiom` is the runtime object produced by that factory.
+`ChartPlugin` is a configuration and factory object. `ChartType` is the runtime
+object produced by that factory.
 
 ```js
-import { defineChartIdiom, registerChartModule } from "visdelta/plugins";
+import { defineChartType, registerChartModule } from "visdelta/plugins";
 
-const plugin = defineChartIdiom({
+const plugin = defineChartType({
   key: "area",
   createRenderer: deps => areaRenderer,
   createSpecCompiler: context => areaCompiler,
   prepareSpec: spec => spec,
-  scenes: ["focus", "guide", "observation"],
+  scenes: ["selection", "axis", "mapping"],
   transitionEvaluation: "reconstruct"
 });
 
 registerChartModule({ plugin });
 ```
 
-Register before creating a transition or Story. New runtimes snapshot the selected idioms. Registration does not create a builder and does not enable cross-idiom morphing. See [Plugins](/extending-with-plugins) for the renderer and compiler contracts.
+Register before creating a transition. New transition runtimes snapshot the
+selected chart types. Registration does not create a builder and does not enable
+bar-to-line transitions. See [Plugins](/extending-with-plugins) for the renderer
+and compiler contracts.
 
 ## Lifecycle and errors
 
@@ -254,21 +273,19 @@ Register before creating a transition or Story. New runtimes snapshot the select
 - Package ESM requires explicit D3. Pass Arquero when transforms are present.
 - Call `destroy()` during framework unmount or route disposal.
 - Call `resize()` after an external size or theme change that the runtime cannot observe.
-- Call `sequence.unbind()` and `sequence.off("change")` when releasing Seq bindings.
 
 Common errors are intentional and actionable:
 
 ```text
-transition() requires two visualizations of the same chart idiom.
+transition() requires two states of the same chart type.
 Pass { target, d3 } to transition().
 transition(): missing dataset "name".
-Cannot navigate an empty Seq.
 VisDelta target not found: selector
 ```
 
 ## Current boundaries
 
-- Cross-idiom morphing is not supported. Bar-to-line is outside the current contract.
+- Transitions between different chart types are not supported. Bar-to-line is outside the current contract.
 - Bar uses cached frame evaluation. Line, point, unit, and unspecified plugins reconstruct when seeking.
 - Focused entries do not yet exist for line, point, and unit authoring.
 - Arquero is optional only when no transform pipeline is declared.
@@ -280,7 +297,7 @@ VisDelta target not found: selector
 1. Import focused modules when you only need pair transitions.
 2. Treat visualization builders as immutable endpoint declarations.
 3. Declare a stable key for objects that should persist across states.
-4. Use `transition()` for a pair and let the application own the driver.
+4. Use `transition()` for a pair and let the application own the control.
 5. Pass D3 explicitly and Arquero only when transforms require it.
 6. Import `visdelta/style.css` once.
 7. Destroy transition controllers during teardown.

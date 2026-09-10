@@ -1,11 +1,11 @@
 import type { ViewSpec } from '../../types/index.js';
-import { IdiomState } from '../authoring.js';
+import { ChartState } from '../authoring.js';
 export interface UnitViewState extends ViewSpec {
     mark: 'unit';
     unit?: Record<string, unknown>;
 }
 export declare function unit(data?: unknown): UnitState;
-export declare class UnitState extends IdiomState<UnitViewState> {
+export declare class UnitState extends ChartState<UnitViewState> {
     protected compileSpec(spec: ViewSpec): ViewSpec;
     value(field: string, options?: {
         maxUnits?: number;

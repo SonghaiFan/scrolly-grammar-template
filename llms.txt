@@ -6,9 +6,8 @@ Canonical model:
 
 Visualization -> Delta -> Transition -> Progress -> Frame
 
-The core library owns immutable visualization declarations, same-idiom semantic
-delta, chart rendering, and seekable transition controllers. It does not own a
-story page or scroll driver.
+The core library owns chart-state declarations, same-type differences, chart
+rendering, and seekable transition controllers.
 
 Primary imports:
 
@@ -38,11 +37,6 @@ Public package entries:
 - visdelta/plugins
 - visdelta/browser
 - visdelta/composition (driver-package adapter, not beginner API)
-
-Story, Seq, layout, navigation, theme mounting, and native scroll progress were
-extracted to the private `scrollytelling/` package in this repository. That
-package is intended for later integration into ScrollyTale. Do not claim that
-`story()`, `seq()`, `createStory()`, and page-layout APIs are not exported by VisDelta.
 
 D3 is required by the renderer. Arquero is currently required only when a
 declared transform pipeline is evaluated.

@@ -6,13 +6,13 @@ import { inferTransition } from '../grammar/infer-transition.js';
 import { captureDomFrame } from './dom-frame.js';
 import { hideTooltip } from './marks.js';
 import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress } from '../transition-progress.js';
-export function createTransitionSurface(from, to, options, idioms) {
+export function createTransitionSurface(from, to, options, chartTypes) {
     const { d3, aq } = options;
-    const { drawView, prepareScrollSourceState, compileTransitionSource, renderVirtualScrollPhase, applyVirtualScrollSequence } = createViewRenderer(idioms);
-    const idiom = idioms.get(from);
-    if (!idiom)
-        throw new Error(`Unsupported chart idiom: ${from.mark}`);
-    const canonical = idiom.canonicalTransitionPair?.(from, to) ?? { from, to, reverse: false };
+    const { drawView, prepareScrollSourceState, compileTransitionSource, renderVirtualScrollPhase, applyVirtualScrollSequence } = createViewRenderer(chartTypes);
+    const chartType = chartTypes.get(from);
+    if (!chartType)
+        throw new Error(`Unsupported chart type: ${from.mark}`);
+    const canonical = chartType.canonicalTransitionPair?.(from, to) ?? { from, to, reverse: false };
     const source = canonical.from;
     const target = canonical.to;
     const canonicalProgress = value => canonical.reverse ? 1 - value : value;
@@ -23,9 +23,9 @@ export function createTransitionSurface(from, to, options, idioms) {
     const node = shell.views.main;
     const config = { height: options.height ?? from.height ?? to.height ?? 500 };
     const scenes = { scene: inferTransition(source, target) };
-    // Cache only when the selected idiom explicitly opts into the property-track
+    // Cache only when the selected chart type explicitly opts into reusable-frame
     // contract. Unspecified/custom renderers use the reconstruction bridge.
-    const cacheFrames = idiom.transitionEvaluation === 'cached' && options.reconstruct !== true;
+    const cacheFrames = chartType.transitionEvaluation === 'cached' && options.reconstruct !== true;
     let cached = null;
     const disposeScene = () => {
         const scene = node.__visDeltaScene;
@@ -109,7 +109,7 @@ export function createTransitionSurface(from, to, options, idioms) {
                     previousViewSpec: source
                 });
                 // The pair's progress is already normalized. Chart-local timing and
-                // staging apply inside the plan; scroll easing is not a driver here.
+                // The step order applies inside the plan; scroll easing is not a control here.
                 const scene = node.__visDeltaScene;
                 if (!applyVirtualScrollSequence(scene, value))
                     scene.transitionProgress?.progress(value);

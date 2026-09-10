@@ -1,13 +1,13 @@
-import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createUnitSpecCompiler } from './compile.js';
 const UNIT_SPEC_COMPILER = createUnitSpecCompiler();
 export function unit(data) {
     return new UnitState({ data: normalizeDataSource(data), mark: 'unit', encoding: {}, unit: {} });
 }
-export class UnitState extends IdiomState {
+export class UnitState extends ChartState {
     compileSpec(spec) {
-        return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { guide: 'layout' });
+        return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { axis: 'layout' });
     }
     value(field, options = {}) {
         return this.with({
@@ -35,7 +35,7 @@ export class UnitState extends IdiomState {
     }
     group(field, options = {}) {
         const { color, ...layoutOptions } = options;
-        return unitGuide(this, {
+        return withUnitAxis(this, {
             layout: 'groupedGrid',
             group: field,
             ...layoutOptions,
@@ -43,22 +43,22 @@ export class UnitState extends IdiomState {
         });
     }
     timeline(field, options = {}) {
-        return unitGuide(this, {
+        return withUnitAxis(this, {
             layout: 'timeline',
-            ...unitAxis(this, 'x', field, options)
+            ...unitAxisChannel(this, 'x', field, options)
         });
     }
     dodge(field, options = {}) {
-        return unitGuide(this, {
+        return withUnitAxis(this, {
             layout: 'dodge',
-            ...unitAxis(this, 'x', field, options)
+            ...unitAxisChannel(this, 'x', field, options)
         });
     }
 }
-function unitGuide(state, guide) {
-    return state.guide(guide);
+function withUnitAxis(state, axis) {
+    return state.axis(axis);
 }
-function unitAxis(state, channel, field, options = {}) {
+function unitAxisChannel(state, channel, field, options = {}) {
     const { title, type, ...rest } = options;
     const current = state.state['encoding']?.[channel];
     if ((field == null || field === current?.field) && title == null && type == null) {

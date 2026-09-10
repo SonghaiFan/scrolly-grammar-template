@@ -1,6 +1,6 @@
-import { availableChartIdioms, registerChartIdiom, registerChartModule } from 'visdelta/composition';
+import { availableChartTypes, registerChartType, registerChartModule } from 'visdelta/composition';
 import type { AnyRecord, ChartOptions, ChartRuntime, PageOptions, PageRuntime, RuntimeOptions, StoryRuntime } from 'visdelta/composition';
-export { registerChartIdiom, registerChartModule, availableChartIdioms };
+export { registerChartType, registerChartModule, availableChartTypes };
 export declare function createStory(spec: AnyRecord, options: RuntimeOptions): Promise<StoryRuntime>;
 /** Layout-only embedding; charts and navigation remain owned by the caller. */
 export declare function createPage(spec: AnyRecord, options?: PageOptions): Promise<PageRuntime>;

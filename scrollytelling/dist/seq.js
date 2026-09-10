@@ -33,7 +33,7 @@ export class Seq {
         this._builder.view('main', opts);
         return this;
     }
-    /** Add a state: chart grammar object + optional narrative text */
+    /** Add a state: chart grammar object + optional text */
     add(viewSpec, text = '', opts = {}) {
         const index = this._entries.length;
         viewSpec = cloneState(typeof viewSpec.toSpec === 'function'

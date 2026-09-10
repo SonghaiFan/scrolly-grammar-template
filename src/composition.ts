@@ -1,10 +1,10 @@
 /**
- * Integration surface for driver packages such as `@visdelta/scrollytelling`.
+ * Integration surface for applications that provide their own controls.
  *
  * End users should normally import `visdelta`, `visdelta/bar`, or
  * `visdelta/transition`. This module intentionally exposes the lower-level
- * renderer contracts needed to build navigation, scroll, gesture, or route
- * orchestration without making those drivers part of the transition library.
+ * renderer contracts needed to connect navigation, scroll, gesture, or route
+ * progress without putting those controls inside the transition engine.
  */
 export { applyTransforms } from './data/transforms.js';
 export { chartModules } from './charts/manifest.js';
@@ -16,9 +16,9 @@ export {
 } from './runtime/actions.js';
 export { createChartRuntimeDeps } from './runtime/chart-deps.js';
 export {
-  availableChartIdioms,
+  availableChartTypes,
   chartRegistry,
-  registerChartIdiom,
+  registerChartType,
   registerChartModule,
   snapshotChartRegistry,
   transitionRegistry
@@ -34,9 +34,9 @@ export {
   VISDELTA_TRANSITION_NAME
 } from './transition-progress.js';
 export {
-  externalizeScrollyViewSpec,
-  withNarrative
-} from './scrolly-meta.js';
+  serializeViewSpec,
+  withSpecMeta
+} from './spec-meta.js';
 export { cloneState } from './grammar/view-state.js';
 export { diffViewStates } from './grammar/diff.js';
 export { inferTransition } from './grammar/infer-transition.js';

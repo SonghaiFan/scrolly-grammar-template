@@ -1,15 +1,15 @@
-import { defineChartIdiom } from '../plugin.js';
-import { createBarIdiom } from './idiom.js';
+import { defineChartType } from '../plugin.js';
+import { createBarChart } from './chart.js';
 import type { ChartPlugin } from '../../types/index.js';
-import type { BarSpec } from './idiom.js';
+import type { BarSpec } from './chart.js';
 
 // createBarSpecCompiler is still in compile.js (not yet migrated)
 import { createBarSpecCompiler } from './compile.js';
 
-export const plugin: ChartPlugin<BarSpec> = defineChartIdiom<BarSpec>({
+export const plugin: ChartPlugin<BarSpec> = defineChartType<BarSpec>({
   key: 'bar',
   transitionEvaluation: 'cached',
-  scenes: ['focus', 'guide', 'granularity', 'observation'],
-  createIdiom: createBarIdiom,
+  scenes: ['selection', 'axis', 'detail', 'mapping'],
+  createChart: createBarChart,
   createSpecCompiler: createBarSpecCompiler
 });

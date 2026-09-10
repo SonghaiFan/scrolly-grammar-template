@@ -1,16 +1,16 @@
 import type { ViewSpec } from '../../types/index.js';
 import { keyAccessor } from '../../identity/semantic-key.js';
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 
 type KeyFn = (d: Record<string, unknown>, i: number) => string | number;
 
 export function pointKeyAccessor(spec: ViewSpec, fallbackField = 'id'): KeyFn {
   const rawKey = keyAccessor(spec, fallbackField);
-  const mode = (narrativeState(spec).sceneState as Record<string, unknown> | undefined)?.['granularity'] as Record<string, unknown> | undefined;
-  const granularityMode = mode?.['mode'] as string | undefined;
-  if (!granularityMode) return rawKey;
+  const mode = (specState(spec).sceneState as Record<string, unknown> | undefined)?.['detail'] as Record<string, unknown> | undefined;
+  const detailMode = mode?.['mode'] as string | undefined;
+  if (!detailMode) return rawKey;
   return (row: Record<string, unknown>, index: number) =>
-    `${granularityMode}:${rawKey(row, index)}`;
+    `${detailMode}:${rawKey(row, index)}`;
 }
 
 export function pointStoredKey(

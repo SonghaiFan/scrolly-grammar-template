@@ -173,7 +173,7 @@ The rule of thumb: if you can describe the grid in words, it's too visible.
 - **Don't** change the series palette per-step. The reader builds a
   mental model of what each color means; breaking that mid-story is
   disorienting.
-- **Don't** add decorative backgrounds to the SVG figure. The white
-  surface is the data's stage.
+- **Don't** add decorative backgrounds to the SVG figure. Keep the chart
+  background white and quiet.
 - **Don't** set bar radius above 6px. Above that, the mark reads as a
   pill, not a bar, and area judgment degrades.

@@ -164,7 +164,7 @@ test('reject incompatible pairs and missing data without changing target', async
     }
     return { messages, text: document.querySelector('#a').textContent };
   });
-  expect(result.messages[0]).toContain('same chart idiom');
+  expect(result.messages[0]).toContain('same chart type');
   expect(result.messages[1]).toContain('missing dataset');
   expect(result.text).toBe('keep');
 });
@@ -248,16 +248,16 @@ test('URL data loads once, .data replacement is resolved, and later seeks do not
   expect(result.marks).toBe(3);
 });
 
-for (const idiom of ['line', 'point', 'unit']) {
-  test(`${idiom}: same-idiom pair has reproducible frames`, async ({ page }) => {
-    const result = await page.evaluate(async idiom => {
+for (const chartType of ['line', 'point', 'unit']) {
+  test(`${chartType}: same-type pair has reproducible frames`, async ({ page }) => {
+    const result = await page.evaluate(async chartType => {
       const input = [
         { id: 'a', x: 1, y: 20, other: 35, group: 'one', count: 2 },
         { id: 'b', x: 2, y: 30, other: 10, group: 'two', count: 3 }
       ];
-      let from = sl[idiom]().data(input).x('x').y('y').key('id');
+      let from = sl[chartType]().data(input).x('x').y('y').key('id');
       let to = from.y('other');
-      if (idiom === 'unit') {
+      if (chartType === 'unit') {
         from = from.value('count').columns(6);
         to = from.group('group');
       }
@@ -266,7 +266,7 @@ for (const idiom of ['line', 'point', 'unit']) {
       a.progress(0.37);
       b.progress(1).progress(0.2).progress(0).progress(0.37);
       return { a: snapshot('#a'), b: snapshot('#b'), marks: a.view.querySelectorAll('circle, path.sl-line, rect.sl-unit').length };
-    }, idiom);
+    }, chartType);
     expect(result.a).toEqual(result.b);
     expect(result.marks).toBeGreaterThan(0);
   });

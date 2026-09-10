@@ -1,5 +1,5 @@
 import type { ChannelSpec, ViewSpec } from '../../types/index.js';
-import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createUnitSpecCompiler } from './compile.js';
 
@@ -14,9 +14,9 @@ export function unit(data?: unknown): UnitState {
   return new UnitState({ data: normalizeDataSource(data) as UnitViewState['data'], mark: 'unit', encoding: {}, unit: {} });
 }
 
-export class UnitState extends IdiomState<UnitViewState> {
+export class UnitState extends ChartState<UnitViewState> {
   protected override compileSpec(spec: ViewSpec): ViewSpec {
-    return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { guide: 'layout' });
+    return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { axis: 'layout' });
   }
 
   value(field: string, options: { maxUnits?: number } = {}): this {
@@ -49,7 +49,7 @@ export class UnitState extends IdiomState<UnitViewState> {
 
   group(field: string, options: Record<string, unknown> = {}): this {
     const { color, ...layoutOptions } = options;
-    return unitGuide(this, {
+    return withUnitAxis(this, {
       layout: 'groupedGrid',
       group: field,
       ...layoutOptions,
@@ -58,25 +58,25 @@ export class UnitState extends IdiomState<UnitViewState> {
   }
 
   timeline(field: string, options: Record<string, unknown> = {}): this {
-    return unitGuide(this, {
+    return withUnitAxis(this, {
       layout: 'timeline',
-      ...unitAxis(this, 'x', field, options)
+      ...unitAxisChannel(this, 'x', field, options)
     }) as unknown as this;
   }
 
   dodge(field: string, options: Record<string, unknown> = {}): this {
-    return unitGuide(this, {
+    return withUnitAxis(this, {
       layout: 'dodge',
-      ...unitAxis(this, 'x', field, options)
+      ...unitAxisChannel(this, 'x', field, options)
     }) as unknown as this;
   }
 }
 
-function unitGuide(state: UnitState, guide: Record<string, unknown>): UnitState {
-  return state.guide(guide) as unknown as UnitState;
+function withUnitAxis(state: UnitState, axis: Record<string, unknown>): UnitState {
+  return state.axis(axis) as unknown as UnitState;
 }
 
-function unitAxis(
+function unitAxisChannel(
   state: UnitState,
   channel: string,
   field: string,

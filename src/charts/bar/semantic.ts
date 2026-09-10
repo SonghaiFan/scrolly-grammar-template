@@ -1,4 +1,4 @@
-import { narrativeState } from '../../scrolly-meta.js';
+import { specState } from '../../spec-meta.js';
 import type {
   AggregateTransform,
   BarGeometryState,
@@ -9,10 +9,10 @@ import type {
   ChannelSpec,
   EncodingSpec,
   FilterSpec,
-  GranularitySpec,
-  GuideSpec,
-  NarrativeSceneState,
-  ResolvedNarrativeState,
+  DetailSpec,
+  AxisSpec,
+  ChartChangeState,
+  ResolvedChartState,
   ViewSpec
 } from '../../types/index.js';
 import {
@@ -24,7 +24,7 @@ import {
 
 export function semanticBarState(
   spec: ViewSpec,
-  semanticStateArg: Partial<ResolvedNarrativeState> | null = null
+  semanticStateArg: Partial<ResolvedChartState> | null = null
 ): BarSemanticState {
   const enc = (spec.encoding ?? {}) as Record<string, ChannelSpec | undefined>;
   const state = semanticStateArg ?? semanticStateFromSpec(spec);
@@ -34,8 +34,8 @@ export function semanticBarState(
   const categoryField = barCategoryChannel(enc).field ?? null;
   const measureField = barMeasureChannel(enc).field ?? null;
   const segmentField = barSegmentField(spec, state);
-  const guide = barGuideState({ orientation, layout, state });
-  const granularity = barGranularityState({ layout, categoryField, measureField, segmentField, state });
+  const axis = barAxisState({ orientation, layout, state });
+  const detail = barDetailState({ layout, categoryField, measureField, segmentField, state });
   const geometry = barGeometryState({ enc, filters: resolveFilters(spec, state), layout, orientation, categoryField, measureField, segmentField });
 
   return {
@@ -43,8 +43,8 @@ export function semanticBarState(
     layout,
     categoryField,
     measureField,
-    guide,
-    granularity,
+    axis,
+    detail,
     aggregate,
     segmentField,
     xGeometry: geometry.x,
@@ -54,16 +54,16 @@ export function semanticBarState(
 
 export function barLayoutState(
   spec: ViewSpec,
-  state: Partial<ResolvedNarrativeState> = semanticStateFromSpec(spec),
+  state: Partial<ResolvedChartState> = semanticStateFromSpec(spec),
   aggregate: AggregateTransform | AggregateTransform[] | null = barAggregateState(spec)
 ): BarLayout {
   const enc = (spec.encoding ?? {}) as Record<string, ChannelSpec | undefined>;
-  const sceneState = (state as { sceneState?: NarrativeSceneState }).sceneState ?? {};
+  const sceneState = (state as { sceneState?: ChartChangeState }).sceneState ?? {};
   const stateLayout =
-    sceneState.guide?.layout ??
-    sceneState.granularity?.layout ??
-    (state as { guide?: { layout?: BarLayout } }).guide?.layout ??
-    (state as { granularity?: { layout?: BarLayout } }).granularity?.layout;
+    sceneState.axis?.layout ??
+    sceneState.detail?.layout ??
+    (state as { axis?: { layout?: BarLayout } }).axis?.layout ??
+    (state as { detail?: { layout?: BarLayout } }).detail?.layout;
 
   if (stateLayout) return stateLayout;
   if (enc.xOffset?.field || enc.yOffset?.field) return 'grouped';
@@ -71,28 +71,28 @@ export function barLayoutState(
   return 'simple';
 }
 
-export function barGuideState({
+export function barAxisState({
   orientation,
   layout,
   state = {}
 }: {
   orientation: BarOrientation;
   layout: BarLayout;
-  state?: Partial<ResolvedNarrativeState>;
-}): GuideSpec | null {
-  const sceneState = (state as { sceneState?: NarrativeSceneState }).sceneState ?? {};
-  const explicit = sceneState.guide ?? (state as { guide?: GuideSpec }).guide;
+  state?: Partial<ResolvedChartState>;
+}): AxisSpec | null {
+  const sceneState = (state as { sceneState?: ChartChangeState }).sceneState ?? {};
+  const explicit = sceneState.axis ?? (state as { axis?: AxisSpec }).axis;
   if (explicit) return explicit;
   if (orientation === 'horizontal') {
-    return { orientation, staging: { order: ['y', 'x'] } };
+    return { orientation, order: ['y', 'x'] };
   }
   if (layout === 'grouped') {
-    return { layout, staging: { order: ['x', 'y'] } };
+    return { layout, order: ['x', 'y'] };
   }
   return null;
 }
 
-export function barGranularityState({
+export function barDetailState({
   layout,
   categoryField,
   measureField,
@@ -103,11 +103,11 @@ export function barGranularityState({
   categoryField: string | null;
   measureField: string | null;
   segmentField: string | null;
-  state?: Partial<ResolvedNarrativeState>;
-}): GranularitySpec | null {
-  const sceneState = (state as { sceneState?: NarrativeSceneState }).sceneState ?? {};
+  state?: Partial<ResolvedChartState>;
+}): DetailSpec | null {
+  const sceneState = (state as { sceneState?: ChartChangeState }).sceneState ?? {};
   const explicit =
-    sceneState.granularity ?? (state as { granularity?: GranularitySpec }).granularity;
+    sceneState.detail ?? (state as { detail?: DetailSpec }).detail;
   if (explicit) return explicit;
   if (!isSegmentLayout(layout) || !segmentField) return null;
   return {
@@ -131,12 +131,12 @@ export function barAggregateState(
 
 export function barSegmentField(
   spec: ViewSpec,
-  state: Partial<ResolvedNarrativeState> = semanticStateFromSpec(spec)
+  state: Partial<ResolvedChartState> = semanticStateFromSpec(spec)
 ): string | null {
-  const sceneState = (state as { sceneState?: NarrativeSceneState }).sceneState ?? {};
+  const sceneState = (state as { sceneState?: ChartChangeState }).sceneState ?? {};
   return (
-    sceneState.granularity?.segmentField ??
-    (state as { granularity?: GranularitySpec }).granularity?.segmentField ??
+    sceneState.detail?.segmentField ??
+    (state as { detail?: DetailSpec }).detail?.segmentField ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.detail?.field ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.xOffset?.field ??
     (spec.encoding as Record<string, ChannelSpec | undefined>)?.yOffset?.field ??
@@ -147,8 +147,8 @@ export function barSegmentField(
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-function semanticStateFromSpec(spec: ViewSpec): ResolvedNarrativeState & { filters: FilterSpec[] } {
-  const state = narrativeState(spec);
+function semanticStateFromSpec(spec: ViewSpec): ResolvedChartState & { filters: FilterSpec[] } {
+  const state = specState(spec);
   const transforms = (spec.transform ?? []) as Array<Record<string, unknown>>;
   return {
     ...state,
@@ -159,7 +159,7 @@ function semanticStateFromSpec(spec: ViewSpec): ResolvedNarrativeState & { filte
   };
 }
 
-function resolveFilters(spec: ViewSpec, state: Partial<ResolvedNarrativeState>): FilterSpec[] {
+function resolveFilters(spec: ViewSpec, state: Partial<ResolvedChartState>): FilterSpec[] {
   const transforms = (spec.transform ?? []) as Array<Record<string, unknown>>;
   return [
     ...(spec.filter ? [spec.filter as FilterSpec] : []),

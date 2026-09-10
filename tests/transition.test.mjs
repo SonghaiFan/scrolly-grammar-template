@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bar, line, point, unit, transition } from '../dist/index.js';
 import { diffViewStates, sameValue } from '../dist/grammar/diff.js';
+import { resolveBarTransitionPlan } from '../dist/charts/bar/state.js';
 
 test('builders accept deferred data and preserve both branches', () => {
   const rows = [{ category: 'A', value: 1, other: 4 }];
@@ -41,10 +42,22 @@ test('same result has the same delta independent of derivation and property orde
 });
 
 test('pair validation runs before DOM access', async () => {
-  await assert.rejects(() => transition(bar('a'), line('a'), {}), /same chart idiom/);
+  await assert.rejects(() => transition(bar('a'), line('a'), {}), /same chart type/);
   await assert.rejects(() => transition(bar('a'), bar('a'), {}), /target, d3/);
   await assert.rejects(() => transition(bar('a'), bar('a'), { d3: {}, aq: {} }), /missing dataset/);
   const a = { mark: 'bar', data: [{ category: 'A', value: 1 }] };
   await assert.rejects(() => transition(a, { ...a, transform: [null] }, { d3: {} }), /transform\[0\]/);
   await assert.rejects(() => transition(a, { ...a, transform: [{ limit: -1 }] }, { d3: {} }), /transform\[0\]/);
+});
+
+test('bar steps keep scale, axis, and marks in one chart-part change', () => {
+  const vertical = bar([{ category: 'A', value: 1 }]).x('category').y('value');
+  const horizontal = vertical.flip({ order: ['y', 'x'] });
+  const plan = resolveBarTransitionPlan(vertical.toSpec(), horizontal.toSpec());
+
+  assert.deepEqual(plan.steps, [
+    { part: 'y', changes: ['scale', 'axis', 'marks'] },
+    { part: 'x', changes: ['scale', 'axis', 'marks'] }
+  ]);
+  assert.equal(plan.match, undefined);
 });

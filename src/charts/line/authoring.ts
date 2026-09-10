@@ -1,5 +1,5 @@
-import type { StageSpec, ViewSpec } from '../../types/index.js';
-import { IdiomState, colorFrom, normalizeDataSource } from '../authoring.js';
+import type { AxisSpec, ViewSpec } from '../../types/index.js';
+import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createLineSpecCompiler } from './compile.js';
 
@@ -16,7 +16,7 @@ export function line(data?: unknown): LineState {
   return new LineState({ data: normalizeDataSource(data) as LineViewState['data'], mark: 'line', encoding: {} });
 }
 
-export class LineState extends IdiomState<LineViewState> {
+export class LineState extends ChartState<LineViewState> {
   protected override compileSpec(spec: ViewSpec): ViewSpec {
     return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
   }
@@ -42,24 +42,19 @@ export class LineState extends IdiomState<LineViewState> {
   }
 
   flip(options: Record<string, unknown> = {}): this {
-    return this.guide({
+    return this.axis({
       flip: true,
       ...(options['x'] ? { x: options['x'] } : {}),
       ...(options['y'] ? { y: options['y'] } : {}),
-      ...(options['staging'] || options['stage'] || options['order']
-        ? {
-            staging: {
-              ...(typeof options['staging'] === 'object' ? options['staging'] as Partial<StageSpec> : {}),
-              order: ((options['order'] || options['stage'] || (options['staging'] as Record<string, unknown>)?.['order'] || ['x', 'y']) as Array<'x' | 'y'>)
-            } as StageSpec
-          }
-        : {})
+      ...(options['order'] ? { order: options['order'] as Array<'x' | 'y'> } : {}),
+      ...(options['duration'] != null ? { duration: options['duration'] as number } : {}),
+      ...(options['stagger'] ? { stagger: options['stagger'] as AxisSpec['stagger'] } : {})
     });
   }
 
   breakdown(field: string, options: Record<string, unknown> = {}): this {
     return this.with({
-      granularity: {
+      detail: {
         mode: 'series',
         series: field,
         ...(options['color']
@@ -69,7 +64,7 @@ export class LineState extends IdiomState<LineViewState> {
           : {}),
         ...(options['range'] ? { range: options['range'] as unknown[] } : {})
       }
-    }, 'granularity') as this;
+    }, 'detail') as this;
   }
 
   rollup(groupbyOrOptions: Record<string, unknown> = {}): this {
@@ -77,10 +72,10 @@ export class LineState extends IdiomState<LineViewState> {
       ? groupbyOrOptions
       : {};
     return this.with({
-      granularity: {
+      detail: {
         mode: 'single',
         ...(options['color'] ? { color: colorFrom(options['color'] as string) } : {})
       }
-    }, 'granularity') as this;
+    }, 'detail') as this;
   }
 }

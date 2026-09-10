@@ -1,9 +1,9 @@
 import { keyAccessor, semanticKeyForDatum, semanticMeasureForDatum } from '../../identity/semantic-key.js';
-import { narrativeSemanticKey } from '../../scrolly-meta.js';
+import { specSemanticKey } from '../../spec-meta.js';
 export function barKeyAccessor(chart, spec, fallbackField = 'id') {
     const fallback = keyAccessor(spec, fallbackField);
-    const keyPlan = chart.transitionPlan?.key;
-    if (keyPlan?.mode !== 'semantic' || !narrativeSemanticKey(spec)) {
+    const matchPlan = chart.transitionPlan?.match;
+    if (matchPlan?.mode !== 'semantic' || !specSemanticKey(spec)) {
         return fallback;
     }
     return function semanticJoinKey(d, i) {

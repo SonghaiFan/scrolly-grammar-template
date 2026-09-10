@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('focused bar transition loads no Story runtime or unrelated idioms', async ({ page }) => {
+test('selected bar transition loads no Story runtime or unrelated chart types', async ({ page }) => {
   const modules = [];
   page.on('request', request => {
     const url = new URL(request.url());
@@ -18,19 +18,19 @@ test('focused bar transition loads no Story runtime or unrelated idioms', async 
   expect(modules.filter(path => /\/(shell|navigation)\.js$|\/scroll-drivers\//.test(path))).toEqual([]);
 });
 
-test('custom idiom compiler runs and an existing pair keeps its renderer after registration changes', async ({ page }) => {
+test('custom chart compiler runs and an existing pair keeps its renderer after registration changes', async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
   const result = await page.evaluate(async () => {
     const { transition } = await import('/dist/transition-entry.js');
-    const { defineChartIdiom, registerChartModule } = await import('/dist/plugins.js');
+    const { defineChartType, registerChartModule } = await import('/dist/plugins.js');
     const { plugin: barPlugin } = await import('/dist/charts/bar/plugin.js');
     const host = document.createElement('div');
     document.body.append(host);
     // Reuse a public plugin renderer through its normal dependency injection.
     const { CHART_RUNTIME_DEPS } = await import('/dist/runtime/chart-deps.js');
-    const renderer = barPlugin.createChartIdiom(CHART_RUNTIME_DEPS).renderer;
+    const renderer = barPlugin.createChartType(CHART_RUNTIME_DEPS).renderer;
     let compiled = 0;
-    registerChartModule({ plugin: defineChartIdiom({
+    registerChartModule({ plugin: defineChartType({
       key: 'custom-bar',
       renderer,
       prepareSpec: spec => ({ ...spec, mark: 'bar' }),
@@ -43,7 +43,7 @@ test('custom idiom compiler runs and an existing pair keeps its renderer after r
     const pair = await transition(a, { ...a, measure: 'b' }, { target: host, d3 });
     pair.progress(0.4);
     const before = host.querySelector('rect.sl-bar')?.getAttribute('height');
-    registerChartModule({ plugin: defineChartIdiom({ key: 'custom-bar', renderer() { throw new Error('replacement must not run'); } }) });
+    registerChartModule({ plugin: defineChartType({ key: 'custom-bar', renderer() { throw new Error('replacement must not run'); } }) });
     pair.progress(0.7).progress(0.4).resize();
     const after = host.querySelector('rect.sl-bar')?.getAttribute('height');
     pair.destroy();
@@ -55,15 +55,15 @@ test('custom idiom compiler runs and an existing pair keeps its renderer after r
   expect(result.after).toBe(result.before);
 });
 
-test('the root entry does not overwrite a focused built-in registration', async ({ page }) => {
+test('the root entry does not overwrite a selected built-in registration', async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
   const calls = await page.evaluate(async () => {
-    const { registerChartIdiom } = await import('/dist/plugins.js');
+    const { registerChartType } = await import('/dist/plugins.js');
     const { plugin } = await import('/dist/charts/bar/plugin.js');
     const { CHART_RUNTIME_DEPS } = await import('/dist/runtime/chart-deps.js');
-    const idiom = plugin.createChartIdiom(CHART_RUNTIME_DEPS);
+    const chartType = plugin.createChartType(CHART_RUNTIME_DEPS);
     let calls = 0;
-    registerChartIdiom({ ...idiom, renderer(...args) { calls++; return idiom.renderer(...args); } });
+    registerChartType({ ...chartType, renderer(...args) { calls++; return chartType.renderer(...args); } });
     const { bar, transition } = await import('/dist/index.js');
     const host = document.createElement('div');
     document.body.append(host);

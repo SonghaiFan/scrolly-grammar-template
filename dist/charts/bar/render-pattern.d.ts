@@ -1,8 +1,9 @@
 export declare function createBarRenderKit(deps: any): {
-    axisTransition: (stage: any, axis: any, d3: any) => any;
+    applyMarkSteps: (selection: any, steps: any, spec: any, markGeometry: any, baseAttrs: any) => any;
+    axisTransition: (steps: any, part: any, d3: any) => any;
     baselineEnterPlan: typeof baselineEnterPlan;
     baselineExitPlan: typeof baselineExitPlan;
-    barFocusOpacity: typeof barFocusOpacity;
+    barSelectionOpacity: typeof barSelectionOpacity;
     collapseLineage: typeof collapseLineage;
     renderBarJoin: (options: any) => void;
     renderBarSeams: ({ chart, path, startPath, draw }: {
@@ -14,9 +15,8 @@ export declare function createBarRenderKit(deps: any): {
     setRectGeometry: typeof setRectGeometry;
     splitLineage: typeof splitLineage;
     sourceBaselineExit: typeof sourceBaselineExit;
-    stagedUpdate: (selection: any, stage: any, spec: any, dimensions: any, baseAttrs: any) => any;
-    updateStage: (chart: any, rendererOrientation: any, d3: any) => {
-        stages: any;
+    steps: (chart: any, rendererOrientation: any, d3: any) => {
+        ordered: any;
         duration: any;
         ease: any;
         stagger: any;
@@ -35,4 +35,4 @@ export declare function sourceBaselineExit(selection: any, { horizontal, plan, v
     plan?: null | undefined;
     value?: null | undefined;
 }): any;
-export declare function barFocusOpacity(row: any, spec?: {}, dimOpacity?: number): number;
+export declare function barSelectionOpacity(row: any, spec?: {}, dimOpacity?: number): number;

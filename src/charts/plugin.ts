@@ -1,6 +1,6 @@
 import type {
   ChartDeps,
-  ChartIdiom,
+  ChartType,
   ChartPlugin,
   CompilerContext,
   IntermediateSpec,
@@ -12,22 +12,22 @@ import type {
   ViewSpec
 } from '../types/index.js';
 
-export const DEFAULT_SCENES = ['focus', 'guide', 'granularity', 'observation'] as const;
+export const DEFAULT_SCENES = ['selection', 'axis', 'detail', 'mapping'] as const;
 
 export const DEFAULT_STATE_OPERATIONS: StateOperations = {
-  focus: 'filter',
-  guide: 'coordinate',
-  granularity: 'aggregate'
+  selection: 'filter',
+  axis: 'coordinate',
+  detail: 'aggregate'
 };
 
-export interface ChartIdiomConfig<S extends ViewSpec = ViewSpec> {
+export interface ChartTypeConfig<S extends ViewSpec = ViewSpec> {
   key: string;
   transitionEvaluation?: 'cached' | 'reconstruct';
   scenes?: string[];
   stateOperations?: StateOperations;
   renderer?: Renderer<S>;
   createRenderer?: (deps: ChartDeps) => Renderer<S>;
-  createIdiom?: (deps: ChartDeps) => ChartIdiom<S>;
+  createChart?: (deps: ChartDeps) => ChartType<S>;
   prepareSpec?: (spec: S) => S;
   defaults?: { margin?: (spec: S) => Partial<MarginSpec> };
   inspect?: Record<string, unknown>;
@@ -39,27 +39,27 @@ export interface ChartIdiomConfig<S extends ViewSpec = ViewSpec> {
   createSpecCompiler?: (context: CompilerContext) => SpecCompiler;
 }
 
-export function defineChartIdiom<S extends ViewSpec = ViewSpec>(
-  config: ChartIdiomConfig<S>
+export function defineChartType<S extends ViewSpec = ViewSpec>(
+  config: ChartTypeConfig<S>
 ): ChartPlugin<S> {
-  if (!config.key) throw new Error('Chart idiom plugin requires a key.');
+  if (!config.key) throw new Error('Chart type plugin requires a key.');
 
   const { createSpecCompiler } = config;
   const scenes = uniqueStrings(config.scenes ?? [...DEFAULT_SCENES]);
   const stateOperations: StateOperations = { ...DEFAULT_STATE_OPERATIONS, ...(config.stateOperations ?? {}) };
 
-  function createChartIdiom(deps: ChartDeps): ChartIdiom<S> {
-    const idiom = config.createIdiom
-      ? config.createIdiom(deps)
-      : createRuntimeIdiom(config, deps);
+  function createChartType(deps: ChartDeps): ChartType<S> {
+    const chartType = config.createChart
+      ? config.createChart(deps)
+      : createRuntimeChartType(config, deps);
 
-    return normalizeChartIdiom<S>(
+    return normalizeChartType<S>(
       {
-        ...idiom,
-        transitionEvaluation: config.transitionEvaluation ?? idiom.transitionEvaluation,
-        key: idiom.key || config.key,
-        scenes: idiom.scenes ?? scenes,
-        stateOperations: { ...stateOperations, ...(idiom.stateOperations ?? {}) }
+        ...chartType,
+        transitionEvaluation: config.transitionEvaluation ?? chartType.transitionEvaluation,
+        key: chartType.key || config.key,
+        scenes: chartType.scenes ?? scenes,
+        stateOperations: { ...stateOperations, ...(chartType.stateOperations ?? {}) }
       },
       createSpecCompiler
     );
@@ -69,7 +69,7 @@ export function defineChartIdiom<S extends ViewSpec = ViewSpec>(
     key: config.key,
     scenes,
     stateOperations,
-    createChartIdiom,
+    createChartType,
     ...(createSpecCompiler ? { createSpecCompiler } : {})
   };
 }
@@ -86,39 +86,39 @@ export function defaultMargin(): Partial<MarginSpec> {
   return {};
 }
 
-export function normalizeChartIdiom<S extends ViewSpec = ViewSpec>(
-  idiom: Partial<ChartIdiom<S>> & { key: string },
+export function normalizeChartType<S extends ViewSpec = ViewSpec>(
+  chartType: Partial<ChartType<S>> & { key: string },
   createSpecCompiler?: ((context: CompilerContext) => SpecCompiler) | null
-): ChartIdiom<S> {
-  const prepareSpec = idiom.prepareSpec ?? identityPrepare;
-  const resolveTransitionPlan = idiom.resolveTransitionPlan ?? emptyTransitionPlan;
-  const renderer = idiom.renderer;
-  if (!renderer) throw new Error(`Chart idiom "${idiom.key}" must provide a renderer function.`);
+): ChartType<S> {
+  const prepareSpec = chartType.prepareSpec ?? identityPrepare;
+  const resolveTransitionPlan = chartType.resolveTransitionPlan ?? emptyTransitionPlan;
+  const renderer = chartType.renderer;
+  if (!renderer) throw new Error(`Chart type "${chartType.key}" must provide a renderer function.`);
 
-  const scenes = uniqueStrings([...(idiom.scenes ?? DEFAULT_SCENES)]);
-  const stateOperations: StateOperations = { ...DEFAULT_STATE_OPERATIONS, ...(idiom.stateOperations ?? {}) };
+  const scenes = uniqueStrings([...(chartType.scenes ?? DEFAULT_SCENES)]);
+  const stateOperations: StateOperations = { ...DEFAULT_STATE_OPERATIONS, ...(chartType.stateOperations ?? {}) };
 
   return {
     inspect: {},
-    ...idiom,
+    ...chartType,
     scenes,
     stateOperations,
     renderer,
     prepareSpec,
     resolveTransitionPlan,
-    intermediateSpecs: idiom.intermediateSpecs,
-    intermediateSpec: idiom.intermediateSpec ?? null,
-    defaultMargin: idiom.defaultMargin ?? defaultMargin,
+    intermediateSpecs: chartType.intermediateSpecs,
+    intermediateSpec: chartType.intermediateSpec ?? null,
+    defaultMargin: chartType.defaultMargin ?? defaultMargin,
     ...(createSpecCompiler ? { createSpecCompiler } : {})
-  } as ChartIdiom<S>;
+  } as ChartType<S>;
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-function createRuntimeIdiom<S extends ViewSpec>(
-  config: ChartIdiomConfig<S>,
+function createRuntimeChartType<S extends ViewSpec>(
+  config: ChartTypeConfig<S>,
   deps: ChartDeps
-): Partial<ChartIdiom<S>> & { key: string } {
+): Partial<ChartType<S>> & { key: string } {
   const renderer = config.createRenderer
     ? config.createRenderer(deps)
     : config.renderer;

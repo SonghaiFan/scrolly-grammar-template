@@ -1,6 +1,6 @@
-import { narrativeTransition } from '../../scrolly-meta.js';
+import { specTransition } from '../../spec-meta.js';
 import { diffViewStates } from '../../grammar/diff.js';
-import { defaultTransition, stagedDuration } from '../../timing.js';
+import { defaultTransition, stepDuration } from '../../timing.js';
 import { normalizeMarkRendererKey } from '../index.js';
 import { barCategoryChannel, barLayoutTransitionRoute, barMeasureChannel, barOffsetChannelName, barRendererKey, isSegmentLayout } from './layout/index.js';
 import { semanticBarState } from './semantic.js';
@@ -15,31 +15,31 @@ export function resolveBarTransitionPlan(previousSpec, nextSpec) {
             type, action, previous: p, next: n
         }))
     };
-    const crossesGranularity = diff.hasDelta('bar.granularity') || previous.hasGranularity || next.hasGranularity;
-    if (crossesGranularity) {
-        plan.key = { mode: 'semantic', reason: 'granularity-object-consistency' };
+    const crossesDetail = diff.hasDelta('bar.detail') || previous.hasDetail || next.hasDetail;
+    if (crossesDetail) {
+        plan.match = { mode: 'semantic', reason: 'detail-item-consistency' };
     }
     // Collapse: child → parent
-    if (diff.hasDelta('bar.granularity', 'remove') &&
-        previous.hasGranularity && next.hasAggregate && !next.hasGranularity) {
+    if (diff.hasDelta('bar.detail', 'remove') &&
+        previous.hasDetail && next.hasAggregate && !next.hasDetail) {
         plan.enter = {
             mode: 'parent-child-lineage',
             from: 'child-bounds',
             target: 'parent',
-            reason: 'granularity-parent-child-lineage',
+            reason: 'detail-parent-child-lineage',
             parentKey: next.categoryField,
             childKey: [previous.categoryField, previous.segmentField].filter(Boolean),
             sourceLayout: previous.barLayout
         };
     }
-    if (diff.hasDelta('bar.granularity', 'remove') && previous.hasGranularity) {
+    if (diff.hasDelta('bar.detail', 'remove') && previous.hasDetail) {
         const baseline = barBaselinePlan(previous.barLayout);
         plan.exit = {
             mode: 'baseline',
             to: baseline.name,
             baseline,
             source: 'child',
-            reason: 'granularity-exit-baseline',
+            reason: 'detail-exit-baseline',
             sourceOrientation: previous.orientation,
             sourceLayout: previous.barLayout,
             categoryKey: previous.categoryField,
@@ -48,26 +48,26 @@ export function resolveBarTransitionPlan(previousSpec, nextSpec) {
         };
     }
     // Split: parent → child
-    if (diff.hasDelta('bar.granularity', 'add') &&
-        previous.hasAggregate && next.hasGranularity && !previous.hasGranularity) {
+    if (diff.hasDelta('bar.detail', 'add') &&
+        previous.hasAggregate && next.hasDetail && !previous.hasDetail) {
         plan.enter = {
             mode: 'parent-child-lineage',
             from: 'parent-bounds',
             target: 'child',
-            reason: 'granularity-parent-child-lineage',
+            reason: 'detail-parent-child-lineage',
             parentKey: previous.categoryField,
             childKey: [next.categoryField, next.segmentField].filter(Boolean),
             targetLayout: next.barLayout
         };
     }
-    if (diff.hasDelta('bar.granularity', 'add') && next.hasGranularity && !plan.enter) {
+    if (diff.hasDelta('bar.detail', 'add') && next.hasDetail && !plan.enter) {
         const baseline = barBaselinePlan(next.barLayout);
         plan.enter = {
             mode: 'baseline',
             from: baseline.name,
             baseline,
             target: 'child',
-            reason: 'granularity-enter-baseline',
+            reason: 'detail-enter-baseline',
             targetLayout: next.barLayout,
             categoryKey: next.categoryField,
             segmentKey: next.segmentField,
@@ -78,50 +78,46 @@ export function resolveBarTransitionPlan(previousSpec, nextSpec) {
     const changesSegmentLayout = layoutChanged &&
         isSegmentLayout(previous.barLayout) &&
         isSegmentLayout(next.barLayout);
-    const crossesGuide = diff.hasDelta('bar.guide') || previous.hasGuide || next.hasGuide;
+    const crossesAxis = diff.hasDelta('bar.axis') || previous.hasAxis || next.hasAxis;
     const orientationChanged = diff.hasDelta('bar.orientation');
-    const geometryAxes = changedBarGeometryAxes(diff);
-    if (!geometryAxes.length)
+    const changedDimensions = changedBarDimensions(diff);
+    if (!changedDimensions.length)
         return plan;
-    const guideStaging = (next.guideStaging ?? previous.guideStaging ?? {});
-    const reason = stagedUpdateReason({ changesSegmentLayout, crossesGuide, orientationChanged });
+    const orderOptions = (next.axisOrder ?? previous.axisOrder ?? {});
+    const reason = stepReason({ changesSegmentLayout, crossesAxis, orientationChanged });
     const timing = defaultTransition({
-        ...narrativeTransition(previousSpec ?? {}),
-        ...narrativeTransition(nextSpec ?? {}),
-        ...guideStaging
+        ...specTransition(previousSpec ?? {}),
+        ...specTransition(nextSpec ?? {}),
+        ...orderOptions
     });
-    const stagedOrder = geometryStageOrder({
-        staging: guideStaging,
+    const orderedParts = coordinateStepOrder({
+        orderOptions,
         target: next,
         changesSegmentLayout,
-        reverse: crossesGuide && !next.hasGuide,
-        axes: geometryAxes
+        reverse: crossesAxis && !next.hasAxis,
+        dimensions: changedDimensions
     });
-    if (!stagedOrder.length)
+    if (!orderedParts.length)
         return plan;
-    const stageTiming = {
-        duration: guideStaging.duration ?? stagedDuration(timing.duration, stagedOrder.length),
+    const stepTiming = {
+        duration: orderOptions.duration ?? stepDuration(timing.duration, orderedParts.length),
         ease: timing.ease,
         stagger: timing.stagger
     };
-    const staggerMaxVal = staggerMax(stageTiming.stagger);
-    const stageTotalDuration = stageTiming.duration * stagedOrder.length + staggerMaxVal;
-    plan.update = {
-        mode: 'staged',
-        reason,
-        target: {
-            orientation: next.orientation,
-            layout: next.barLayout,
-            renderer: barRendererKey(next.barLayout, next.orientation)
-        },
-        changedAxes: geometryAxes,
-        stages: stagedOrder.map((axis) => ({
-            axis,
-            attrs: axis === 'x' ? ['x', 'width'] : ['y', 'height']
-        })),
-        timing: stageTiming,
-        totalDuration: stageTotalDuration
+    const staggerMaxVal = staggerMax(stepTiming.stagger);
+    const totalDuration = stepTiming.duration * orderedParts.length + staggerMaxVal;
+    plan.reason = reason;
+    plan.target = {
+        orientation: next.orientation,
+        layout: next.barLayout,
+        renderer: barRendererKey(next.barLayout, next.orientation)
     };
+    plan.steps = orderedParts.map((part) => ({
+        part,
+        changes: ['scale', 'axis', 'marks']
+    }));
+    plan.timing = stepTiming;
+    plan.totalDuration = totalDuration;
     return plan;
 }
 export function barState(spec) {
@@ -133,34 +129,35 @@ export function barState(spec) {
         barLayout: semantic.layout,
         categoryField: semantic.categoryField,
         measureField: semantic.measureField,
-        hasGuide: Boolean(semantic.guide),
-        hasGranularity: Boolean(semantic.granularity),
+        hasAxis: Boolean(semantic.axis),
+        hasDetail: Boolean(semantic.detail),
         hasAggregate: Boolean(semantic.aggregate),
         segmentField: semantic.segmentField,
-        guideStaging: semantic.guide?.staging ?? null
+        axisOrder: semantic.axis
     };
 }
 /**
- * Parent -> child is the canonical granularity path. A child -> parent pair
+ * Parent -> child is the canonical detail path. A child -> parent pair
  * reuses that exact path with inverted progress so split and merge cannot
- * acquire different seams, opacity tracks, staggering, or axis staging.
+ * acquire different seams, opacity changes, staggering, or step order.
  */
 export function canonicalBarTransitionPair(previousSpec, nextSpec) {
     const previous = barState(previousSpec);
     const next = barState(nextSpec);
-    const isCollapse = Boolean(previous?.hasGranularity &&
+    const isCollapse = Boolean(previous?.hasDetail &&
         next?.hasAggregate &&
-        !next.hasGranularity);
+        !next.hasDetail);
     return isCollapse
         ? { from: nextSpec, to: previousSpec, reverse: true }
         : { from: previousSpec, to: nextSpec, reverse: false };
 }
 export function barCollapseIntermediateSpec(previousSpec, nextSpec) {
     const plan = resolveBarTransitionPlan(previousSpec, nextSpec);
-    if (plan.enter?.mode !== 'parent-child-lineage' || plan.enter.from !== 'child-bounds')
+    const enter = plan.enter;
+    if (enter?.mode !== 'parent-child-lineage' || enter.from !== 'child-bounds')
         return null;
     const previous = barState(previousSpec);
-    if (!previous?.hasGranularity)
+    if (!previous?.hasDetail)
         return null;
     const route = barLayoutTransitionRoute({
         fromLayout: previous.barLayout,
@@ -171,10 +168,11 @@ export function barCollapseIntermediateSpec(previousSpec, nextSpec) {
 }
 export function barSplitIntermediateSpec(previousSpec, nextSpec) {
     const plan = resolveBarTransitionPlan(previousSpec, nextSpec);
-    if (plan.enter?.mode !== 'parent-child-lineage' || plan.enter.from !== 'parent-bounds')
+    const enter = plan.enter;
+    if (enter?.mode !== 'parent-child-lineage' || enter.from !== 'parent-bounds')
         return null;
     const next = barState(nextSpec);
-    if (!next?.hasGranularity)
+    if (!next?.hasDetail)
         return null;
     const route = barLayoutTransitionRoute({
         fromLayout: barState(previousSpec)?.barLayout,
@@ -195,7 +193,7 @@ export function barIntermediateSpecs(previousSpec, nextSpec) {
     if (!orientedSource)
         return direct;
     return [
-        { spec: orientedSource, scene: 'guide' },
+        { spec: orientedSource, scene: 'axis' },
         ...directBarIntermediateSpecs(orientedSource, nextSpec)
     ];
 }
@@ -215,48 +213,48 @@ function staggerMax(stagger) {
 function directBarIntermediateSpecs(previousSpec, nextSpec) {
     const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);
     if (collapseSpec)
-        return [{ spec: collapseSpec, scene: 'guide' }];
+        return [{ spec: collapseSpec, scene: 'axis' }];
     const splitSpec = barSplitIntermediateSpec(previousSpec, nextSpec);
     if (splitSpec)
-        return [{ spec: splitSpec, scene: 'granularity' }];
+        return [{ spec: splitSpec, scene: 'detail' }];
     return [];
 }
-function stageOrder(staging, orientation) {
-    const order = staging.order;
+function stepOrder(options, orientation) {
+    const order = options.order;
     if (Array.isArray(order) && order.length)
         return order.filter((a) => a === 'x' || a === 'y');
     return orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y'];
 }
-function segmentLayoutStageOrder(staging, layout) {
-    const order = staging.order;
+function segmentLayoutStepOrder(options, layout) {
+    const order = options.order;
     if (Array.isArray(order) && order.length)
         return order.filter((a) => a === 'x' || a === 'y');
     return layout === 'stacked' ? ['y', 'x'] : ['x', 'y'];
 }
-function changedBarGeometryAxes(diff) {
+function changedBarDimensions(diff) {
     return [
         diff.hasDelta('bar.x-geometry') ? 'x' : null,
         diff.hasDelta('bar.y-geometry') ? 'y' : null
     ].filter((v) => v !== null);
 }
-function geometryStageOrder({ staging, target, changesSegmentLayout, reverse, axes }) {
+function coordinateStepOrder({ orderOptions, target, changesSegmentLayout, reverse, dimensions }) {
     const baseOrder = changesSegmentLayout
-        ? segmentLayoutStageOrder(staging, target.barLayout)
-        : stageOrder(staging, target.orientation);
+        ? segmentLayoutStepOrder(orderOptions, target.barLayout)
+        : stepOrder(orderOptions, target.orientation);
     const ordered = reverse ? [...baseOrder].reverse() : [...baseOrder];
-    const axisSet = new Set(axes);
-    const staged = ordered.filter((a) => axisSet.has(a));
-    for (const axis of axes) {
-        if (!staged.includes(axis))
-            staged.push(axis);
+    const dimensionSet = new Set(dimensions);
+    const steps = ordered.filter((dimension) => dimensionSet.has(dimension));
+    for (const dimension of dimensions) {
+        if (!steps.includes(dimension))
+            steps.push(dimension);
     }
-    return staged;
+    return steps;
 }
-function stagedUpdateReason({ changesSegmentLayout, crossesGuide, orientationChanged }) {
-    if (changesSegmentLayout && crossesGuide)
-        return 'guide-segment-layout';
-    if (orientationChanged && crossesGuide)
-        return 'guide-orientation';
+function stepReason({ changesSegmentLayout, crossesAxis, orientationChanged }) {
+    if (changesSegmentLayout && crossesAxis)
+        return 'axis-segment-layout';
+    if (orientationChanged && crossesAxis)
+        return 'axis-orientation';
     return 'bar-geometry';
 }
 function orientBarSpec(spec, orientation) {
@@ -284,26 +282,23 @@ function orientBarSpec(spec, orientation) {
     if (state.barLayout === 'grouped' && state.segmentField) {
         encoding[barOffsetChannelName(orientation)] = { field: state.segmentField, type: 'nominal' };
     }
-    const narrative = { ...(next.narrative ?? {}) };
-    const narrativeState = { ...(narrative.state ?? {}) };
-    const sceneState = { ...(narrativeState.sceneState ?? {}) };
-    sceneState.guide = {
-        ...(sceneState.guide ?? {}),
+    const meta = { ...(next.meta ?? {}) };
+    const specState = { ...(meta.state ?? {}) };
+    const sceneState = { ...(specState.sceneState ?? {}) };
+    sceneState.axis = {
+        ...(sceneState.axis ?? {}),
         ...(state.barLayout !== 'simple' ? { layout: state.barLayout } : {}),
         orientation,
-        staging: {
-            ...(sceneState.guide?.staging ?? {}),
-            order: orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y']
-        }
+        order: orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y']
     };
-    if (state.hasGranularity || sceneState.granularity) {
-        sceneState.granularity = {
-            ...(sceneState.granularity ?? {}),
+    if (state.hasDetail || sceneState.detail) {
+        sceneState.detail = {
+            ...(sceneState.detail ?? {}),
             ...(state.barLayout !== 'simple' ? { layout: state.barLayout } : {})
         };
     }
-    narrativeState.sceneState = sceneState;
-    narrative.state = narrativeState;
+    specState.sceneState = sceneState;
+    meta.state = specState;
     return {
         ...next,
         encoding: encoding,
@@ -311,8 +306,8 @@ function orientBarSpec(spec, orientation) {
             ...(orientation === 'horizontal' ? { left: 86, right: 42 } : {}),
             ...(next.margin ?? {})
         },
-        narrative: narrative,
-        transition: { ...narrativeTransition(spec) }
+        meta: meta,
+        transition: { ...specTransition(spec) }
     };
 }
 function segmentLayoutSpec(spec, layout, transitionPeerSpec) {
@@ -327,21 +322,21 @@ function segmentLayoutSpec(spec, layout, transitionPeerSpec) {
             type: 'nominal'
         };
     }
-    const narrative = { ...(next.narrative ?? {}) };
-    const narrativeStateBlock = { ...(narrative.state ?? {}) };
-    const sceneState = { ...(narrativeStateBlock.sceneState ?? {}) };
-    sceneState.granularity = { ...(sceneState.granularity ?? {}), layout };
-    sceneState.guide = { ...(sceneState.guide ?? {}), layout };
-    narrativeStateBlock.sceneState = sceneState;
-    narrative.state = narrativeStateBlock;
+    const meta = { ...(next.meta ?? {}) };
+    const specStateBlock = { ...(meta.state ?? {}) };
+    const sceneState = { ...(specStateBlock.sceneState ?? {}) };
+    sceneState.detail = { ...(sceneState.detail ?? {}), layout };
+    sceneState.axis = { ...(sceneState.axis ?? {}), layout };
+    specStateBlock.sceneState = sceneState;
+    meta.state = specStateBlock;
     return {
         ...next,
         encoding: encoding,
-        narrative: {
-            ...narrative,
+        meta: {
+            ...meta,
             transition: {
-                ...narrativeTransition(transitionPeerSpec ?? {}),
-                ...narrativeTransition(spec)
+                ...specTransition(transitionPeerSpec ?? {}),
+                ...specTransition(spec)
             }
         }
     };

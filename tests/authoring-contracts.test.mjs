@@ -23,3 +23,11 @@ test('color is an explicit encoding, including for bar breakdowns', () => {
   });
   assert.equal(base.breakdown('type').color('type').rollup().toSpec().encoding.color, undefined);
 });
+
+test('order is the canonical authored transition-step order', () => {
+  const base = bar([{ category: 'A', value: 1 }]).x('category').y('value');
+  const ordered = base.flip({ order: ['x', 'y'], duration: 300 }).toSpec();
+
+  assert.deepEqual(ordered.meta.state.sceneState.axis.order, ['x', 'y']);
+  assert.equal(ordered.meta.state.sceneState.axis.duration, 300);
+});

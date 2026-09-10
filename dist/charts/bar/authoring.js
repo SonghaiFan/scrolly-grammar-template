@@ -1,15 +1,15 @@
-import { externalizeScrollyViewSpec } from '../../scrolly-meta.js';
+import { serializeViewSpec } from '../../spec-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { normalizeFilter } from '../../data/filter.js';
 import { labelFromValue, titleize } from '../../labels.js';
-import { IdiomState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
 export function bar(data) {
     return new BarState({ data: normalizeDataSource(data), mark: 'bar', encoding: {} });
 }
 const BAR_SPEC_COMPILER = createBarSpecCompiler();
-export class BarState extends IdiomState {
+export class BarState extends ChartState {
     toSpec() {
         const spec = cloneState(this.state);
         delete spec.__grammar;
@@ -25,14 +25,14 @@ export class BarState extends IdiomState {
         }
         delete spec.where;
         delete spec.filter;
-        if (spec.granularity == null)
-            delete spec.granularity;
-        if (spec.guide == null)
-            delete spec.guide;
+        if (spec.detail == null)
+            delete spec.detail;
+        if (spec.axis == null)
+            delete spec.axis;
         delete spec.aggregate;
         if (spec.semanticKey == null)
             delete spec.semanticKey;
-        return pruneAuthoringState(compileViewWithCompiler(externalizeScrollyViewSpec(spec), { scene: [] }, BAR_SPEC_COMPILER));
+        return pruneAuthoringState(compileViewWithCompiler(serializeViewSpec(spec), { scene: [] }, BAR_SPEC_COMPILER));
     }
     x(field, options = {}) {
         const channel = channelFrom(field, { type: 'nominal', ...options });
@@ -56,7 +56,7 @@ export class BarState extends IdiomState {
     }
     where(selector) {
         if (selector == null) {
-            return this.with({ where: [] }, 'focus');
+            return this.with({ where: [] }, 'selection');
         }
         const selectors = normalizeSelectors(selector);
         const identity = identityFromSelectors(this.state, selectors);
@@ -83,20 +83,20 @@ export class BarState extends IdiomState {
                     ? { measureSelector: { title: measureTitle, fields: selectors.map((s) => s.field) } }
                     : {})
             }
-        }, 'focus');
+        }, 'selection');
     }
     flip(options = {}) {
         const domain = options.domain ?? options.scale?.domain;
         const scale = domain || options.scale
             ? { ...(options.scale ?? {}), ...(domain ? { domain } : {}) }
             : undefined;
-        const staging = options.staging ?? options.stage ?? options.order
-            ? {
-                ...(typeof options.staging === 'object' ? options.staging : {}),
-                order: options.order ?? options.stage ?? options.staging?.order ?? ['y', 'x']
-            }
-            : undefined;
-        return this.guide({ flip: true, ...(scale ? { scale } : {}), ...(staging ? { staging } : {}) });
+        return this.axis({
+            flip: true,
+            ...(scale ? { scale } : {}),
+            ...(options.order ? { order: options.order } : {}),
+            ...(options.duration != null ? { duration: options.duration } : {}),
+            ...(options.stagger ? { stagger: options.stagger } : {})
+        });
     }
     breakdown(segment = 'type', options = {}) {
         const category = options.category ?? this.state.encoding?.x?.field;
@@ -157,7 +157,7 @@ export class BarState extends IdiomState {
         return this.with({
             key: config.key ?? [category, segment],
             where: tidy ? clearConstraint(state.where ?? [], segment) : state.where,
-            granularity: {
+            detail: {
                 category,
                 categoryTitle: config.categoryTitle ?? state.encoding?.x?.title,
                 fields,
@@ -175,34 +175,23 @@ export class BarState extends IdiomState {
             ...(config.tooltip
                 ? { encoding: { tooltip: cloneState(config.tooltip) } }
                 : {})
-        }, 'granularity');
+        }, 'detail');
     }
     layout(layout, options = {}) {
         const state = this.state;
         const next = this.with({
-            granularity: state.granularity
-                ? { ...state.granularity, layout }
+            detail: state.detail
+                ? { ...state.detail, layout }
                 : undefined,
-            guide: {
-                ...(state.guide ?? {}),
+            axis: {
+                ...(state.axis ?? {}),
                 layout,
-                staging: options.staging ?? state.guide?.staging
+                ...(options.order ? { order: options.order } : {}),
+                ...(options.duration != null ? { duration: options.duration } : {}),
+                ...(options.stagger ? { stagger: options.stagger } : {})
             }
         });
-        return options.stage ? next.stage(options.stage) : next.with({}, 'guide');
-    }
-    stage(order, options = {}) {
-        const state = this.state;
-        return this.with({
-            guide: {
-                ...(state.guide ?? {}),
-                staging: {
-                    ...(state.guide?.staging ?? {}),
-                    ...options,
-                    order
-                }
-            }
-        }, 'guide');
+        return next.with({}, 'axis');
     }
 }
 function channelFields(channel) {
@@ -222,7 +211,7 @@ function aggregateBarState(view, config) {
         return view.with({
             key: normalized.key ?? [normalized.category, segment],
             where: clearConstraint(view.state.where ?? [], segment),
-            granularity: {
+            detail: {
                 category: normalized.category,
                 categoryTitle: normalized.categoryTitle,
                 fields: [],
@@ -240,12 +229,12 @@ function aggregateBarState(view, config) {
             },
             __grammar: { measureSelector: null },
             ...(normalized.tooltip ? { encoding: { tooltip: cloneState(normalized.tooltip) } } : {})
-        }, 'granularity');
+        }, 'detail');
     }
     return view.with({
         key: normalized.key ?? (groupby.length === 1 ? groupby[0] : groupby),
-        granularity: null,
-        guide: null,
+        detail: null,
+        axis: null,
         semanticKey: normalized.semanticKey ?? null,
         where: view.state.where,
         transform: [
@@ -258,7 +247,7 @@ function aggregateBarState(view, config) {
             }
         ],
         __grammar: { measureSelector: null }
-    }, 'granularity');
+    }, 'detail');
 }
 function normalizeSelectors(selector) {
     if (typeof selector === 'string')
@@ -342,46 +331,47 @@ function asArray(value) {
 function pruneAuthoringState(spec) {
     const next = cloneState(spec);
     delete next.margin;
-    const state = next.narrative?.state;
+    const state = next.meta?.state;
     if (!state)
         return next;
     const sceneState = (state.sceneState ?? {});
     const preservedSceneState = {};
-    const focus = sceneState.focus ?? state.focus;
-    const guide = sceneState.guide ?? state.guide;
-    if (focus?.mode === 'highlight') {
-        preservedSceneState.focus = focus;
+    const selection = sceneState.selection ?? state.selection;
+    const axis = sceneState.axis ?? state.axis;
+    if (selection?.mode === 'highlight') {
+        preservedSceneState.selection = selection;
     }
-    if (hasCustomGuideStaging(guide)) {
-        const g = guide;
-        preservedSceneState.guide = {
+    if (hasCustomAxisOrder(axis)) {
+        const g = axis;
+        preservedSceneState.axis = {
             ...(g.layout ? { layout: g.layout } : {}),
             ...(g.orientation ? { orientation: g.orientation } : {}),
-            staging: g.staging
+            ...(g.order ? { order: g.order } : {}),
+            ...(g.duration != null ? { duration: g.duration } : {}),
+            ...(g.stagger ? { stagger: g.stagger } : {})
         };
     }
-    delete state.focus;
-    delete state.guide;
-    delete state.granularity;
+    delete state.selection;
+    delete state.axis;
+    delete state.detail;
     state.sceneState = preservedSceneState;
     if (!Object.keys(state.sceneState).length)
         delete state.sceneState;
     if (!Object.keys(state).length)
-        delete next.narrative.state;
-    if (next.narrative && !Object.keys(next.narrative).length)
-        delete next.narrative;
+        delete next.meta.state;
+    if (next.meta && !Object.keys(next.meta).length)
+        delete next.meta;
     return next;
 }
-function hasCustomGuideStaging(guide) {
-    if (!guide?.staging)
+function hasCustomAxisOrder(axis) {
+    if (!axis)
         return false;
-    const staging = guide.staging;
-    if (staging.duration != null || staging.stagger != null)
+    if (axis.duration != null || axis.stagger != null)
         return true;
-    if (!Array.isArray(staging.order))
+    if (!Array.isArray(axis.order))
         return false;
-    return staging.order.join('|') !== defaultGuideOrder(guide).join('|');
+    return axis.order.join('|') !== defaultAxisOrder(axis).join('|');
 }
-function defaultGuideOrder(guide) {
-    return guide.orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y'];
+function defaultAxisOrder(axis) {
+    return axis.orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y'];
 }

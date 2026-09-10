@@ -5,11 +5,11 @@ import {
   compileHighlight,
   copyDefined,
   identitySpec,
-  resolveGuideStaging,
+  resolveAxisOrder,
   withObject,
   withSceneState
 } from '../compiler-utils.js';
-import { narrativeObjectKey, narrativeUnit, withNarrative } from '../../scrolly-meta.js';
+import { specObjectKey, specUnit, withSpecMeta } from '../../spec-meta.js';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -30,27 +30,27 @@ function compileUnitBase(spec: ViewSpec, _context: AnyRecord = {}): ViewSpec {
   return identitySpec(spec);
 }
 
-function compileUnitLayout(spec: ViewSpec, guideSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
+function compileUnitLayout(spec: ViewSpec, axisSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
   const unit = {
-    ...(narrativeUnit(spec) || {}),
-    ...copyDefined(guideSpec, [
+    ...(specUnit(spec) || {}),
+    ...copyDefined(axisSpec, [
       'layout', 'columns', 'groupColumns', 'radius', 'x', 'y',
       'group', 'value', 'label', 'maxUnits'
     ])
   };
   const encoding = cloneEncoding(spec.encoding);
-  if (guideSpec['color']) (encoding as AnyRecord)['color'] = guideSpec['color'];
+  if (axisSpec['color']) (encoding as AnyRecord)['color'] = axisSpec['color'];
 
-  return withSceneState(withObject(withNarrative({ ...spec, encoding: encoding as ViewSpec['encoding'] }, { unit }), {
-    key: (guideSpec['key'] as string) || narrativeObjectKey(spec) as string
+  return withSceneState(withObject(withSpecMeta({ ...spec, encoding: encoding as ViewSpec['encoding'] }, { unit }), {
+    key: (axisSpec['key'] as string) || specObjectKey(spec) as string
   }), {
-    guide: {
+    axis: {
       layout: (unit['layout'] as string) || 'grid',
       x: unit['x'] || null,
       y: unit['y'] || null,
       group: unit['group'] || null,
       value: unit['value'] || null,
-      staging: resolveGuideStaging(guideSpec, 'unit')
+      ...resolveAxisOrder(axisSpec, 'unit')
     }
   });
 }

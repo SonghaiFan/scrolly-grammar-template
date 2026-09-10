@@ -1,10 +1,10 @@
 # VisDelta
 
-VisDelta is a declarative visualization-transition library. Declare two
-immutable states of the same chart idiom, let VisDelta compute their semantic
-delta, then play the change or evaluate any frame from progress `0` to `1`.
+Describe how one chart looks before and after a change. VisDelta finds the
+difference, then lets you play the movement or show any exact frame from
+progress `0` to `1`. This state-first approach is what “declarative” means here.
 
-Scrolling is not part of the core runtime. It is one possible external driver.
+Scrolling is not part of the core runtime. It is one possible external control.
 
 ```js
 import * as d3 from "d3";
@@ -27,20 +27,15 @@ change.progress(0.42);
 change.play({ duration: 800 });
 ```
 
-## Package boundary
+## What VisDelta includes
 
 VisDelta owns:
 
-- immutable visualization authoring
-- semantic endpoint delta
-- chart idiom compilation and rendering
-- seekable pair transitions
+- chart states that never change the state they were created from
+- a meaningful difference between the first and last state
+- chart-type compilation and rendering
+- transitions that can show any progress value from `0` to `1`
 - transform execution and plugin contracts
-
-The repository's private [`scrollytelling/`](scrollytelling/README.md) package
-now owns `story()`, `seq()`, `createStory()`, page layout, navigation, and the
-native scroll driver. It is being kept here temporarily for later integration
-into ScrollyTale. VisDelta does not import it.
 
 ## Install
 
@@ -72,7 +67,7 @@ not require it.
 | `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
 | `visdelta/plugins` | Plugin definition and registration |
 | `visdelta/browser` | Browser-global dependency adapter |
-| `visdelta/composition` | Low-level adapter contract for driver packages |
+| `visdelta/composition` | Low-level adapter contract for control packages |
 
 `visdelta/composition` is for integration packages, not ordinary chart
 authoring.
@@ -92,15 +87,7 @@ npm run docs:build
 python3 -m http.server 5511
 ```
 
-Then open `http://127.0.0.1:5511/docs/.vitepress/dist/`. The repository root
-page and the former `examples/transition/` URL are compatibility launchers into
-this single documentation site.
-
-Build the extracted composition package separately:
-
-```sh
-npm --prefix scrollytelling test
-```
+Then open `http://127.0.0.1:5511/docs/.vitepress/dist/`.
 
 Documentation starts at [docs/index.md](docs/index.md), with the complete
 interactive API map in [docs/reference.md](docs/reference.md) and the current
@@ -108,10 +95,8 @@ ownership boundary in [docs/modular-architecture.md](docs/modular-architecture.m
 
 ## Current limits
 
-- Endpoint chart idioms must match; cross-idiom morphing is not supported.
+- Endpoint chart types must match; bar-to-line transitions are not supported.
 - Bar has the richest semantic transition coverage.
 - Arquero still executes authored transforms.
-- The scrollytelling package is private and has not yet been integrated into
-  ScrollyTale.
 
 Released under the MIT License.

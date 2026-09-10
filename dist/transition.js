@@ -7,12 +7,12 @@ import { transitionRegistry } from './runtime/chart-registry.js';
 import { validateTransforms } from './data/validate.js';
 import { createChartRuntimeDeps } from './runtime/chart-deps.js';
 import { resolveTarget } from './runtime/target.js';
-/** Compile two same-idiom visualizations into a standalone, seekable transition. */
+/** Compile two states of the same chart type into a standalone, seekable transition. */
 export async function transition(from, to, options) {
     const source = visualizationSpec(from);
     const target = visualizationSpec(to);
     if (!source.mark || source.mark !== target.mark) {
-        throw new Error('transition() requires two visualizations of the same chart idiom.');
+        throw new Error('transition() requires two states of the same chart type.');
     }
     if (!options?.d3) {
         throw new Error('Pass { target, d3 } to transition().');
@@ -48,8 +48,8 @@ export async function transition(from, to, options) {
     };
     const [resolvedFrom, resolvedTo] = await Promise.all([resolveData(source), resolveData(target)]);
     const host = resolveTarget(options.target ?? '#app');
-    const idioms = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host }));
-    const surface = createTransitionSurface(resolvedFrom, resolvedTo, options, idioms);
+    const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host }));
+    const surface = createTransitionSurface(resolvedFrom, resolvedTo, options, chartTypes);
     let value = 0;
     let animation = null;
     let destroyed = false;

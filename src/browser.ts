@@ -1,8 +1,8 @@
 import * as core from './index.js';
 import type { Visualization, TransitionOptions } from './transition.js';
 
-export { availableChartIdioms, bar, delta, diffViewStates, defineChartIdiom,
-  line, point, registerChartIdiom, registerChartModule, unit,
+export { availableChartTypes, bar, delta, diffViewStates, defineChartType,
+  line, point, registerChartType, registerChartModule, unit,
   visualizationSpec } from './index.js';
 
 type BrowserOptions = Record<string, unknown>;

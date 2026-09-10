@@ -1,11 +1,11 @@
 import type {
   ChannelSpec,
   FilterSpec,
-  FocusSpec,
+  SelectionSpec,
   SemanticKey,
   ViewSpec
 } from '../types/index.js';
-import { narrativeObjectKey, withNarrative } from '../scrolly-meta.js';
+import { specObjectKey, withSpecMeta } from '../spec-meta.js';
 import { titleize } from '../labels.js';
 import { normalizeFilter } from '../data/filter.js';
 
@@ -16,26 +16,26 @@ interface ObjectSpec {
   semantic?: SemanticKey;
 }
 
-interface GuideStaging {
+interface AxisOrder {
   order: string[];
   duration?: number;
   stagger?: unknown;
 }
 
-export function compileFilter(spec: ViewSpec, operationSpec: FocusSpec = {}): ViewSpec {
+export function compileFilter(spec: ViewSpec, operationSpec: SelectionSpec = {}): ViewSpec {
   const filter = operationSpec.filter ? normalizeFilter(operationSpec.filter) : selectorToFilter(operationSpec);
   if (!filter) return spec;
   return withSceneState({
     ...spec,
     transform: [{ filter }, ...(spec.transform || [])]
-  }, { focus: { filter } });
+  }, { selection: { filter } });
 }
 
-export function compileHighlight(spec: ViewSpec, operationSpec: FocusSpec = {}): ViewSpec {
+export function compileHighlight(spec: ViewSpec, operationSpec: SelectionSpec = {}): ViewSpec {
   const filter = operationSpec.filter ? normalizeFilter(operationSpec.filter) : selectorToFilter(operationSpec);
   if (!filter) return spec;
   return withSceneState(spec, {
-    focus: {
+    selection: {
       mode: 'highlight',
       filter,
       ...(operationSpec.opacity != null ? { opacity: operationSpec.opacity } : {})
@@ -55,13 +55,13 @@ export function compileCartesianCoordinate(spec: ViewSpec, operationSpec: AnyRec
   if (operationSpec['y']) encoding['y'] = mergeXYChannel(encoding['y'] as ChannelSpec, operationSpec['y'] as ChannelSpec, 'quantitative');
 
   return withSceneState(withObject({ ...spec, encoding }, {
-    key: (operationSpec['key'] as string) || narrativeObjectKey(spec)
+    key: (operationSpec['key'] as string) || specObjectKey(spec)
   }), {
-    guide: {
+    axis: {
       flip: shouldFlip,
       xScale: channelScaleType(encoding['x'] as ChannelSpec),
       yScale: channelScaleType(encoding['y'] as ChannelSpec),
-      staging: resolveGuideStaging(operationSpec as AnyRecord, 'cartesian')
+      ...resolveAxisOrder(operationSpec as AnyRecord, 'cartesian')
     }
   });
 }
@@ -77,26 +77,26 @@ export function identitySpec(spec: ViewSpec): ViewSpec {
 export function withObject(spec: ViewSpec, objectSpec: ObjectSpec = {}): ViewSpec {
   const object: AnyRecord = {};
   if (objectSpec.key != null) object['key'] = objectSpec.key;
-  if (objectSpec.semantic != null) object['semantic'] = semanticToNarrative(objectSpec.semantic);
-  return Object.keys(object).length ? withNarrative(spec, { object: object as AnyRecord }) : spec;
+  if (objectSpec.semantic != null) object['semantic'] = semanticToMeta(objectSpec.semantic);
+  return Object.keys(object).length ? withSpecMeta(spec, { object: object as AnyRecord }) : spec;
 }
 
 export function withSceneState(spec: ViewSpec, sceneStatePatch: AnyRecord = {}): ViewSpec {
-  return withNarrative(spec, { state: { sceneState: sceneStatePatch } });
+  return withSpecMeta(spec, { state: { sceneState: sceneStatePatch } });
 }
 
-export function semanticToNarrative(semanticKey: SemanticKey = {}): AnyRecord {
+export function semanticToMeta(semanticKey: SemanticKey = {}): AnyRecord {
   const sk = semanticKey as AnyRecord;
   return {
-    ...(sk['entity'] !== undefined ? { entity: semanticPartToNarrative(sk['entity']) } : {}),
-    ...(sk['entities'] !== undefined ? { entity: semanticPartToNarrative(sk['entities']) } : {}),
-    ...(sk['measure'] !== undefined ? { measure: semanticPartToNarrative(sk['measure']) } : {}),
-    ...(sk['measures'] !== undefined ? { measure: semanticPartToNarrative(sk['measures']) } : {})
+    ...(sk['entity'] !== undefined ? { entity: semanticPartToMeta(sk['entity']) } : {}),
+    ...(sk['entities'] !== undefined ? { entity: semanticPartToMeta(sk['entities']) } : {}),
+    ...(sk['measure'] !== undefined ? { measure: semanticPartToMeta(sk['measure']) } : {}),
+    ...(sk['measures'] !== undefined ? { measure: semanticPartToMeta(sk['measures']) } : {})
   };
 }
 
-export function semanticPartToNarrative(part: unknown): unknown {
-  if (Array.isArray(part)) return part.map(semanticPartToNarrative);
+export function semanticPartToMeta(part: unknown): unknown {
+  if (Array.isArray(part)) return part.map(semanticPartToMeta);
   if (typeof part === 'string') return { field: part };
   if (part == null || typeof part !== 'object') return part;
   return { ...(part as AnyRecord) };
@@ -110,19 +110,12 @@ export function selectorToFilter(selector: AnyRecord = {}): FilterSpec | null {
   });
 }
 
-export function resolveGuideStaging(guideSpec: AnyRecord = {}, orientation: string): GuideStaging | null {
-  if (guideSpec['staging'] === false) return null;
-
-  const staging = guideSpec['staging'] && typeof guideSpec['staging'] === 'object'
-    ? guideSpec['staging'] as AnyRecord
-    : {};
-
+export function resolveAxisOrder(axisSpec: AnyRecord = {}, orientation: string): AxisOrder {
   return {
-    order: (staging['order'] as string[]) ||
-      (guideSpec['stageOrder'] as string[]) ||
+    order: (axisSpec['order'] as string[]) ||
       (orientation === 'horizontal' ? ['y', 'x'] : ['x', 'y']),
-    duration: (staging['duration'] as number) || (guideSpec['stageDuration'] as number),
-    stagger: staging['stagger'] || guideSpec['stagger']
+    duration: axisSpec['duration'] as number,
+    stagger: axisSpec['stagger']
   };
 }
 

@@ -1,4 +1,4 @@
-import { narrativeObjectKey, narrativeSemanticKey, narrativeState } from '../scrolly-meta.js';
+import { specObjectKey, specSemanticKey, specState } from '../spec-meta.js';
 import { appendBarSemanticDeltas, semanticBarState } from '../charts/bar/diff.js';
 export function diffViewStates(previous, next) {
     const prev = toComparableSpec(previous);
@@ -18,10 +18,10 @@ export function diffViewStates(previous, next) {
         if (!sameValue(prev.encoding?.[channel], curr.encoding?.[channel]))
             changed.push(`encoding.${channel}`);
     }
-    if (!sameValue(prev.guide, curr.guide))
-        changed.push('guide');
-    if (!sameValue(prev.granularity, curr.granularity))
-        changed.push('granularity');
+    if (!sameValue(prev.axis, curr.axis))
+        changed.push('axis');
+    if (!sameValue(prev.detail, curr.detail))
+        changed.push('detail');
     const semantic = diffSemanticViewStates(prev, curr);
     return {
         changed,
@@ -72,9 +72,9 @@ export function diffSemanticViewStates(previous = {}, next = {}) {
     for (const channel of encodingChannels(previous, next)) {
         pushDelta(deltas, `encoding.${channel}`, prev.encoding[channel], curr.encoding[channel]);
     }
-    pushStateDelta(deltas, 'focus', prev.focus, curr.focus);
-    pushStateDelta(deltas, 'guide', prev.guide, curr.guide);
-    pushStateDelta(deltas, 'granularity', prev.granularity, curr.granularity);
+    pushStateDelta(deltas, 'selection', prev.selection, curr.selection);
+    pushStateDelta(deltas, 'axis', prev.axis, curr.axis);
+    pushStateDelta(deltas, 'detail', prev.detail, curr.detail);
     if (prev.mark === 'bar' || curr.mark === 'bar') {
         appendBarSemanticDeltas(deltas, prev, curr, { pushDelta, pushStateDelta });
     }
@@ -87,22 +87,22 @@ export function diffSemanticViewStates(previous = {}, next = {}) {
     };
 }
 function toSemanticState(spec) {
-    const stateFields = narrativeState(spec);
+    const stateFields = specState(spec);
     const sceneState = stateFields.sceneState ?? {};
     const transforms = (spec.transform ?? []);
     const state = {
         mark: spec.mark ?? null,
-        key: narrativeObjectKey(spec),
-        semanticKey: narrativeSemanticKey(spec),
+        key: specObjectKey(spec),
+        semanticKey: specSemanticKey(spec),
         encoding: (spec.encoding ?? {}),
         filters: [
             ...(spec.filter ? [spec.filter] : []),
             ...transforms.filter((t) => t.filter).map((t) => t.filter)
         ],
         nonFilterTransforms: transforms.filter((t) => !t.filter),
-        focus: sceneState.focus ?? stateFields.focus ?? null,
-        guide: sceneState.guide ?? stateFields.guide ?? null,
-        granularity: (sceneState.granularity ?? stateFields.granularity ?? null)
+        selection: sceneState.selection ?? stateFields.selection ?? null,
+        axis: sceneState.axis ?? stateFields.axis ?? null,
+        detail: (sceneState.detail ?? stateFields.detail ?? null)
     };
     if (String(spec.mark ?? '').toLowerCase() === 'bar') {
         state.bar = semanticBarState(spec, stateFields);

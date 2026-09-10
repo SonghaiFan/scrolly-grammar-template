@@ -1,4 +1,4 @@
-import type { FocusSpec, SpecCompiler, ViewSpec } from '../../types/index.js';
+import type { SelectionSpec, SpecCompiler, ViewSpec } from '../../types/index.js';
 import {
   compileCartesianCoordinate,
   compileCartesianScale,
@@ -30,21 +30,21 @@ function compileLineBase(spec: ViewSpec, _context: AnyRecord = {}): ViewSpec {
   return identitySpec(spec);
 }
 
-function compileLineFilter(spec: ViewSpec, focusSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
-  const filter = (focusSpec['filter'] as FocusSpec | undefined) || selectorToFilter(focusSpec);
+function compileLineFilter(spec: ViewSpec, selectionSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
+  const filter = (selectionSpec['filter'] as SelectionSpec | undefined) || selectorToFilter(selectionSpec);
   if (!filter) return spec;
 
-  if (focusSpec['mode'] === 'filter' || focusSpec['mode'] === 'highlight') {
-    return focusSpec['mode'] === 'highlight'
-      ? compileHighlight(spec, focusSpec as FocusSpec)
-      : compileFilter(spec, focusSpec as FocusSpec);
+  if (selectionSpec['mode'] === 'filter' || selectionSpec['mode'] === 'highlight') {
+    return selectionSpec['mode'] === 'highlight'
+      ? compileHighlight(spec, selectionSpec as SelectionSpec)
+      : compileFilter(spec, selectionSpec as SelectionSpec);
   }
 
   return withSceneState({ ...spec }, {
-    focus: {
+    selection: {
       filter,
-      mode: (focusSpec['mode'] as string) || 'rangeCrop',
-      crop: focusSpec['crop'] !== false
+      mode: (selectionSpec['mode'] as string) || 'rangeCrop',
+      crop: selectionSpec['crop'] !== false
     }
   });
 }
@@ -57,23 +57,23 @@ function compileLineScale(spec: ViewSpec, operationSpec: AnyRecord = {}, _contex
   return compileCartesianScale(spec, operationSpec);
 }
 
-function compileLineAggregate(spec: ViewSpec, granularitySpec: AnyRecord = {}, context: AnyRecord = {}): ViewSpec {
-  return compileLineSeries(spec, granularitySpec, context);
+function compileLineAggregate(spec: ViewSpec, detailSpec: AnyRecord = {}, context: AnyRecord = {}): ViewSpec {
+  return compileLineSeries(spec, detailSpec, context);
 }
 
-function compileLineSeries(spec: ViewSpec, granularitySpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
-  const mode = (granularitySpec['mode'] as string) || 'series';
+function compileLineSeries(spec: ViewSpec, detailSpec: AnyRecord = {}, _context: AnyRecord = {}): ViewSpec {
+  const mode = (detailSpec['mode'] as string) || 'series';
   const encoding = { ...(spec.encoding || {}) } as Record<string, unknown>;
   const seriesField =
-    (granularitySpec['series'] as string) ||
-    (granularitySpec['field'] as string) ||
+    (detailSpec['series'] as string) ||
+    (detailSpec['field'] as string) ||
     (encoding['color'] as AnyRecord | undefined)?.['field'] as string | undefined;
 
   if (mode === 'series' && seriesField) {
-    encoding['color'] = granularitySpec['color'] || {
+    encoding['color'] = detailSpec['color'] || {
       field: seriesField,
       type: 'nominal',
-      range: (granularitySpec['range'] as string[]) || [
+      range: (detailSpec['range'] as string[]) || [
         'var(--sl-series-1)',
         'var(--sl-series-2)',
         'var(--sl-series-3)'
@@ -81,14 +81,14 @@ function compileLineSeries(spec: ViewSpec, granularitySpec: AnyRecord = {}, _con
     };
   }
 
-  if (mode === 'single' && granularitySpec['color']) {
-    encoding['color'] = granularitySpec['color'];
+  if (mode === 'single' && detailSpec['color']) {
+    encoding['color'] = detailSpec['color'];
   }
 
   return withSceneState(
     { ...spec, encoding: encoding as ViewSpec['encoding'] },
     {
-      granularity: {
+      detail: {
         mode,
         seriesField: mode === 'series' ? seriesField : null
       }

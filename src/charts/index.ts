@@ -1,8 +1,8 @@
-import { narrativeUnit } from '../scrolly-meta.js';
-import { normalizeChartIdiom } from './plugin.js';
+import { specUnit } from '../spec-meta.js';
+import { normalizeChartType as normalizeChartPlugin } from './plugin.js';
 import type {
   ChartDeps,
-  ChartIdiom,
+  ChartType,
   ChartPlugin,
   CompilerContext,
   SpecCompiler,
@@ -12,20 +12,20 @@ import type {
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-export interface ChartIdiomRegistry {
-  register<S extends ViewSpec>(idiom: ChartIdiom<S>): this;
-  get<S extends ViewSpec = ViewSpec>(markOrSpec: string | ViewSpec): ChartIdiom<S> | undefined;
+export interface ChartTypeRegistry {
+  register<S extends ViewSpec>(chartType: ChartType<S>): this;
+  get<S extends ViewSpec = ViewSpec>(markOrSpec: string | ViewSpec): ChartType<S> | undefined;
   has(markOrSpec: string | ViewSpec): boolean;
   types(): string[];
 }
 
-export function createChartIdiomRegistry(): ChartIdiomRegistry {
-  const idioms = new Map<string, ChartIdiom<ViewSpec>>();
+export function createChartTypeRegistry(): ChartTypeRegistry {
+  const chartTypes = new Map<string, ChartType<ViewSpec>>();
 
   return {
-    register(idiom) {
-      const normalized = normalizeRegisteredIdiom(idiom as unknown as ChartIdiom<ViewSpec>);
-      idioms.set(normalized.key, normalized);
+    register(chartType) {
+      const normalized = normalizeRegisteredChartType(chartType as unknown as ChartType<ViewSpec>);
+      chartTypes.set(normalized.key, normalized);
       return this;
     },
 
@@ -34,7 +34,7 @@ export function createChartIdiomRegistry(): ChartIdiomRegistry {
         typeof markOrSpec === 'object'
           ? resolveMarkRendererKey(markOrSpec)
           : normalizeMarkRendererKey(markOrSpec);
-      return idioms.get(key) as ChartIdiom<any> | undefined;
+      return chartTypes.get(key) as ChartType<any> | undefined;
     },
 
     has(markOrSpec) {
@@ -42,7 +42,7 @@ export function createChartIdiomRegistry(): ChartIdiomRegistry {
     },
 
     types() {
-      return [...idioms.keys()].sort();
+      return [...chartTypes.keys()].sort();
     }
   };
 }
@@ -54,13 +54,13 @@ export interface SpecCompilerEntry {
 }
 
 export function registerChartModules(
-  registry: ChartIdiomRegistry,
+  registry: ChartTypeRegistry,
   modules: Array<{ plugin: ChartPlugin }>,
   deps: ChartDeps = {}
-): ChartIdiomRegistry {
+): ChartTypeRegistry {
   for (const module of modules) {
-    const idiom = chartIdiomFromModule(module, deps);
-    registry.register(idiom);
+    const chartType = chartTypeFromModule(module, deps);
+    registry.register(chartType);
   }
   return registry;
 }
@@ -100,7 +100,7 @@ export function normalizeChartType(type: unknown): string {
 }
 
 export function resolveMarkRendererKey(viewSpec: ViewSpec): string {
-  if (narrativeUnit(viewSpec)) return 'unit';
+  if (specUnit(viewSpec)) return 'unit';
   return normalizeMarkRendererKey(viewSpec.mark);
 }
 
@@ -110,25 +110,25 @@ export function resolveChartType(viewSpec: ViewSpec): string {
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-function normalizeRegisteredIdiom(idiom: ChartIdiom<ViewSpec>): ChartIdiom<ViewSpec> {
-  const key = normalizeMarkRendererKey(idiom.key);
-  if (!key) throw new Error('Chart idiom key is required.');
-  const normalized = normalizeChartIdiom({ ...idiom, key });
+function normalizeRegisteredChartType(chartType: ChartType<ViewSpec>): ChartType<ViewSpec> {
+  const key = normalizeMarkRendererKey(chartType.key);
+  if (!key) throw new Error('Chart type key is required.');
+  const normalized = normalizeChartPlugin({ ...chartType, key });
   if (typeof normalized.renderer !== 'function') {
-    throw new Error(`Chart idiom "${key}" must provide a renderer function.`);
+    throw new Error(`Chart type "${key}" must provide a renderer function.`);
   }
   return { ...normalized, key };
 }
 
-function chartIdiomFromModule(
+function chartTypeFromModule(
   module: { plugin: ChartPlugin },
   deps: ChartDeps
-): ChartIdiom<ViewSpec> {
+): ChartType<ViewSpec> {
   const plugin = pluginFromModule(module);
-  if (typeof plugin.createChartIdiom === 'function') {
-    return plugin.createChartIdiom(deps) as ChartIdiom<ViewSpec>;
+  if (typeof plugin.createChartType === 'function') {
+    return plugin.createChartType(deps) as ChartType<ViewSpec>;
   }
-  throw new Error('Chart module must export plugin.createChartIdiom(deps).');
+  throw new Error('Chart module must export plugin.createChartType(deps).');
 }
 
 function pluginFromModule(module: { plugin?: ChartPlugin }): ChartPlugin {

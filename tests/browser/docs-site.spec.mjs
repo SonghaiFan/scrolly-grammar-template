@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test('VitePress reference loads the real seekable transition', async ({ page }) => {
   await expect(page).toHaveTitle(/Interactive reference.*VisDelta/);
-  await expect(page.getByRole('link', { name: 'Guide', exact: true })).toBeVisible();
+  await expect(page.locator('#VPSidebarNav').getByRole('link', { name: 'Chart types', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Search/ })).toBeVisible();
   const workbench = page.locator('.transition-workbench');
   await expect(workbench.locator('rect.sl-bar')).toHaveCount(4);
@@ -35,7 +35,7 @@ test('application state controls drive the same transition progress', async ({ p
   await expect(page.locator('.workbench-seq-head output')).toHaveText('3 / 3');
 });
 
-test('editable grammar recompiles live, reports errors, and switches idioms', async ({ page }) => {
+test('editable grammar recompiles live, reports errors, and switches chart types', async ({ page }) => {
   await page.locator('.syntax-playground').scrollIntoViewIfNeeded();
   const editor = page.getByRole('textbox', { name: 'Editable VisDelta code' });
   const status = page.locator('.playground-status');
@@ -98,11 +98,11 @@ test('reference stays usable at a narrow viewport', async ({ page }) => {
 test('language map is the status source of truth with inline live grammar', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/language-framework.html');
   await expect(page).toHaveTitle(/Language framework and roadmap.*VisDelta/);
-  await expect(page.getByRole('heading', { name: 'Grammar taxonomy' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grammar map' })).toBeVisible();
   await expect(page.getByText('Available', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Developing', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Research', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Cross-idiom transition such as bar → line')).toBeVisible();
+  await expect(page.getByText('Transition such as bar → line')).toBeVisible();
 
   const firstPlayground = page.locator('.syntax-playground').first();
   await firstPlayground.scrollIntoViewIfNeeded();

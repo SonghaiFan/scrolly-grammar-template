@@ -90,12 +90,12 @@ for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip
       const cached = await sl.transition(source, target, options('#cached'));
       // Test the old deterministic renderer bridge, not another cached pair.
       const referenceHost = document.querySelector('#reference');
-      const idioms = await transitionRegistry(source.toSpec(), createChartRuntimeDeps({ root: referenceHost }));
+      const chartTypes = await transitionRegistry(source.toSpec(), createChartRuntimeDeps({ root: referenceHost }));
       const reference = createTransitionSurface(
         source.toSpec(),
         target.toSpec(),
         { ...options(referenceHost), reconstruct: true },
-        idioms
+        chartTypes
       );
       const results = [];
       for (const p of [0, 0.07, 0.37, 0.8, 1, 0.2]) {
@@ -133,7 +133,7 @@ test('exit nodes are detached and restored by identity; endpoint tooltip data fo
   expect(await page.locator('#cached .sl-tooltip').innerText()).toContain('Value');
 });
 
-test('delayed property tracks can jump back before their start without retaining later values', async ({ page }) => {
+test('delayed property changes can jump back before their start without retaining later values', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const start = base.transition({ duration: 600, ease: 'linear', stagger: { step: 180, max: 600 } });
     const a = await sl.transition(start, start.y('other'), options('#cached'));
@@ -145,7 +145,7 @@ test('delayed property tracks can jump back before their start without retaining
   expect(result.a).toEqual(result.b);
 });
 
-test('successive stages on the same property initialize from preceding endpoints', async ({ page }) => {
+test('successive steps on the same property initialize from preceding endpoints', async ({ page }) => {
   const frames = await page.evaluate(async () => {
     const { createSceneTransitionProgress } = await import('/dist/transition-progress.js');
     const root = d3.select('#cached').append('svg');

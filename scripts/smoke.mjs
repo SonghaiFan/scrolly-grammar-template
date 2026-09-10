@@ -1,6 +1,6 @@
 import { chartModules } from '../dist/charts/manifest.js';
 import {
-  createChartIdiomRegistry,
+  createChartTypeRegistry,
   createSpecCompilerRegistry,
   registerChartModules
 } from '../dist/charts/index.js';
@@ -8,29 +8,29 @@ import * as sourceApi from '../dist/index.js';
 import * as distApi from '../dist/visdelta.esm.js';
 
 const publicApi = [
-  'availableChartIdioms',
+  'availableChartTypes',
   'bar',
   'delta',
-  'defineChartIdiom',
+  'defineChartType',
   'diffViewStates',
   'line',
   'point',
-  'registerChartIdiom',
+  'registerChartType',
   'registerChartModule',
   'transition',
   'unit',
   'visualizationSpec'
 ];
 
-const registry = createChartIdiomRegistry();
+const registry = createChartTypeRegistry();
 registerChartModules(registry, chartModules, {});
 const compilerKeys = Object.keys(createSpecCompilerRegistry(chartModules)).sort();
-const expectedIdioms = ['bar', 'line', 'point', 'unit'];
+const expectedTypes = ['bar', 'line', 'point', 'unit'];
 
 assertSame(Object.keys(sourceApi).sort(), publicApi.sort(), 'source public API');
 assertSame(Object.keys(distApi).sort(), publicApi.sort(), 'dist public API');
-assertSame(registry.types(), expectedIdioms, 'chart idiom registry');
-assertSame(compilerKeys, expectedIdioms, 'spec compiler registry');
+assertSame(registry.types(), expectedTypes, 'chart type registry');
+assertSame(compilerKeys, expectedTypes, 'spec compiler registry');
 
 const first = sourceApi.bar([{ category: 'A', value: 1, other: 2 }])
   .x('category')

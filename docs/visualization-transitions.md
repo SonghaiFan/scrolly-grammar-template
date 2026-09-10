@@ -1,9 +1,8 @@
 # Visualization transitions
 
 VisDelta's visualization builders are chainable declarations. Deriving a new
-visualization preserves the previous one. Pass two same-idiom visualizations to
-`transition()` to display, play, or seek their animated change. No story, step
-sequence, or scroll listener is required.
+visualization preserves the previous one. Pass two states of the same chart type to
+`transition()` to display, play, or seek their animated change.
 
 This is the canonical 0.2 pair-transition API.
 Until publication, build the checkout or install its local tarball to try it.
@@ -37,12 +36,12 @@ change.play({ duration: 800 }); // replay from 0 to 1
   or animate anything. Their method calls are not individual animation steps.
 - `transition()` snapshots both declarations and resolves their data before
   creating the display. Matching source requests are loaded once per transition.
-- A delta describes endpoint differences; the idiom's renderer and transition
-  planner determine interpolation, staging, entering/exiting marks, and axes.
-- `key` identifies corresponding objects across the endpoints. Use a stable,
-  unique key for the marks represented at the current grain.
+- A Delta describes what differs between the two states. The chart planner
+  matches items, finds which ones enter or exit, and builds ordered steps.
+- `key` tells VisDelta how to match the same item between states. Use a stable,
+  unique key for the items represented at the current level of detail.
 - Progress is a normalized position through the whole transition, including its
-  stages and stagger. It is not necessarily a linear fraction of a mark's distance.
+  steps and stagger. It is not necessarily a linear fraction of a mark's distance.
 - `progress(0)` shows the source; `progress(1)` shows the target. Arbitrary orders
   such as `0.8 → 0.2 → 1 → 0.37` reconstruct the same frame as a direct `0.37`,
   for fixed data, container size, theme, and renderer configuration.
@@ -50,10 +49,10 @@ change.play({ duration: 800 }); // replay from 0 to 1
   stacked and grouped layouts, separately authored split and merge transitions
   are exact reverses: `split.progress(p)` displays the same frame as
   `merge.progress(1 - p)`. This includes cutlines, fills, opacity, staggering,
-  legends, axes, and x/y staging. The controller still exposes `from`, `to`,
+  legends, axes, and x/y steps. The controller still exposes `from`, `to`,
   and `delta` in the order the author declared.
 - Non-finite progress is rejected; finite values outside `[0, 1]` are clamped.
-- Different chart idioms are rejected. This API does not animate bar → line.
+- Different chart types are rejected. This API does not animate bar → line.
 
 ## Data
 
@@ -72,7 +71,7 @@ bar().data('weather');                    // named source
 For named sources, pass `data: { weather: { url: './weather.csv' } }` in the
 transition options. Missing source names reject rather than rendering an empty
 chart. A transition keeps its loaded data snapshot; construct another transition
-to fetch updated data. Data transformations still use the existing idiom grammar.
+to fetch updated data. Data transformations still use the existing chart grammar.
 Arquero is optional for data with no transforms. Pass `aq` when a visualization
 uses filters, aggregation, fold, bin, sort, or another data transform.
 See [data transform grammar](./data-transforms.md) for supported operations and
@@ -116,16 +115,16 @@ function onScrollProgress(p) { change.progress(p); }
 ## Implementation boundary
 
 Built-in bar pairs compile once during initialization. Data transforms, layouts,
-keyed joins, and D3 tween factories prepare per-property tracks and endpoint/phase
-DOM snapshots. Later `progress()` calls evaluate those tracks on retained SVG
+keyed joins, and D3 tween factories prepare reusable property changes and
+endpoint/phase DOM snapshots. Later `progress()` calls evaluate those changes on retained SVG
 nodes; they do not run the data pipeline, create scales, or schedule D3 transitions.
 `play()` advances progress through exactly the same evaluator.
 
-Tracks contain start time, duration, easing, and an interpolator. A staged
-transition initializes later interpolators at the correct preceding state. On a
-backward seek, a property whose stage has not started evaluates to its starting
+Each cached change contains a start time, duration, easing, and an interpolator.
+Ordered steps initialize later interpolators from the correct preceding state. On a
+backward seek, a property whose step has not started evaluates to its starting
 value. Bar flips, split/merge and stacked/grouped routes also cache their
-intermediate phases. Crossing a phase or endpoint restores cached membership,
+intermediate phases. Crossing a phase or endpoint restores which nodes are present,
 attributes, bound data, and tooltips, without rerunning its renderer. This costs
 more than a seek within the same phase, but does not allocate a fresh SVG tree.
 Exit nodes detach at endpoints and can reattach on a reverse seek. Common keyed
@@ -163,7 +162,7 @@ npm run test:browser
 
 To use an installed Chrome instead, set `VISDELTA_CHROME_PATH` to its executable.
 Browser checks cover random seek order, endpoint restoration, stationary frames,
-time playback, pause, resizing, destruction, and same-idiom validation. Cache
+time playback, pause, resizing, destruction, and same-type validation. Cache
 checks also compare mark geometry against the original reconstruction path,
 verify stable nodes and restored listeners, and instrument data/scale/schedule
 creation to ensure seeks and playback do not repeat compilation.

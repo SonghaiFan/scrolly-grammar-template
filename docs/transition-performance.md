@@ -11,7 +11,7 @@ container width and 500-pixel chart height. After three warmup seeks, 31
 deterministic nonsequential interior progress values are sampled. Timings include
 the synchronous `progress()` call and a bounding-box read to flush layout, but
 exclude rasterization/compositing. They are not end-to-end frame rates. The table
-does not measure phase/endpoint switches, where cached DOM membership is restored.
+does not measure phase/endpoint switches, where cached DOM nodes are restored.
 
 | Marks | Before: median seek | Cached: median seek | Before: p95 seek | Cached: p95 seek |
 | ---: | ---: | ---: | ---: | ---: |
@@ -30,7 +30,7 @@ Initialization now performs more work upfront:
 Initialization is one observation per size, not a percentile. Seek timings are
 rounded to one decimal place. Hardware, browser load, chart configuration and
 data affect results. Retained phase/endpoint nodes also increase memory use;
-memory and worst-case multi-stage costs have not been benchmarked here.
+memory and worst-case multi-step costs have not been benchmarked here.
 
 ## Reproduce
 
@@ -52,7 +52,7 @@ that seek/play do not recreate data tables, scales or D3 schedules; that common
 SVG nodes survive; and that mark geometry matches the reconstruction renderer.
 Run them with `npm run test:browser`.
 
-The public API is unchanged. Built-in bar pairs use the cache; other idioms and
+Built-in bar pairs use the cache; other chart types and
 custom renderers retain the existing reconstruction path unless explicitly
 opting into the cached-property contract. `resize()` invalidates
 the cache and recompiles using the already-loaded data at the same progress.

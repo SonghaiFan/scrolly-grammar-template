@@ -5,17 +5,17 @@ interface BarInternalState {
     barLayout: BarLayout;
     categoryField: string | null;
     measureField: string | null;
-    hasGuide: boolean;
-    hasGranularity: boolean;
+    hasAxis: boolean;
+    hasDetail: boolean;
     hasAggregate: boolean;
     segmentField: string | null;
-    guideStaging: Record<string, unknown> | null;
+    axisOrder: Record<string, unknown> | null;
 }
 export declare function barState(spec: ViewSpec | null | undefined): BarInternalState | null;
 /**
- * Parent -> child is the canonical granularity path. A child -> parent pair
+ * Parent -> child is the canonical detail path. A child -> parent pair
  * reuses that exact path with inverted progress so split and merge cannot
- * acquire different seams, opacity tracks, staggering, or axis staging.
+ * acquire different seams, opacity changes, staggering, or step order.
  */
 export declare function canonicalBarTransitionPair<S extends ViewSpec>(previousSpec: S, nextSpec: S): CanonicalTransitionPair<S>;
 export declare function barCollapseIntermediateSpec(previousSpec: ViewSpec | null, nextSpec: ViewSpec | null): ViewSpec | null;

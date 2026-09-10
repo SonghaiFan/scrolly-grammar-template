@@ -1,7 +1,7 @@
 import { createBarRenderer } from './render.js';
 import { cloneSpec, uniqueTokens } from '../../runtime/utils.js';
 import { barCollapseIntermediateSpec, canonicalBarTransitionPair, barIntermediateSpecs, barSplitIntermediateSpec, resolveBarTransitionPlan } from './state.js';
-export function createBarIdiom(deps) {
+export function createBarChart(deps) {
     const renderer = createBarRenderer(deps);
     return {
         key: 'bar',
@@ -13,15 +13,15 @@ export function createBarIdiom(deps) {
         intermediateSpec(previousSpec, nextSpec) {
             const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);
             if (collapseSpec)
-                return { spec: collapseSpec, scene: 'guide' };
+                return { spec: collapseSpec, scene: 'axis' };
             const splitSpec = barSplitIntermediateSpec(previousSpec, nextSpec);
             if (splitSpec)
-                return { spec: splitSpec, scene: 'granularity' };
+                return { spec: splitSpec, scene: 'detail' };
             return null;
         },
         defaultMargin,
-        scenes: ['focus', 'guide', 'granularity', 'observation'],
-        stateOperations: { focus: 'filter', guide: 'coordinate', granularity: 'aggregate' },
+        scenes: ['selection', 'axis', 'detail', 'mapping'],
+        stateOperations: { selection: 'filter', axis: 'coordinate', detail: 'aggregate' },
         inspect: { transitionPlanKey: 'barTransitionPlan' }
     };
 }

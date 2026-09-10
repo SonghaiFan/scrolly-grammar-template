@@ -11,7 +11,7 @@ export function createBarStory({ actionMode = ["step", "tooltip"] } = {}) {
     .action(actionMode)
     .layout("floatToText")
     .description(
-      "Demonstrates Focus, Guide, and Granularity scene transitions on tidy data. " +
+      "Demonstrates Selection, Axis, and Detail scene transitions on tidy data. " +
       "Each step changes one semantic dimension of the bar chart."
     )
     .add(
@@ -23,26 +23,26 @@ export function createBarStory({ actionMode = ["step", "tooltip"] } = {}) {
       }
     )
     .add(
-      "Focus: filter to recent decades",
+      "Selection: filter to recent decades",
       base.where({ type: "Hot days", period: "recent" }),
       {
-        body: "Focus narrows the data to recent decades only. The bar layout is preserved; only the domain changes.",
+        body: "Selection narrows the data to recent decades only. The bar layout is preserved; only the domain changes.",
         code: 'base.where({ type: "Hot days", period: "recent" })'
       }
     )
     .add(
-      "Guide: flip to horizontal bars",
+      "Axis: flip to horizontal bars",
       base.where({ type: "Hot days", period: "recent" }).flip(),
       {
-        body: "Guide changes the reading frame — vertical becomes horizontal with a two-stage axis transition.",
+        body: "Flip changes the reading frame: vertical becomes horizontal in two ordered steps.",
         code: 'base.where({ type: "Hot days", period: "recent" }).flip()'
       }
     )
     .add(
-      "Focus: switch to cold days",
+      "Selection: switch to cold days",
       base.where({ type: "Cold days" }).flip(),
       {
-        body: "A keyed focus update swaps the hot/cold filter while keeping the flipped orientation.",
+        body: "A keyed selection update swaps the hot/cold filter while keeping the flipped orientation.",
         code: 'base.where({ type: "Cold days" }).flip()'
       }
     )
@@ -55,34 +55,34 @@ export function createBarStory({ actionMode = ["step", "tooltip"] } = {}) {
       }
     )
     .add(
-      "Granularity: hot/cold stacked segments",
+      "Detail: hot/cold stacked segments",
       base.breakdown("type").color("type"),
       {
-        body: "Granularity splits each decade bar into hot and cold segments — one aggregate becomes two.",
+        body: "Detail splits each decade bar into hot and cold segments — one aggregate becomes two.",
         code: 'base.breakdown("type").color("type")'
       }
     )
     .add(
-      "Focus: highlight cold days",
+      "Selection: highlight cold days",
       base.breakdown("type").color("type").highlight({ type: "Cold days" }),
       {
-        body: "Focus highlights cold segments by fading the hot ones — shape is preserved, emphasis changes.",
+        body: "Selection highlights cold segments by fading the hot ones — shape is preserved, emphasis changes.",
         code: 'base.breakdown("type").color("type").highlight({ type: "Cold days" })'
       }
     )
     .add(
-      "Guide: stacked → grouped layout",
+      "Axis: stacked → grouped layout",
       base.breakdown("type").color("type").layout("grouped").flip(),
       {
-        body: "Guide changes the segment layout from stacked to side-by-side, then flips orientation.",
+        body: "Axis changes the segment layout from stacked to side-by-side, then flips orientation.",
         code: 'base.breakdown("type").color("type").layout("grouped").flip()'
       }
     )
     .add(
-      "Granularity: roll up to mean",
+      "Detail: roll up to mean",
       base.rollup("decade", { title: "Average days", op: "mean" }),
       {
-        body: "Granularity merges segments back into one average-days bar per decade.",
+        body: "Detail merges segments back into one average-days bar per decade.",
         code: 'base.rollup("decade", { title: "Average days", op: "mean" })'
       }
     )

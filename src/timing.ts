@@ -9,7 +9,7 @@ export const DEFAULT_TIMING: TimingDefaults = {
   scene: {
     stagger: { step: 12, max: 160 }
   },
-  stage: {
+  step: {
     minDuration: 180
   },
   unit: {
@@ -36,9 +36,9 @@ export function defaultTransition(overrides: Partial<TransitionSpec> = {}): Requ
   } as Required<TransitionSpec>;
 }
 
-export function stagedDuration(totalDuration: number | undefined, stageCount: number): number {
+export function stepDuration(totalDuration: number | undefined, stepCount: number): number {
   return Math.max(
-    DEFAULT_TIMING.stage.minDuration,
-    Math.round((totalDuration ?? DEFAULT_TIMING.transition.duration) / Math.max(stageCount, 1))
+    DEFAULT_TIMING.step.minDuration,
+    Math.round((totalDuration ?? DEFAULT_TIMING.transition.duration) / Math.max(stepCount, 1))
   );
 }

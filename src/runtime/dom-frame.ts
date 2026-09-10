@@ -1,5 +1,5 @@
 // DOM topology is captured during compilation, not cloned on every frame.
-// Snapshot switches restore endpoint/phase membership while retaining the actual
+// Snapshot switches restore which nodes are present while retaining the actual
 // keyed SVG nodes, their data, and their listeners (including exited marks).
 type BoundNode = Node & {
   __data__?: unknown;

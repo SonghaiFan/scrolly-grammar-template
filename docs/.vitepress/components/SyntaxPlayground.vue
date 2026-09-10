@@ -79,7 +79,7 @@ const horizontal = vertical.flip({
 return { from: vertical, to: horizontal };`
   },
   line: {
-    label: 'Line idiom',
+    label: 'Line chart',
     code: `const sales = line(series)
   .x("quarter")
   .y("sales")
@@ -92,7 +92,7 @@ const profit = sales.y("profit");
 return { from: sales, to: profit };`
   },
   point: {
-    label: 'Point idiom',
+    label: 'Point chart',
     code: `const sales = point(series)
   .x("sales")
   .y("profit")
@@ -107,7 +107,7 @@ const reordered = sales
 return { from: sales, to: reordered };`
   },
   unit: {
-    label: 'Unit idiom',
+    label: 'Unit chart',
     code: `const grid = unit(units)
   .value("count", { maxUnits: 80 })
   .label("team")

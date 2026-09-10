@@ -1,7 +1,7 @@
 # Browser ESM without a bundler
 
 VisDelta can run directly from versioned ESM files. This template creates a
-standalone transition; it does not create a story page or scroll driver.
+transition controlled by a slider.
 
 ```html
 <!doctype html>
@@ -44,6 +44,5 @@ Arquero is needed only for current transform-backed declarations. Import it and
 pass `{ aq }` when using `.where()`, `.sort()`, `.breakdown()`, `.rollup()`, or
 another operation that produces transforms.
 
-The browser-global build exposes the same core API as `window.VisDelta`; it
-does not expose Story or Seq. Scrollytelling composition now lives in the
-private `scrollytelling/` package for later ScrollyTale integration.
+The browser-global build exposes the same chart and transition API as
+`window.VisDelta`.

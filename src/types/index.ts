@@ -88,7 +88,7 @@ export interface TransitionSpec {
   stagger?: StaggerSpec | number;
 }
 
-export interface StageSpec {
+export interface TransitionOrder {
   order?: Array<'x' | 'y'>;
   duration?: number;
   stagger?: StaggerSpec;
@@ -97,7 +97,7 @@ export interface StageSpec {
 export interface TimingDefaults {
   transition: Required<TransitionSpec> & { stagger: StaggerSpec };
   scene: { stagger: StaggerSpec };
-  stage: { minDuration: number };
+  step: { minDuration: number };
   unit: {
     axisDurationMultiplier: number;
     xRatio: number;
@@ -115,9 +115,9 @@ export interface MarginSpec {
   left: number;
 }
 
-// ─── Focus / Guide / Granularity ─────────────────────────────────────────────
+// ─── Selection / Axis / Detail ─────────────────────────────────────────────
 
-export interface FocusSpec {
+export interface SelectionSpec {
   field?: string;
   equal?: unknown;
   mode?: 'highlight' | 'filter';
@@ -126,18 +126,20 @@ export interface FocusSpec {
   [key: string]: unknown;
 }
 
-export interface GuideSpec {
+export interface AxisSpec {
   flip?: boolean;
   layout?: BarLayout;
   orientation?: BarOrientation;
   xScale?: string;
   yScale?: string;
-  staging?: StageSpec;
+  order?: Array<'x' | 'y'>;
+  duration?: number;
+  stagger?: StaggerSpec;
   scale?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
-export interface GranularitySpec {
+export interface DetailSpec {
   category?: string | null;
   categoryTitle?: string;
   categoryField?: string | null;
@@ -174,30 +176,30 @@ export interface SemanticKey {
   measures?: SemanticKeyPartInput;
 }
 
-// ─── Narrative (internal wire format) ────────────────────────────────────────
+// ─── Spec metadata ───────────────────────────────────────────────────────────
 
-export interface NarrativeObjectSpec {
+export interface ObjectMeta {
   key?: string | string[] | null;
   semantic?: Record<string, unknown>;
 }
 
-export interface NarrativeSceneState {
-  focus?: FocusSpec;
-  guide?: GuideSpec;
-  granularity?: GranularitySpec;
+export interface ChartChangeState {
+  selection?: SelectionSpec;
+  axis?: AxisSpec;
+  detail?: DetailSpec;
   [key: string]: unknown;
 }
 
-export interface NarrativeStateSpec {
-  focus?: FocusSpec | null;
-  guide?: GuideSpec | null;
-  granularity?: GranularitySpec | null;
-  sceneState?: NarrativeSceneState;
+export interface ChartStateMeta {
+  selection?: SelectionSpec | null;
+  axis?: AxisSpec | null;
+  detail?: DetailSpec | null;
+  sceneState?: ChartChangeState;
 }
 
-export interface NarrativeSpec {
-  object?: NarrativeObjectSpec;
-  state?: NarrativeStateSpec;
+export interface SpecMeta {
+  object?: ObjectMeta;
+  state?: ChartStateMeta;
   transition?: TransitionSpec;
   transform?: TransformSpec[];
   action?: { scroll?: ScrollSpec };
@@ -206,11 +208,11 @@ export interface NarrativeSpec {
   [key: string]: unknown;
 }
 
-export interface ResolvedNarrativeState {
-  focus: FocusSpec | null;
-  guide: GuideSpec | null;
-  granularity: GranularitySpec | null;
-  sceneState: NarrativeSceneState;
+export interface ResolvedChartState {
+  selection: SelectionSpec | null;
+  axis: AxisSpec | null;
+  detail: DetailSpec | null;
+  sceneState: ChartChangeState;
 }
 
 // ─── View Spec ────────────────────────────────────────────────────────────────
@@ -228,11 +230,11 @@ export interface ViewSpec {
   semanticKey?: SemanticKey | null;
   transition?: TransitionSpec;
   scroll?: ScrollSpec;
-  guide?: GuideSpec | null;
-  granularity?: GranularitySpec | null;
-  focus?: FocusSpec | null;
+  axis?: AxisSpec | null;
+  detail?: DetailSpec | null;
+  selection?: SelectionSpec | null;
   unit?: Record<string, unknown> | null;
-  narrative?: NarrativeSpec;
+  meta?: SpecMeta;
   margin?: Partial<MarginSpec>;
   [field: string]: unknown;
 }
@@ -322,8 +324,8 @@ export interface BarSemanticState {
   layout: BarLayout;
   categoryField: string | null;
   measureField: string | null;
-  guide: GuideSpec | null;
-  granularity: GranularitySpec | null;
+  axis: AxisSpec | null;
+  detail: DetailSpec | null;
   aggregate: AggregateTransform | AggregateTransform[] | null;
   segmentField: string | null;
   xGeometry: BarGeometryState;
@@ -334,7 +336,7 @@ export interface BarSemanticState {
 
 export interface GrammarMeta {
   operations?: string[];
-  /** Per-idiom scene capabilities (e.g. bar opts out of `observation`). */
+  /** Per-chart-type scene capabilities (e.g. bar opts out of `mapping`). */
   capabilities?: Record<string, boolean>;
   /** Field declared via bar's `.measure()` — drives identity/title inference in `.where()`. */
   measureField?: string;
@@ -359,9 +361,9 @@ export interface SemanticViewState {
   encoding: EncodingSpec;
   filters: FilterSpec[];
   nonFilterTransforms: TransformSpec[];
-  focus: FocusSpec | null;
-  guide: GuideSpec | null;
-  granularity: GranularitySpec | null;
+  selection: SelectionSpec | null;
+  axis: AxisSpec | null;
+  detail: DetailSpec | null;
   bar?: BarSemanticState;
 }
 
@@ -386,24 +388,17 @@ export interface DiffResult {
 
 // ─── Transition planning ──────────────────────────────────────────────────────
 
-export interface TransitionPlanKey {
+export type ChartPart = 'x' | 'y';
+export type TransitionChange = 'scale' | 'axis' | 'marks' | 'enter' | 'exit';
+
+export interface TransitionMatch {
   mode: string;
   reason: string;
 }
 
-export interface TransitionPlanStage {
-  axis: 'x' | 'y';
-  attrs: string[];
-}
-
-export interface TransitionPlanUpdate {
-  mode: string;
-  reason: string;
-  target: { orientation: BarOrientation; layout: BarLayout; renderer: string };
-  changedAxes: Array<'x' | 'y'>;
-  stages: TransitionPlanStage[];
-  timing: TransitionSpec;
-  totalDuration: number;
+export interface TransitionStep {
+  part?: ChartPart;
+  changes: TransitionChange[];
 }
 
 export interface TransitionPlanBaseline {
@@ -413,7 +408,7 @@ export interface TransitionPlanBaseline {
   meaning: string;
 }
 
-export interface TransitionPlanEnterExit {
+export interface TransitionItemAction {
   mode: string;
   reason: string;
   from?: string;
@@ -440,13 +435,17 @@ export interface TransitionPlanDiffEntry {
 
 export interface TransitionPlan {
   diff?: TransitionPlanDiffEntry[];
-  key?: TransitionPlanKey;
-  update?: TransitionPlanUpdate;
-  enter?: TransitionPlanEnterExit;
-  exit?: TransitionPlanEnterExit;
+  reason?: string;
+  target?: { orientation: BarOrientation; layout: BarLayout; renderer: string };
+  match?: TransitionMatch;
+  enter?: TransitionItemAction;
+  exit?: TransitionItemAction;
+  steps?: TransitionStep[];
+  timing?: TransitionSpec;
+  totalDuration?: number;
 }
 
-// ─── Chart idiom ──────────────────────────────────────────────────────────────
+// ─── Chart type ───────────────────────────────────────────────────────────────
 
 export type DataRow = Record<string, unknown>;
 
@@ -511,7 +510,7 @@ export interface ChartDeps {
   [key: string]: unknown;
 }
 
-export interface ChartIdiom<S extends ViewSpec = ViewSpec> {
+export interface ChartType<S extends ViewSpec = ViewSpec> {
   key: string;
   /** Opt in only when all animated SVG properties can be captured and sought. */
   transitionEvaluation?: 'cached' | 'reconstruct';
@@ -536,7 +535,7 @@ export interface ChartPlugin<S extends ViewSpec = ViewSpec> {
   key: string;
   readonly scenes: readonly string[];
   readonly stateOperations: StateOperations;
-  createChartIdiom(deps: ChartDeps): ChartIdiom<S>;
+  createChartType(deps: ChartDeps): ChartType<S>;
   createSpecCompiler?: (context: CompilerContext) => SpecCompiler;
 }
 
