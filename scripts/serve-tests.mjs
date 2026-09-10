@@ -14,4 +14,4 @@ createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.end(await readFile(path));
   } catch { res.writeHead(404).end('Not found'); }
-}).listen(Number(process.env.VISDELTA_TEST_PORT || process.env.SCROLLYLITE_TEST_PORT || 5511), '127.0.0.1');
+}).listen(Number(process.env.VISDELTA_TEST_PORT || 5511), '127.0.0.1');

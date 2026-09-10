@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SonghaiFan/scrollylite.git"
+    "url": "git+https://github.com/SonghaiFan/visdelta.git"
   },
   "bugs": {
-    "url": "https://github.com/SonghaiFan/scrollylite/issues"
+    "url": "https://github.com/SonghaiFan/visdelta/issues"
   },
-  "homepage": "https://github.com/SonghaiFan/scrollylite#readme",
+  "homepage": "https://github.com/SonghaiFan/visdelta#readme",
   "main": "./dist/visdelta.esm.js",
   "module": "./dist/visdelta.esm.js",
   "types": "./dist/index.d.ts",

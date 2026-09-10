@@ -1,8 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
-const port = Number(process.env.VISDELTA_TEST_PORT || process.env.SCROLLYLITE_TEST_PORT || 5511);
+const port = Number(process.env.VISDELTA_TEST_PORT || 5511);
 const baseURL = `http://127.0.0.1:${port}`;
-const chromePath = process.env.VISDELTA_CHROME_PATH || process.env.SCROLLYLITE_CHROME_PATH;
+const chromePath = process.env.VISDELTA_CHROME_PATH;
 
 export default defineConfig({
   testDir: './tests/browser',

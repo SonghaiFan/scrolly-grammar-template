@@ -108,12 +108,12 @@ assertEqual(packageJson.unpkg, "./dist/visdelta.global.js", "unpkg");
 assertEqual(packageJson.style, "./dist/visdelta.css", "style");
 assertEqual(packageJson.repository, {
   type: "git",
-  url: "git+https://github.com/SonghaiFan/scrollylite.git"
+  url: "git+https://github.com/SonghaiFan/visdelta.git"
 }, "repository");
 assertEqual(packageJson.bugs, {
-  url: "https://github.com/SonghaiFan/scrollylite/issues"
+  url: "https://github.com/SonghaiFan/visdelta/issues"
 }, "bugs");
-assertEqual(packageJson.homepage, "https://github.com/SonghaiFan/scrollylite#readme", "homepage");
+assertEqual(packageJson.homepage, "https://github.com/SonghaiFan/visdelta#readme", "homepage");
 assertEqual(packageJson.publishConfig, { access: "public" }, "publishConfig");
 assertEqual(packageJson.engines, { node: ">=18" }, "engines");
 if (!packageJson.devDependencies?.esbuild) {

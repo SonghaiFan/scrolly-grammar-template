@@ -31,7 +31,7 @@ export default defineConfig({
       { text: 'Bar Lab', link: '/transition-lab' },
       { text: 'Examples', link: '/examples' },
       { text: '0.2.0', items: [
-        { text: 'Changelog', link: 'https://github.com/SonghaiFan/scrollylite/blob/main/CHANGELOG.md' },
+        { text: 'Changelog', link: 'https://github.com/SonghaiFan/visdelta/blob/main/CHANGELOG.md' },
         { text: 'npm package', link: 'https://www.npmjs.com/package/visdelta' }
       ] }
     ],
@@ -87,10 +87,10 @@ export default defineConfig({
       label: 'On this page'
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/SonghaiFan/scrollylite' }
+      { icon: 'github', link: 'https://github.com/SonghaiFan/visdelta' }
     ],
     editLink: {
-      pattern: 'https://github.com/SonghaiFan/scrollylite/edit/main/docs/:path',
+      pattern: 'https://github.com/SonghaiFan/visdelta/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     },
     footer: {
