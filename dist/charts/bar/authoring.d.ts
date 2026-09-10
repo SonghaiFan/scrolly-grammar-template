@@ -10,6 +10,7 @@ export interface BarViewState extends ViewSpec {
 }
 export declare function bar(data?: unknown): BarState;
 export declare class BarState extends ChartState<BarViewState> {
+    chartModule(): import("../module.js").ChartModule<BarViewState>;
     toSpec(): Omit<BarViewState, '__grammar'>;
     x(field: string | ChannelSpec, options?: Partial<ChannelSpec>): this;
     y(field: string | ChannelSpec, options?: Partial<ChannelSpec> | string): this;

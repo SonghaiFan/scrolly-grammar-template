@@ -2,6 +2,7 @@ import type { ChannelSpec, ViewSpec } from '../../types/index.js';
 import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createUnitSpecCompiler } from './compile.js';
+import { chartModule as unitModule } from './module.js';
 
 const UNIT_SPEC_COMPILER = createUnitSpecCompiler();
 
@@ -15,6 +16,10 @@ export function unit(data?: unknown): UnitState {
 }
 
 export class UnitState extends ChartState<UnitViewState> {
+  chartModule() {
+    return unitModule;
+  }
+
   protected override compileSpec(spec: ViewSpec): ViewSpec {
     return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { axis: 'layout' });
   }

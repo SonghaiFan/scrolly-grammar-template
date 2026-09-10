@@ -2,8 +2,8 @@
 
 VisDelta is designed to run as a browser ESM library from a CDN URL. That
 means runtime code cannot scan `src/charts/` or discover new files dynamically.
-Every built-in chart type is therefore represented by one folder plus a
-generated static ESM manifest.
+Every official chart type is therefore represented by one folder plus generated
+static ESM lists. Runtime discovery never depends on scanning folders.
 
 ## Folder Contract
 
@@ -13,10 +13,21 @@ Each chart type lives in:
 src/charts/<chart-type>/
 ```
 
-The folder becomes a plugin when it exposes:
+The folder becomes a chart module when it exposes both:
 
 ```text
 src/charts/<chart-type>/plugin.ts
+src/charts/<chart-type>/module.ts
+```
+
+`plugin.ts` contains the loaded chart recipe. `module.ts` is the lightweight,
+lazy reference carried by that chart's authoring state:
+
+```js
+export const chartModule = defineChartModule({
+  key: "area",
+  load: () => import("./plugin.js")
+});
 ```
 
 That file should export:
@@ -66,19 +77,19 @@ spec. `scenes` and `stateOperations` declare compiler capability, so transition
 code does not need mark-specific switch statements. Do not add empty hook bags;
 the plugin metadata is the contract.
 
-## CDN-Compatible Registration
+## CDN-compatible module lists
 
-The complete VisDelta entry imports the generated manifest (source is
-TypeScript; import specifiers and dist output use `.js`):
+The generator writes two lists:
 
-```js
-import { chartModules } from "./charts/manifest.js";
+```text
+builtins.ts  lightweight lazy references used by the complete entry
+manifest.ts  eagerly loaded plugins exposed only by the low-level composition entry
 ```
 
-`manifest.js` is static ESM so it can be served directly from a CDN. It is
-generated from folders that expose `plugin.ts` (or JavaScript plugins).
-Standalone transitions instead use the lazy loader map in
-`src/runtime/chart-registry.ts` and load only their selected chart type.
+The generic `src/runtime/chart-registry.ts` imports neither list and contains no
+concrete chart names. A focused builder supplies its own chart module directly.
+The complete `visdelta` entry registers the generated lightweight references as
+a convenience collection.
 
 After adding or removing a chart-type folder, run:
 
@@ -86,8 +97,9 @@ After adding or removing a chart-type folder, run:
 node scripts/sync-chart-manifest.mjs
 ```
 
-Update the lazy loader map as well, then run `npm run manifest:check` and build.
-The check requires both inventories to agree. The browser never scans directories.
+Then run `npm run manifest:check` and build. No runtime map needs a manual edit.
+The check requires every discovered plugin folder to provide `module.ts` and
+rejects concrete chart imports in the generic registry.
 
 ## Bar Ground Truth
 
@@ -110,6 +122,7 @@ authoring.js / grammar.js
 - `grammar.js` is the authoring entry for `bar()` and `BarState`.
 - `plugin.js` is the runtime plugin entry. Keep it authoring-free so the CDN
   runtime can register the chart type without importing grammar code.
+- `module.js` is the lightweight lazy reference returned by `BarState.chartModule()`.
 - `index.js` is a public barrel that can re-export authoring helpers.
 - `compile.js` turns bar authoring operations such as filter/highlight,
   coordinate/scale/layout, breakdown, and rollup into Vega-ish `data`,
@@ -160,12 +173,11 @@ as `encoding.series`; line grouping is stored in
 `meta.state.sceneState.detail.seriesField` and rendered through the
 standard `color` encoding.
 
-Point, line, and unit spec compilers now live in their chart-type folders:
+Point, line, and unit spec compilers live in their chart-type folders:
 `src/charts/point/compile.js`, `src/charts/line/compile.js`, and
-`src/charts/unit/compile.js`. The global transition module builds its compiler
-map from the chart plugin manifest, so adding a chart type means adding a folder
-with `plugin.js`. Runtime registry keys are canonical only: `bar`, `point`,
-`line`, and `unit`.
+`src/charts/unit/compile.js`. Each authoring state compiles locally and carries
+its own module; the global transition module does not build a chart-specific
+compiler map.
 
 ## D3 Bar Checklist
 

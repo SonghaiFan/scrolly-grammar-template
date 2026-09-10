@@ -28,6 +28,11 @@ const summary = detailed.rollup("region", {
   y: { op: "mean" }
 });`;
 
+export const chart = 'point';
+export async function loadChart() {
+  return (await import('../../dist/point.js')).point;
+}
+
 export const pointScenarios = [
   sample('x', '01 · Change x field', 'Keep the same points and move them to a different horizontal measure.', base, 'base', 'base.x("education", { title: "Education" })'),
   sample('y', '02 · Change y field', 'Keep the same points and move them to a different vertical measure.', base, 'base', 'base.y("happiness", { title: "Happiness" })'),
@@ -50,3 +55,5 @@ export const pointScenarios = [
   sample('rollup', '11 · Combine into summaries', 'Gather detailed places into one mean-position summary circle per region.', summarySetup, 'detailed', 'summary'),
   sample('breakdown', '12 · Reveal detail', 'Reverse the same path: split each regional summary into its places.', summarySetup, 'summary', 'detailed')
 ];
+
+export const scenarios = pointScenarios;

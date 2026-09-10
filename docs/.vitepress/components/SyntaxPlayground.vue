@@ -1,8 +1,8 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as d3 from 'd3';
-import { scenarios as barScenarios } from '../../../examples/transition/scenarios.js';
-import { pointScenarios } from '../../../examples/point/scenarios.js';
+
+const labModules = import.meta.glob('../../../examples/*/scenarios.js', { eager: true });
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -123,12 +123,18 @@ return { from: grid, to: grouped };`
   }
 };
 
-const barLabSamples = Object.fromEntries(barScenarios.map(sample => [sample.id, sample]));
-const pointLabSamples = Object.fromEntries(pointScenarios.map(sample => [sample.id, sample]));
-const labSamples = {
-  'bar-lab': { chart: 'bar', samples: barLabSamples },
-  'point-lab': { chart: 'point', samples: pointLabSamples }
-};
+const labSamples = Object.fromEntries(
+  Object.values(labModules)
+    .filter(module => module.chart && Array.isArray(module.scenarios) && typeof module.loadChart === 'function')
+    .map(module => [
+      `${module.chart}-lab`,
+      {
+        chart: module.chart,
+        loadChart: module.loadChart,
+        samples: Object.fromEntries(module.scenarios.map(sample => [sample.id, sample]))
+      }
+    ])
+);
 const isLabMode = computed(() => Boolean(labSamples[props.mode]));
 const labChart = computed(() => labSamples[props.mode]?.chart ?? null);
 const availableSamples = computed(() => labSamples[props.mode]?.samples ?? samples);
@@ -213,7 +219,9 @@ onMounted(() => {
 async function initialize() {
   try {
     const [runtime, arquero] = await Promise.all([
-      import('../../../dist/visdelta.esm.js'),
+      isLabMode.value
+        ? import('../../../dist/transition-entry.js')
+        : import('../../../dist/visdelta.esm.js'),
       import('arquero')
     ]);
     api = runtime;
@@ -278,7 +286,7 @@ async function runCode() {
         `"use strict";\n${code.value}`
       );
     const result = isLab
-      ? await evaluate(api[labChart.value])
+      ? await evaluate(await labSamples[props.mode].loadChart())
       : await evaluate(
         api.bar, api.line, api.point, api.unit, api.delta,
         structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)

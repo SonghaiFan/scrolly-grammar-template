@@ -1,9 +1,14 @@
 import { bar, delta } from 'visdelta';
 import { transition } from 'visdelta/transition';
 import { delta as selectedDelta } from 'visdelta/core';
-import { bar as selectedBar } from 'visdelta/bar';
-import { point as selectedPoint } from 'visdelta/point';
-import { defineChartType, registerChartModule } from 'visdelta/plugins';
+import { bar as selectedBar, barModule } from 'visdelta/bar';
+import { point as selectedPoint, pointModule } from 'visdelta/point';
+import {
+  ChartState,
+  defineChartModule,
+  defineChartType,
+  registerChartModule
+} from 'visdelta/plugins';
 import * as browser from 'visdelta/browser';
 
 declare const d3: Record<string, unknown>;
@@ -16,9 +21,22 @@ delta(a, b).hasDelta('encoding.y');
 selectedDelta(a, b).hasDelta('encoding.y');
 selectedBar().data([]).x('key');
 selectedPoint().data([]).x('x').y('y').radius(6);
+registerChartModule(barModule);
+registerChartModule(pointModule);
 // @ts-expect-error Pair progress accepts only a number.
 pair.progress('0.5');
 // @ts-expect-error ESM dependencies are explicit.
 await transition(a, b, { target: '#chart' });
 await browser.transition(a, b);
-registerChartModule({ plugin: defineChartType({ key: 'custom', renderer() {} }) });
+const customPlugin = defineChartType({ key: 'custom', renderer() {} });
+registerChartModule({ plugin: customPlugin });
+const customLazyPlugin = defineChartType({ key: 'custom-lazy', renderer() {} });
+const customModule = defineChartModule({
+  key: 'custom-lazy',
+  async load() { return { plugin: customLazyPlugin }; }
+});
+registerChartModule(customModule);
+class CustomState extends ChartState {
+  chartModule() { return customModule; }
+}
+new CustomState({ mark: 'custom-lazy', data: { values: [] }, encoding: {} }).x('value');

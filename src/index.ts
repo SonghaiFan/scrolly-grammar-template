@@ -1,3 +1,8 @@
+import { builtInChartModules } from './charts/builtins.js';
+import { registerChartModule as registerBuiltInChartModule } from './runtime/chart-registry.js';
+
+builtInChartModules.forEach(registerBuiltInChartModule);
+
 export {
   availableChartTypes,
   registerChartType,

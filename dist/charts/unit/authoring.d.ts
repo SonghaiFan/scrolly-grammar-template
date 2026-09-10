@@ -6,6 +6,7 @@ export interface UnitViewState extends ViewSpec {
 }
 export declare function unit(data?: unknown): UnitState;
 export declare class UnitState extends ChartState<UnitViewState> {
+    chartModule(): import("../module.js").ChartModule<UnitViewState>;
     protected compileSpec(spec: ViewSpec): ViewSpec;
     value(field: string, options?: {
         maxUnits?: number;

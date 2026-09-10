@@ -1,6 +1,12 @@
 import { cloneState } from './grammar/view-state.js';
 import { diffViewStates } from './grammar/diff.js';
 import { serializeViewSpec } from './spec-meta.js';
+/** Read a visualization's chart module without adding it to serialized state. */
+export function visualizationChartModule(input) {
+    if (!input || typeof input !== 'object' || typeof input.chartModule !== 'function')
+        return null;
+    return input.chartModule();
+}
 /** Resolve an immutable builder or plain spec into a detached view spec. */
 export function visualizationSpec(input) {
     if (!input || typeof input !== 'object') {

@@ -24,6 +24,11 @@ function sample(id, label, description, setup, from, to) {
   return { id, label, description, code: `${setup}\n\nconst from = ${from};\nconst to = ${to};\n\nreturn { from, to };` };
 }
 
+export const chart = 'bar';
+export async function loadChart() {
+  return (await import('../../dist/bar.js')).bar;
+}
+
 export const scenarios = [
   sample('measure', '01 · Change measure', 'Keep the same categories and change the y field from value to other.', basic, 'base', 'base.y("other")'),
   sample('filter', '02 · Filter members', 'Keep type one. B exits; drag back to restore it.', basic, 'base', 'base.where({ type: "one" })'),

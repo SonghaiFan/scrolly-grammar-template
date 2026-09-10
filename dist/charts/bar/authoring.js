@@ -5,11 +5,15 @@ import { labelFromValue, titleize } from '../../labels.js';
 import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
+import { chartModule as barModule } from './module.js';
 export function bar(data) {
     return new BarState({ data: normalizeDataSource(data), mark: 'bar', encoding: {} });
 }
 const BAR_SPEC_COMPILER = createBarSpecCompiler();
 export class BarState extends ChartState {
+    chartModule() {
+        return barModule;
+    }
     toSpec() {
         const spec = cloneState(this.state);
         delete spec.__grammar;

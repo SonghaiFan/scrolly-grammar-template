@@ -6,6 +6,7 @@ export interface PointViewState extends ViewSpec {
 }
 export declare function point(data?: unknown): PointState;
 export declare class PointState extends ChartState<PointViewState> {
+    chartModule(): import("../module.js").ChartModule<PointViewState>;
     protected compileSpec(spec: ViewSpec): ViewSpec;
     x(field: string | import('../../types/index.js').ChannelSpec, options?: Partial<import('../../types/index.js').ChannelSpec>): this;
     y(field: string | import('../../types/index.js').ChannelSpec, options?: Partial<import('../../types/index.js').ChannelSpec>): this;

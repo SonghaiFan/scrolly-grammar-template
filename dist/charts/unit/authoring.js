@@ -1,11 +1,15 @@
 import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createUnitSpecCompiler } from './compile.js';
+import { chartModule as unitModule } from './module.js';
 const UNIT_SPEC_COMPILER = createUnitSpecCompiler();
 export function unit(data) {
     return new UnitState({ data: normalizeDataSource(data), mark: 'unit', encoding: {}, unit: {} });
 }
 export class UnitState extends ChartState {
+    chartModule() {
+        return unitModule;
+    }
     compileSpec(spec) {
         return compileViewWithCompiler(spec, { scene: [] }, UNIT_SPEC_COMPILER, { axis: 'layout' });
     }

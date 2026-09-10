@@ -1,5 +1,5 @@
 import { cloneState } from './grammar/view-state.js';
-import { delta, visualizationSpec } from './core.js';
+import { delta, visualizationChartModule, visualizationSpec } from './core.js';
 import { normalizeDataSource } from './charts/authoring.js';
 import { loadData } from './runtime/data.js';
 import { createTransitionSurface } from './runtime/transition-surface.js';
@@ -9,10 +9,17 @@ import { createChartRuntimeDeps } from './runtime/chart-deps.js';
 import { resolveTarget } from './runtime/target.js';
 /** Compile two states of the same chart type into a standalone, seekable transition. */
 export async function transition(from, to, options) {
+    const localModules = [visualizationChartModule(from), visualizationChartModule(to)]
+        .filter((module) => module !== null);
     const source = visualizationSpec(from);
     const target = visualizationSpec(to);
     if (!source.mark || source.mark !== target.mark) {
         throw new Error('transition() requires two states of the same chart type.');
+    }
+    for (const module of localModules) {
+        if (normalizeChartKey(module.key) !== normalizeChartKey(source.mark)) {
+            throw new Error(`Visualization uses chart module "${module.key}" but declares mark "${source.mark}".`);
+        }
     }
     if (!options?.d3) {
         throw new Error('Pass { target, d3 } to transition().');
@@ -48,7 +55,7 @@ export async function transition(from, to, options) {
     };
     const [resolvedFrom, resolvedTo] = await Promise.all([resolveData(source), resolveData(target)]);
     const host = resolveTarget(options.target ?? '#app');
-    const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host }));
+    const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host }), localModules);
     const surface = createTransitionSurface(resolvedFrom, resolvedTo, options, chartTypes);
     let value = 0;
     let animation = null;
@@ -128,4 +135,7 @@ function finiteProgress(value) {
     if (!Number.isFinite(value))
         throw new Error('progress must be a finite number.');
     return Math.max(0, Math.min(1, value));
+}
+function normalizeChartKey(value) {
+    return String(value ?? '').replace(/\s+/g, '').toLowerCase();
 }

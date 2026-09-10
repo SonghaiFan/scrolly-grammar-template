@@ -236,22 +236,27 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
 | `visdelta/transition` | Pair initialization, seek, play, resize, and destroy |
-| `visdelta/plugins` | Plugin definition and registration |
+| `visdelta/plugins` | Chart-module building blocks and plain-spec registration |
 | `visdelta/composition` | Adapter contract used by external control packages |
 | `visdelta` | Visualization grammar, delta, transition, and plugin API |
 | `visdelta/browser` | Transition API with browser-global dependency fallback |
 
-Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for
-bar authoring, under 7 KB for point authoring, and under 35 KB for bar plus
+Current gzip gates are under 4 KB for the core delta fixture, under 9 KB for
+bar authoring, under 8 KB for point authoring, and under 35.5 KB for bar plus
 transition. These exclude D3, optional Arquero, and CSS.
 
-## Plugin boundary
+## Chart module boundary
 
-`ChartPlugin` is a configuration and factory object. `ChartType` is the runtime
-object produced by that factory.
+An imported chainable chart carries its own lazy `ChartModule`. The generic
+transition entry therefore does not import or name any concrete chart type.
+Use registration only when the states are plain JSON and cannot carry a module.
 
 ```js
-import { defineChartType, registerChartModule } from "visdelta/plugins";
+import {
+  defineChartModule,
+  defineChartType,
+  registerChartModule
+} from "visdelta/plugins";
 
 const plugin = defineChartType({
   key: "area",
@@ -262,13 +267,18 @@ const plugin = defineChartType({
   transitionEvaluation: "reconstruct"
 });
 
-registerChartModule({ plugin });
+const areaModule = defineChartModule({
+  key: "area",
+  load: async () => ({ plugin })
+});
+
+registerChartModule(areaModule); // needed for plain { mark: "area", ... } specs
 ```
 
-Register before creating a transition. New transition runtimes snapshot the
-selected chart types. Registration does not create a builder and does not enable
-bar-to-line transitions. See [Plugins](/extending-with-plugins) for the renderer
-and compiler contracts.
+For a chainable module, make its state return `areaModule` from `chartModule()`;
+then no registration is required. `ChartPlugin` is the loaded recipe and
+`ChartType` is its per-runtime working object. See [Add a chart type](/extending-with-plugins)
+for the full builder, compiler, and renderer contract.
 
 ## Lifecycle and errors
 

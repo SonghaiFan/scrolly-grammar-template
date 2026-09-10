@@ -222,11 +222,13 @@ and a slider tomorrow without changing its two chart states.
 | Syntax | Status | Contract |
 | --- | --- | --- |
 | `defineChartType()` | Available | Define a chart-type plugin factory |
-| `registerChartModule()` | Available | Register renderer/compiler capability before runtime creation |
+| `defineChartModule()` | Available | Define a lazy chart implementation carried by a chart state |
+| `state.chartModule()` | Available | Let an imported builder work without global registration |
+| `registerChartModule()` | Available | Make a module available to plain JSON specs |
 | Focused `visdelta/bar` entry | Available | Lightweight bar authoring |
 | Focused `visdelta/point` entry | Available | Lightweight point authoring |
 | Focused line and unit entries | Developing | Available through the complete entry; dedicated public subpaths are not shipped |
-| Automatic builder generation from plugins | Developing | Registration currently supplies runtime capability, not new fluent syntax automatically |
+| Automatic builder generation | Not planned | Each chart owns meaningful chart-specific chain methods; the core does not guess them |
 
 ## What “partial” means for current chart types
 

@@ -5,6 +5,7 @@ import { labelFromValue, titleize } from '../../labels.js';
 import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
+import { chartModule as barModule } from './module.js';
 import type {
   BarLayout,
   ChannelSpec,
@@ -32,6 +33,10 @@ export function bar(data?: unknown): BarState {
 const BAR_SPEC_COMPILER = createBarSpecCompiler();
 
 export class BarState extends ChartState<BarViewState> {
+  chartModule() {
+    return barModule;
+  }
+
   override toSpec(): Omit<BarViewState, '__grammar'> {
     const spec = cloneState(this.state) as BarViewState & { __grammar?: unknown };
     delete spec.__grammar;

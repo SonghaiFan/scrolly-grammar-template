@@ -23,6 +23,11 @@ and no migration guide yet.
 - Made color an explicit mapping. Marks are black when no color is given.
 - Added the `ChartType` plugin API: `defineChartType()`, `registerChartType()`,
   `registerChartModule()`, and `availableChartTypes()`.
+- Added self-contained lazy chart modules. A chainable state now carries its
+  chart implementation, so the generic transition runtime has no built-in chart
+  names and an independently imported chart works without global registration.
+- Made Bar and Point Lab scenarios discoverable modules instead of hard-coded
+  branches in the shared documentation editor.
 - Added focused package entries for core difference calculation, bar and point
   authoring, transitions, plugins, browser use, and composition adapters.
 - Added strict transform validation. Arquero is needed only when a chart uses a

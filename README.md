@@ -66,12 +66,17 @@ not require it.
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
 | `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
-| `visdelta/plugins` | Plugin definition and registration |
+| `visdelta/plugins` | Chart-module building blocks and plain-spec registration |
 | `visdelta/browser` | Browser-global dependency adapter |
 | `visdelta/composition` | Low-level adapter contract for control packages |
 
 `visdelta/composition` is for integration packages, not ordinary chart
 authoring.
+
+Focused chart builders carry their own lazy chart module. For example,
+`visdelta/point` works with `visdelta/transition` without importing the complete
+entry or registering Point globally. An external chart package can follow the
+same contract.
 
 ## Development
 

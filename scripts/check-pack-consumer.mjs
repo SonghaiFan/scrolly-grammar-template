@@ -76,11 +76,15 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import * as api from "visdelta";
 import * as browserApi from "visdelta/browser";
-import { bar as selectedBar } from "visdelta/bar";
-import { point as selectedPoint } from "visdelta/point";
+import { bar as selectedBar, barModule } from "visdelta/bar";
+import { point as selectedPoint, pointModule } from "visdelta/point";
 import { delta as selectedDelta } from "visdelta/core";
 import { transition as selectedTransition } from "visdelta/transition";
-import { defineChartType as selectedPlugin } from "visdelta/plugins";
+import {
+  ChartState as SelectedChartState,
+  defineChartModule as selectedChartModule,
+  defineChartType as selectedPlugin
+} from "visdelta/plugins";
 
 const expectedApi = ${JSON.stringify(expectedApi, null, 2)};
 const actualApi = Object.keys(api).sort();
@@ -91,9 +95,12 @@ if (globalThis.vd !== globalThis.VisDelta) throw new Error("vd global alias mism
 assertSame(api.availableChartTypes(), ["bar", "line", "point", "unit"], "chart types");
 if (typeof selectedBar !== "function") throw new Error("bar subpath did not export bar()");
 if (typeof selectedPoint !== "function") throw new Error("point subpath did not export point()");
+if (barModule.key !== "bar" || pointModule.key !== "point") throw new Error("focused chart module mismatch");
 if (typeof selectedDelta !== "function") throw new Error("core subpath did not export delta()");
 if (typeof selectedTransition !== "function") throw new Error("transition subpath did not export transition()");
 if (typeof selectedPlugin !== "function") throw new Error("plugins subpath did not export defineChartType()");
+if (typeof selectedChartModule !== "function") throw new Error("plugins subpath did not export defineChartModule()");
+if (typeof SelectedChartState !== "function") throw new Error("plugins subpath did not export ChartState");
 
 const entry = fileURLToPath(import.meta.resolve("visdelta"));
 const browserEntry = fileURLToPath(import.meta.resolve("visdelta/browser"));

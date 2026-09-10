@@ -1,11 +1,15 @@
 import { ChartState, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createPointSpecCompiler } from './compile.js';
+import { chartModule as pointModule } from './module.js';
 const POINT_SPEC_COMPILER = createPointSpecCompiler();
 export function point(data) {
     return new PointState({ data: normalizeDataSource(data), mark: 'point', encoding: {} });
 }
 export class PointState extends ChartState {
+    chartModule() {
+        return pointModule;
+    }
     compileSpec(spec) {
         return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
     }

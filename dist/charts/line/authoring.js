@@ -1,11 +1,15 @@
 import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createLineSpecCompiler } from './compile.js';
+import { chartModule as lineModule } from './module.js';
 const LINE_SPEC_COMPILER = createLineSpecCompiler();
 export function line(data) {
     return new LineState({ data: normalizeDataSource(data), mark: 'line', encoding: {} });
 }
 export class LineState extends ChartState {
+    chartModule() {
+        return lineModule;
+    }
     compileSpec(spec) {
         return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
     }

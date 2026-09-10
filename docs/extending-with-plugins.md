@@ -1,17 +1,23 @@
-# Extending with plugins
+# Add a chart type
 
-A **ChartPlugin** is a recipe for adding a chart type. A **ChartType** is the
-working chart object created from that recipe. It knows how to prepare data,
-draw the chart, and plan supported changes. These are two different objects.
+Each chart type is an independent module. It owns four things:
 
-## Register a plugin
+1. a chainable builder, such as `area()`;
+2. a compiler that turns the builder state into a `ViewSpec`;
+3. drawing and chart-specific change rules;
+4. a small module reference that connects the state to the runtime.
 
-The focused entry avoids importing built-in renderers:
+The generic VisDelta core owns none of these chart-specific details.
+
+## The smallest runtime module
+
+`defineChartType()` describes how one chart type works. `defineChartModule()`
+wraps it in a lazy loader:
 
 ```js
-import { defineChartType, registerChartModule } from "visdelta/plugins";
+import { defineChartModule, defineChartType } from "visdelta/plugins";
 
-const plugin = defineChartType({
+export const plugin = defineChartType({
   key: "area",
   createRenderer: deps => areaRenderer,
   createSpecCompiler: context => areaCompiler,
@@ -19,7 +25,10 @@ const plugin = defineChartType({
   scenes: ["selection", "axis", "mapping"]
 });
 
-registerChartModule({ plugin });
+export const areaModule = defineChartModule({
+  key: "area",
+  load: async () => ({ plugin })
+});
 ```
 
 `areaRenderer` and `areaCompiler` above stand for your implementations, not
@@ -27,23 +36,68 @@ functions supplied by VisDelta. Renderer dependencies are injected helpers;
 D3 and optional Arquero are supplied to the runtime when creating a visualization.
 Compiler context is separate from renderer dependencies.
 
-Alternatively, `registerChartType(chartType)` accepts an already-created runtime
-**ChartType**, not the result of `defineChartType()`.
+The names are intentionally literal:
 
-Register before calling `transition()`. Pair transitions
-snapshot the selected chart type: later registration affects new pairs, not
-existing pairs or their `resize()`.
-Registration is shared only as the source for new instances. Module factories
-receive per-instance helper contexts; direct runtime chart types own their
-dependencies.
+- **Chart module**: the independently importable chart feature.
+- **Chart plugin**: the recipe loaded by that module.
+- **Chart type**: the working runtime object created from the recipe.
 
-## Use a custom visualization
+## Connect a chainable builder
 
-A custom visualization can be a plain `ViewSpec`, or an object with
-`toSpec(): ViewSpec`. A chainable builder is optional:
+Extend the public `ChartState`, compile the chart locally, and return the module
+reference. This is the important no-registration path:
 
 ```js
+import {
+  ChartState,
+  compileViewWithCompiler
+} from "visdelta/plugins";
+import { areaCompiler } from "./compiler.js";
+import { areaModule } from "./module.js";
+
+export class AreaState extends ChartState {
+  chartModule() {
+    return areaModule;
+  }
+
+  compileSpec(spec) {
+    return compileViewWithCompiler(spec, {}, areaCompiler);
+  }
+
+  curve(name) {
+    return this.with({ meta: { curve: name } });
+  }
+}
+
+export function area(data = []) {
+  return new AreaState({ mark: "area", data, encoding: {} });
+}
+```
+
+The consumer imports only the new chart and the generic transition runtime:
+
+```js
+import { area } from "@my-charts/area";
 import { transition } from "visdelta/transition";
+
+const before = area(rows).x("year").y("sales").key("year");
+const after = before.y("profit");
+await transition(before, after, { target: "#chart", d3 });
+```
+
+Neither `visdelta/core` nor `visdelta/transition` needs to know that Area exists.
+
+## Plain JSON specs
+
+A plain object cannot carry a module reference. Register the module before using
+plain `ViewSpec` objects:
+
+```js
+import { registerChartModule } from "visdelta/plugins";
+import { transition } from "visdelta/transition";
+import { areaModule } from "@my-charts/area";
+
+registerChartModule(areaModule);
 
 const from = {
   mark: "area",
@@ -61,9 +115,11 @@ const change = await transition(from, to, { target: "#chart", d3 });
 ```
 
 Both endpoints must resolve to the same chart type. Registering a plugin does
-not automatically create an `area()` builder or a bar-to-area transition.
-Internal authoring classes are implementation references, not public package
-subpaths; do not import `visdelta/charts/authoring`.
+not enable bar-to-area transitions.
+
+`registerChartType(chartType)` is the lower-level form for an already-created
+runtime object. New transitions take a snapshot of the selected chart type, so
+later registration cannot alter an existing transition or its `resize()`.
 
 ## Compiler and transition contract
 
@@ -89,13 +145,24 @@ Built-in bar and point opt in. Line, unit, and unspecified custom chart types
 reconstruct their frame on seek. Validate parity, random reverse seeking, entry/exit,
 `resize()`, and cleanup before opting a custom renderer into caching.
 
-## Contributing a built-in chart type
+## Add an official chart folder
 
 See [the chart folder contract](https://github.com/SonghaiFan/visdelta/blob/main/src/charts/README.md) and the TypeScript
 implementations under `src/charts/{bar,line,point,unit}/`.
-The main entry uses the static manifest; focused transitions use the lazy loader
-map in `src/runtime/chart-registry.ts`. A new built-in must be wired into both.
-Run `npm run manifest:check`, `npm test`, and `npm run test:browser`.
+An official chart folder contains `authoring.ts`, `compile.ts`, `plugin.ts`, and
+`module.ts`. The module file exports a lazy `chartModule`; the authoring state
+returns it from `chartModule()`.
 
-`availableChartTypes()` lists built-in keys plus explicitly registered custom
-keys. A listed built-in is available on demand; it need not have been loaded yet.
+Run `node scripts/sync-chart-manifest.mjs` after adding the folder. The generated
+official-chart collection changes; the generic registry does not. The manifest
+check fails if a concrete chart import is added to the registry.
+
+The documentation editor discovers `examples/*/scenarios.js` modules by their
+exported `chart` key, so a new Lab does not require another branch in the shared
+Vue component.
+
+Then run `npm run manifest:check`, `npm test`, and `npm run test:browser`.
+
+`availableChartTypes()` lists modules made available through the complete entry
+plus explicitly registered modules. A builder-carried module stays local to its
+visualization and does not mutate that global list.

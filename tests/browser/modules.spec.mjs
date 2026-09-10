@@ -1,5 +1,23 @@
 import { test, expect } from '@playwright/test';
 
+test('a builder-carried chart module works without global registration', async ({ page }) => {
+  await page.goto('/tests/fixtures/runtime.html');
+  const result = await page.evaluate(async () => {
+    const { transition } = await import('/dist/transition-entry.js');
+    const { dot, moduleLoads } = await import('/tests/fixtures/dot-chart.js');
+    const rows = [{ id: 'A', before: 2, after: 8 }];
+    const from = dot(rows).x('before').key('id');
+    const change = await transition(from, from.x('after'), { target: '#chart', d3, height: 160 });
+    change.progress(1);
+    return {
+      loads: moduleLoads(),
+      circles: document.querySelectorAll('#chart circle.dot').length,
+      x: Number(document.querySelector('#chart circle.dot')?.getAttribute('cx'))
+    };
+  });
+  expect(result).toEqual({ loads: 1, circles: 1, x: 160 });
+});
+
 test('selected bar transition loads no Story runtime or unrelated chart types', async ({ page }) => {
   const modules = [];
   page.on('request', request => {

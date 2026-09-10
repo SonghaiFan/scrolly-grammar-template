@@ -2,6 +2,7 @@ import type { AxisSpec, ViewSpec } from '../../types/index.js';
 import { ChartState, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createPointSpecCompiler } from './compile.js';
+import { chartModule as pointModule } from './module.js';
 
 const POINT_SPEC_COMPILER = createPointSpecCompiler();
 
@@ -15,6 +16,10 @@ export function point(data?: unknown): PointState {
 }
 
 export class PointState extends ChartState<PointViewState> {
+  chartModule() {
+    return pointModule;
+  }
+
   protected override compileSpec(spec: ViewSpec): ViewSpec {
     return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
   }

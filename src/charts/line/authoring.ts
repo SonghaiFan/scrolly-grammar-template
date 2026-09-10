@@ -2,6 +2,7 @@ import type { AxisSpec, ViewSpec } from '../../types/index.js';
 import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createLineSpecCompiler } from './compile.js';
+import { chartModule as lineModule } from './module.js';
 
 const LINE_SPEC_COMPILER = createLineSpecCompiler();
 
@@ -17,6 +18,10 @@ export function line(data?: unknown): LineState {
 }
 
 export class LineState extends ChartState<LineViewState> {
+  chartModule() {
+    return lineModule;
+  }
+
   protected override compileSpec(spec: ViewSpec): ViewSpec {
     return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
   }
