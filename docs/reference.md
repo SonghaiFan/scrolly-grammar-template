@@ -234,13 +234,16 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | --- | --- |
 | `visdelta/core` | DOM-free normalization and semantic delta |
 | `visdelta/bar` | Focused immutable bar authoring |
+| `visdelta/point` | Focused immutable point authoring |
 | `visdelta/transition` | Pair initialization, seek, play, resize, and destroy |
 | `visdelta/plugins` | Plugin definition and registration |
 | `visdelta/composition` | Adapter contract used by external control packages |
 | `visdelta` | Visualization grammar, delta, transition, and plugin API |
 | `visdelta/browser` | Transition API with browser-global dependency fallback |
 
-Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for bar authoring, and under 35 KB for bar plus transition. These exclude D3, optional Arquero, and CSS.
+Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for
+bar authoring, under 7 KB for point authoring, and under 35 KB for bar plus
+transition. These exclude D3, optional Arquero, and CSS.
 
 ## Plugin boundary
 
@@ -286,8 +289,8 @@ VisDelta target not found: selector
 ## Current boundaries
 
 - Transitions between different chart types are not supported. Bar-to-line is outside the current contract.
-- Bar uses cached frame evaluation. Line, point, unit, and unspecified plugins reconstruct when seeking.
-- Focused entries do not yet exist for line, point, and unit authoring.
+- Bar and point use cached frame evaluation. Line, unit, and unspecified plugins reconstruct when seeking.
+- Focused entries do not yet exist for line and unit authoring.
 - Arquero is optional only when no transform pipeline is declared.
 - The composition adapter is deliberately lower level and is not a beginner API.
 - CSS selectors are not isolated through Shadow DOM.

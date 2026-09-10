@@ -85,8 +85,8 @@ Optional hooks on `defineChartType`:
 Cached evaluation is an advanced renderer contract, not a generic performance
 switch: the renderer must express motion through the runtime's capturable
 property changes and tolerate reversible phase/endpoint DOM restoration.
-Built-in bar opts in. Line, point, unit, and unspecified custom chart types reconstruct
-their frame on seek. Validate parity, random reverse seeking, entry/exit,
+Built-in bar and point opt in. Line, unit, and unspecified custom chart types
+reconstruct their frame on seek. Validate parity, random reverse seeking, entry/exit,
 `resize()`, and cleanup before opting a custom renderer into caching.
 
 ## Contributing a built-in chart type

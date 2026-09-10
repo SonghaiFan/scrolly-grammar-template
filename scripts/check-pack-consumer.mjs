@@ -13,8 +13,8 @@ const expectedApi = [
   "diffViewStates",
   "line",
   "point",
-  "registerChartType",
   "registerChartModule",
+  "registerChartType",
   "transition",
   "unit",
   "visualizationSpec"
@@ -77,6 +77,7 @@ import vm from "node:vm";
 import * as api from "visdelta";
 import * as browserApi from "visdelta/browser";
 import { bar as selectedBar } from "visdelta/bar";
+import { point as selectedPoint } from "visdelta/point";
 import { delta as selectedDelta } from "visdelta/core";
 import { transition as selectedTransition } from "visdelta/transition";
 import { defineChartType as selectedPlugin } from "visdelta/plugins";
@@ -89,6 +90,7 @@ assertSame(Object.keys(globalThis.VisDelta).sort(), expectedApi, "browser global
 if (globalThis.vd !== globalThis.VisDelta) throw new Error("vd global alias mismatch");
 assertSame(api.availableChartTypes(), ["bar", "line", "point", "unit"], "chart types");
 if (typeof selectedBar !== "function") throw new Error("bar subpath did not export bar()");
+if (typeof selectedPoint !== "function") throw new Error("point subpath did not export point()");
 if (typeof selectedDelta !== "function") throw new Error("core subpath did not export delta()");
 if (typeof selectedTransition !== "function") throw new Error("transition subpath did not export transition()");
 if (typeof selectedPlugin !== "function") throw new Error("plugins subpath did not export defineChartType()");

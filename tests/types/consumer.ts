@@ -2,6 +2,7 @@ import { bar, delta } from 'visdelta';
 import { transition } from 'visdelta/transition';
 import { delta as selectedDelta } from 'visdelta/core';
 import { bar as selectedBar } from 'visdelta/bar';
+import { point as selectedPoint } from 'visdelta/point';
 import { defineChartType, registerChartModule } from 'visdelta/plugins';
 import * as browser from 'visdelta/browser';
 
@@ -14,6 +15,7 @@ pair.destroy();
 delta(a, b).hasDelta('encoding.y');
 selectedDelta(a, b).hasDelta('encoding.y');
 selectedBar().data([]).x('key');
+selectedPoint().data([]).x('x').y('y').radius(6);
 // @ts-expect-error Pair progress accepts only a number.
 pair.progress('0.5');
 // @ts-expect-error ESM dependencies are explicit.

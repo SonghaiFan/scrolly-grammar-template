@@ -523,7 +523,6 @@ export interface ChartType<S extends ViewSpec = ViewSpec> {
    */
   canonicalTransitionPair?(prev: S, next: S): CanonicalTransitionPair<S>;
   intermediateSpecs?(prev: S, next: S): IntermediateSpec<S>[];
-  intermediateSpec?(prev: S, next: S): IntermediateSpec<S> | null;
   defaultMargin(spec: S): Partial<MarginSpec>;
   readonly scenes: readonly string[];
   readonly stateOperations: StateOperations;

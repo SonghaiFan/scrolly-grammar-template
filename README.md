@@ -64,6 +64,7 @@ not require it.
 | `visdelta` | Visualization grammar, delta, transition, and plugin registration |
 | `visdelta/core` | DOM-free normalization and semantic delta |
 | `visdelta/bar` | Focused immutable bar authoring |
+| `visdelta/point` | Focused immutable point authoring |
 | `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
 | `visdelta/plugins` | Plugin definition and registration |
 | `visdelta/browser` | Browser-global dependency adapter |

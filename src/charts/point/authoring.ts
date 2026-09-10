@@ -28,6 +28,9 @@ export class PointState extends ChartState<PointViewState> {
   }
 
   pointSize(value: number): this {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error('Point size must be a positive finite number.');
+    }
     return this.with({ size: value });
   }
 

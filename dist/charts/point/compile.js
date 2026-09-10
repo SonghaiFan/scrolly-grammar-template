@@ -62,7 +62,11 @@ function compilePointAggregate(spec, detailSpec = {}, _context = {}) {
     return withSceneState(withObject({ ...spec }, {
         key: detailSpec['key'] || detail
     }), {
-        detail: { mode: 'detail', detail }
+        detail: {
+            mode: 'detail',
+            detail,
+            ...(parentField ? { parentField } : {})
+        }
     });
 }
 function compilePointLayout(spec, _operationSpec = {}, _context = {}) {

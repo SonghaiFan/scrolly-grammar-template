@@ -79,14 +79,15 @@ first frame.
 - **Line:** series updates, series split/merge, coordinate changes, and range
   cropping. Its default `.where()` crops the x range instead of physically
   removing source rows.
-- **Point:** coordinate changes and summary/detail gather-scatter behavior.
+- **Point:** cached, seekable frames; coordinate, filter, highlight, color,
+  size, data, and summary/detail gather-scatter changes.
 - **Unit:** filtering and grid, grouped, timeline, and dodge layouts.
 
-Only bar currently draws selective highlight opacity. Line, point, and unit can
-store highlight metadata, but do not yet render that effect.
+Bar and point draw selective highlight opacity. Line and unit can store the
+same state but do not yet render that effect.
 
-Bar prepares reusable frame data when the transition starts. Line, point, unit,
-and custom plugins currently rebuild a frame on each seek. See [Visualization
+Bar and point prepare reusable frame data when the transition starts. Line,
+unit, and custom plugins currently rebuild a frame on each seek. See [Visualization
 transitions](./visualization-transitions.md) for timing, lifecycle, and
 performance limits.
 

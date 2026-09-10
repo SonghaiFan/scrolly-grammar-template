@@ -18,15 +18,17 @@ and no migration guide yet.
 - Added ordered x/y steps that keep marks, scales, and axes together.
 - Added reversible bar changes for values, filters, highlights, colors, order,
   orientation, data updates, stacked/grouped layouts, and split/merge.
+- Added cached point transitions for x/y changes, filters, highlights, colors,
+  sizes, data updates, ordered axis flips, and reversible detail/summary changes.
 - Made color an explicit mapping. Marks are black when no color is given.
 - Added the `ChartType` plugin API: `defineChartType()`, `registerChartType()`,
   `registerChartModule()`, and `availableChartTypes()`.
-- Added focused package entries for core difference calculation, bar authoring,
-  transitions, plugins, browser use, and composition adapters.
+- Added focused package entries for core difference calculation, bar and point
+  authoring, transitions, plugins, browser use, and composition adapters.
 - Added strict transform validation. Arquero is needed only when a chart uses a
   data transform; D3 remains the rendering dependency.
-- Added one VitePress documentation site with live editors, the twelve-scenario
-  Bar Lab, a language roadmap, and automated terminology checks.
+- Added one VitePress documentation site with live editors, twelve-scenario Bar
+  and Point Labs, a language roadmap, and automated terminology checks.
 - Added Node, browser, package, documentation, and bundle-size checks.
 
 The current limits are documented in the [language framework](docs/language-framework.md).

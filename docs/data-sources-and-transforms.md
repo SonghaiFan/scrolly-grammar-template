@@ -59,8 +59,8 @@ reshaping operations applied **in order** to the bound dataset before it's
 encoded and rendered. `applyTransforms(rows, transforms, aq)` runs this
 pipeline using Arquero under the hood; you rarely call it directly — it's
 an internal utility invoked by the renderer. Arquero is optional only when no
-transforms are declared. Cached bar pair transitions evaluate transforms during
-compilation and resize, not on every progress frame.
+transforms are declared. Cached bar and point pair transitions evaluate transforms
+during compilation and resize, not on every progress frame.
 
 Most transforms get attached for you by chart methods (`.where()` →
 `filter`, `.sort()` → `sort`, `.breakdown()`/`.rollup()` → `aggregate`/`fold`,

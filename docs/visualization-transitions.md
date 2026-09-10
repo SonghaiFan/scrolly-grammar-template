@@ -131,17 +131,17 @@ Exit nodes detach at endpoints and can reattach on a reverse seek. Common keyed
 marks retain their node identity. The cache retains nodes for each phase until
 resize or destruction, trading initialization time and memory for cheaper seeks.
 
-Call `resize()` after container size or theme changes. It invalidates the bar
-cache, recompiles against the already-loaded data, and shows the same progress.
+Call `resize()` after container size or theme changes. It invalidates the cached
+frame data, recompiles against the already-loaded data, and shows the same progress.
 It does not fetch data again. Create a new transition for different data or chart
 configuration. Window resize listeners are not installed automatically. Do not
 expect individual mark nodes or listeners to survive a recompile. The built-in
 tooltip handlers are restored per phase; externally attached native listeners and
 D3 handlers with a separate namespace survive ordinary seeks.
 
-Line, point, unit, and custom renderers without an explicit cache capability use the deterministic reconstruction
-bridge: each seek rebuilds their SVG scene and repeats layout/transforms. The
-cached bar compiler currently extracts interpolation functions from D3 schedules
+Line, unit, and custom renderers without an explicit cache capability use the
+deterministic reconstruction bridge: each seek rebuilds their SVG scene and
+repeats layout/transforms. The cached bar and point compiler extracts interpolation functions from D3 schedules
 at initialization; it is not yet independent of D3 internals. The resulting frame
 evaluator has no live D3 timers. Existing renderer limitations still apply. The
 delta is diagnostic and is not a serialized animation or a guarantee that every
@@ -149,9 +149,10 @@ custom field animates.
 
 ## Local example and verification
 
-Build the documentation and open the [Bar transition lab](./transition-lab.md).
-Its twelve editable scenarios run the built ESM package directly and form the
-public demonstration of the browser transition matrix.
+Build the documentation and open the [Bar transition lab](./transition-lab.md)
+or [Point transition lab](./point-lab.md). Each lab's twelve editable scenarios
+run the built ESM package directly and form the public demonstration of its
+browser transition matrix.
 
 ```sh
 npm install

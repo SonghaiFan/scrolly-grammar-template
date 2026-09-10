@@ -29,6 +29,7 @@ export default defineConfig({
       { text: 'Guide', link: '/getting-started' },
       { text: 'API Reference', link: '/reference' },
       { text: 'Bar Lab', link: '/transition-lab' },
+      { text: 'Point Lab', link: '/point-lab' },
       { text: 'Examples', link: '/examples' },
       { text: '0.2.0', items: [
         { text: 'Changelog', link: 'https://github.com/SonghaiFan/visdelta/blob/main/CHANGELOG.md' },
@@ -45,6 +46,7 @@ export default defineConfig({
           { text: 'Mental model', link: '/concepts' },
           { text: 'Interactive reference', link: '/reference' },
           { text: 'Bar transition lab', link: '/transition-lab' },
+          { text: 'Point transition lab', link: '/point-lab' },
           { text: 'Examples', link: '/examples' }
         ]
       },

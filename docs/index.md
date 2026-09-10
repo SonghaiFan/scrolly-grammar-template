@@ -60,9 +60,9 @@ of scrolling.
 
 <TransitionWorkbench />
 
-Continue into the [complete twelve-scenario bar transition lab](/transition-lab)
-to edit endpoint declarations, scrub frames, reverse animations, and inspect
-their computed deltas.
+Continue into the complete twelve-scenario [Bar Lab](/transition-lab) or
+[Point Lab](/point-lab) to edit endpoint declarations, scrub frames, reverse
+animations, and inspect their computed differences.
 
 ## Core and controls
 

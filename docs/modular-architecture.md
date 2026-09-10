@@ -10,6 +10,7 @@ it uses.
 | `visdelta` | All chart builders, differences, transitions, and plugin registration |
 | `visdelta/core` | Chart-state normalization and `delta()` without drawing anything |
 | `visdelta/bar` | The bar-chart builder |
+| `visdelta/point` | The point-chart builder |
 | `visdelta/transition` | `transition()`, progress, play, pause, resize, and destroy |
 | `visdelta/plugins` | Define and register another chart type |
 | `visdelta/browser` | The same API using dependencies supplied by the browser |
@@ -21,6 +22,7 @@ and the stylesheet:
 ```js
 import * as d3 from "d3";
 import { bar } from "visdelta/bar";
+import { point } from "visdelta/point";
 import { transition } from "visdelta/transition";
 import "visdelta/style.css";
 ```
@@ -44,6 +46,7 @@ position, gesture, or route can drive the same transition.
 
 - core difference calculation;
 - bar authoring;
+- point authoring;
 - bar plus transition, including required shared and lazy-loaded code.
 
 D3, optional Arquero, and CSS are measured separately. Arquero is needed only
@@ -52,8 +55,8 @@ when a chart uses a data transform.
 ## Current boundaries
 
 - The two endpoint states must use the same chart type.
-- Bar has cached frame data; line, point, unit, and custom chart types currently
-  rebuild a frame when progress changes.
+- Bar and point have cached frame data; line, unit, and custom chart types
+  currently rebuild a frame when progress changes.
 - `visdelta/composition` is an advanced integration entry, not the beginner API.
 - Adding a plugin registers drawing and transition behavior; it does not
   automatically create a new chainable builder function.

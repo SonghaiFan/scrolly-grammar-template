@@ -160,9 +160,9 @@ For low-level filtering, use `{ filter: ... }` entries in a raw view spec.
 
 ### `.highlight(selector, options?)`
 
-On **bar**, keeps all rows rendered but visually de-emphasizes (fades) the
-non-matching ones. Other built-in builders currently store highlight metadata
-but do not render selective opacity; do not rely on it for line/point/unit:
+On **bar and point**, keeps all rows rendered but visually de-emphasizes
+(fades) the non-matching ones. Line and unit currently store highlight metadata
+but do not render selective opacity; do not rely on it for those chart types:
 
 ```js
 .highlight({ type: "Cold days" })                       // default fade opacity
@@ -458,6 +458,10 @@ const base = point("weather").x("tmin").y("tmax").key("decade");
 
 <SyntaxPlayground initial="point" compact />
 
+Try the complete editable [Point transition lab](/point-lab), which covers
+position, filtering, highlighting, color, size, data, flip, and summary/detail
+transitions.
+
 ### `.pointSize(value)` / `.radius(value)`
 
 Set the circle size (`radius` is an alias for `pointSize`).
@@ -500,6 +504,10 @@ while preserving the higher-level match).
 base.rollup("period").breakdown("year")
 base.breakdown({ detail: "year", key: "period" })
 ```
+
+Summary and detail states keep the same parent field in both directions. A
+detail point therefore gathers into its own summary circle, and the reverse
+transition scatters it back out from that same circle.
 
 ### Point state family
 

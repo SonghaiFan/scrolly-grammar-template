@@ -1,5 +1,7 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { BaseChart } from '../base.js';
+import { matchesFilter } from '../../data/filter.js';
+import { specState } from '../../spec-meta.js';
 import { applyPointIdentity, pointKeyAccessor, pointStoredKey } from './keys.js';
 import { defaultPointRadius, parentAnchors, parentKey, pointState, radiusScale } from './state.js';
 export function createPointRenderer(deps) {
@@ -7,7 +9,7 @@ export function createPointRenderer(deps) {
 }
 class PointChart extends BaseChart {
     render(chart, rows, spec, tooltip, d3) {
-        const { bandOrLinear, bindTooltip, colorScale, drawGrid, drawLegend, drawXAxis, drawYAxis, fadeNonPointShapes, niceExtent, position, quantitativeDomain, quantitativeScale, staggerDelay, themeValue } = this.deps;
+        const { bindTooltip, colorScale, drawLegend, fadeNonPointShapes, position, quantitativeDomain, quantitativeScale, staggerDelay, themeValue } = this.deps;
         const enc = spec.encoding || {};
         const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
         const state = pointState(spec, enc);
@@ -15,7 +17,11 @@ class PointChart extends BaseChart {
         const x = quantitativeScale(rows, enc.x, [0, chart.innerWidth], d3);
         const y = quantitativeScale(rows, enc.y, [chart.innerHeight, 0], d3);
         const color = colorScale(domainRows, enc.color, d3);
-        const radius = radiusScale(rows, enc.size, defaultPointRadius(rows.length), d3, quantitativeDomain);
+        const fallbackRadius = Number.isFinite(Number(spec.size))
+            ? Number(spec.size)
+            : defaultPointRadius(rows.length);
+        const radius = radiusScale(domainRows, enc.size, fallbackRadius, d3, quantitativeDomain);
+        const opacity = (row) => pointSelectionOpacity(row, spec, themeValue('--sl-dim-opacity', 0.22));
         const key = pointKeyAccessor(spec, enc.x?.field || enc.y?.field);
         // Anchor tracking for gather/scatter animation across detail transitions.
         // When rolling up (detail → aggregate), exiting points fly to the next cluster centroid.
@@ -41,7 +47,6 @@ class PointChart extends BaseChart {
             x: (d) => position(x, d[enc.x?.field]),
             y: (d) => position(y, d[enc.y?.field])
         });
-        drawGrid(chart, y, d3);
         this.drawCartesianAxes(chart, x, y, enc, d3);
         drawLegend(chart, rows, enc.color, d3);
         chart.g.selectAll('circle.sl-point')
@@ -56,13 +61,14 @@ class PointChart extends BaseChart {
             .attr('fill', (d) => color(d))
             .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
             .attr('stroke-width', themeValue('--sl-point-stroke-width', 1.5))
+            .style('opacity', 0)
             .call(bindTooltip, spec, tooltip)
             .transition(t)
             .delay((d, i) => staggerDelay(spec, d, i))
             .attr('cx', (d) => chartPosition(d).x)
             .attr('cy', (d) => chartPosition(d).y)
             .attr('r', (d) => radius(d))
-            .style('opacity', 1), (update) => update
+            .style('opacity', (d) => opacity(d)), (update) => update
             .call(applyPointIdentity, key)
             .call(bindTooltip, spec, tooltip)
             .transition(t)
@@ -71,7 +77,7 @@ class PointChart extends BaseChart {
             .attr('cy', (d) => chartPosition(d).y)
             .attr('r', (d) => radius(d))
             .attr('fill', (d) => color(d))
-            .style('opacity', 1), (exit) => exit
+            .style('opacity', (d) => opacity(d)), (exit) => exit
             .transition(t)
             .delay((d, i) => staggerDelay(spec, d, i))
             .style('opacity', 0)
@@ -91,4 +97,13 @@ class PointChart extends BaseChart {
             .style('opacity', 0)
             .remove();
     }
+}
+export function pointSelectionOpacity(row, spec = {}, dimOpacity = 0.22) {
+    const state = specState(spec);
+    const selection = state.sceneState?.selection || state.selection || null;
+    if (selection?.mode !== 'highlight' || !selection.filter)
+        return 1;
+    return matchesFilter(row?.__row || row, selection.filter)
+        ? 1
+        : Number(selection.opacity ?? dimOpacity);
 }

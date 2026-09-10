@@ -141,7 +141,7 @@ effects; the transition planner decides how to show them.
 
 | Family | Public syntax | Status | Meaning |
 | --- | --- | --- | --- |
-| **Filter or highlight** | `.where()`, `.highlight()` | Partial | Filtering works across chart types; selective highlighting is currently bar-first |
+| **Filter or highlight** | `.where()`, `.highlight()` | Partial | Filtering works across chart types; selective highlighting is available for bar and point |
 | **Change a value or mapping** | change `.x()`, `.y()`, `.color()`, `.size()` | Available | Show the same items through another measure or visual property |
 | **Change detail** | `.breakdown()`, `.rollup()`, `.segment()` | Partial | Split into detail or combine into totals; bar has the richest path |
 | **Change layout or axis** | `.flip()`, `.axis()`, `.layout()` | Partial | Available across relevant chart types, with different rendering depth |
@@ -175,7 +175,7 @@ by the shape drawn in SVG.
 | --- | --- | --- | --- |
 | `bar()` | Available | Categorical comparison, filtering, reversible split/merge, grouped/stacked layout | Cached frame data |
 | `line()` | Available | Ordered trends and multiple series | Reconstructs frames |
-| `point()` | Available | Quantitative relationships and aggregation/detail | Reconstructs frames |
+| `point()` | Available | Quantitative relationships and reversible summary/detail changes | Cached frame data |
 | `unit()` | Available | Countable units, grids, groups, timelines, dodge | Reconstructs frames |
 | `area()` | Research | Candidate trend/composition chart type | Not implemented |
 | `rect()` / heatmap | Research | Candidate matrix and density chart type | Not implemented |
@@ -200,7 +200,7 @@ The research rows are a taxonomy of likely language space, not release promises.
 | `.play({ duration, from, to })` | Available | Time-drive progress in either direction |
 | `.pause()`, `.resize()`, `.destroy()` | Available | Runtime lifecycle control |
 | `.transition({ duration, ease, stagger })` | Available | Endpoint transition metadata |
-| Cached frame data for line, point, and unit | Developing | Bar already uses cached evaluation |
+| Cached frame data for line and unit | Developing | Bar and point already use cached evaluation |
 | Transition such as bar → line | Unsupported | Both endpoints must currently use the same chart type |
 | Cross-type transition compiler | Research | Requires matching and geometry rules beyond the current contract |
 
@@ -224,7 +224,8 @@ and a slider tomorrow without changing its two chart states.
 | `defineChartType()` | Available | Define a chart-type plugin factory |
 | `registerChartModule()` | Available | Register renderer/compiler capability before runtime creation |
 | Focused `visdelta/bar` entry | Available | Lightweight bar authoring |
-| Focused line, point, and unit entries | Developing | Available through the complete entry; dedicated public subpaths are not shipped |
+| Focused `visdelta/point` entry | Available | Lightweight point authoring |
+| Focused line and unit entries | Developing | Available through the complete entry; dedicated public subpaths are not shipped |
 | Automatic builder generation from plugins | Developing | Registration currently supplies runtime capability, not new fluent syntax automatically |
 
 ## What “partial” means for current chart types
@@ -236,12 +237,12 @@ should close these differences before adding more chart types.
 | --- | --- | --- | --- | --- |
 | Immutable builder | Available | Available | Available | Available |
 | Same-type transition | Available | Available | Available | Available |
-| Cached arbitrary-frame evaluation | Available | Developing | Developing | Developing |
+| Cached arbitrary-frame evaluation | Available | Developing | Available | Developing |
 | `.where()` filtering | Available | Available with range-oriented semantics | Available | Available |
-| Selective `.highlight()` rendering | Available | Developing | Developing | Developing |
+| Selective `.highlight()` rendering | Available | Developing | Available | Developing |
 | Detail changes | Split/merge | Series/single | Summary/detail | Not currently a primary change |
 | Axis/layout changes | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Grid, group, timeline, dodge |
-| Focused package entry | Available | Developing | Developing | Developing |
+| Focused package entry | Available | Developing | Available | Developing |
 
 ## Development plan
 
@@ -276,9 +277,9 @@ The target is one colocated side-by-side editor for every public syntax section.
 
 <span class="language-status is-developing">Developing</span>
 
-1. Add focused entries for line, point, and unit.
-2. Extend cached seek evaluation beyond bar.
-3. Make selection/highlight behavior explicit and consistent.
+1. Add focused entries for line and unit.
+2. Extend cached seek evaluation to line and unit.
+3. Add selective highlight rendering to line and unit.
 4. Document and test every chart-specific detail, layout, and axis change.
 
 ### Milestone C — control abstraction

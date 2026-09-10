@@ -85,7 +85,11 @@ function compilePointAggregate(spec: ViewSpec, detailSpec: AnyRecord = {}, _cont
   return withSceneState(withObject({ ...spec }, {
     key: (detailSpec['key'] as string) || detail as string
   }), {
-    detail: { mode: 'detail', detail }
+    detail: {
+      mode: 'detail',
+      detail,
+      ...(parentField ? { parentField } : {})
+    }
   });
 }
 

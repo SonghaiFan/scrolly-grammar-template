@@ -2,6 +2,7 @@ import type {
   ChartDeps,
   ChartType,
   ChartPlugin,
+  CanonicalTransitionPair,
   CompilerContext,
   IntermediateSpec,
   MarginSpec,
@@ -33,8 +34,8 @@ export interface ChartTypeConfig<S extends ViewSpec = ViewSpec> {
   inspect?: Record<string, unknown>;
   transition?: {
     plan?: (prev: S | null, next: S | null) => TransitionPlan;
+    canonicalPair?: (prev: S, next: S) => CanonicalTransitionPair<S>;
     intermediateSpecs?: (prev: S, next: S) => IntermediateSpec<S>[];
-    intermediateSpec?: (prev: S, next: S) => IntermediateSpec<S> | null;
   };
   createSpecCompiler?: (context: CompilerContext) => SpecCompiler;
 }
@@ -99,15 +100,12 @@ export function normalizeChartType<S extends ViewSpec = ViewSpec>(
   const stateOperations: StateOperations = { ...DEFAULT_STATE_OPERATIONS, ...(chartType.stateOperations ?? {}) };
 
   return {
-    inspect: {},
     ...chartType,
     scenes,
     stateOperations,
     renderer,
     prepareSpec,
     resolveTransitionPlan,
-    intermediateSpecs: chartType.intermediateSpecs,
-    intermediateSpec: chartType.intermediateSpec ?? null,
     defaultMargin: chartType.defaultMargin ?? defaultMargin,
     ...(createSpecCompiler ? { createSpecCompiler } : {})
   } as ChartType<S>;
@@ -128,8 +126,8 @@ function createRuntimeChartType<S extends ViewSpec>(
     renderer,
     prepareSpec: config.prepareSpec ?? identityPrepare,
     resolveTransitionPlan: config.transition?.plan ?? emptyTransitionPlan,
+    canonicalTransitionPair: config.transition?.canonicalPair,
     intermediateSpecs: config.transition?.intermediateSpecs,
-    intermediateSpec: config.transition?.intermediateSpec,
     defaultMargin: config.defaults?.margin ?? defaultMargin,
     inspect: config.inspect ?? {},
     scenes: config.scenes,

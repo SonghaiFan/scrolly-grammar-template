@@ -31,3 +31,20 @@ test('order is the canonical authored transition-step order', () => {
   assert.deepEqual(ordered.meta.state.sceneState.axis.order, ['x', 'y']);
   assert.equal(ordered.meta.state.sceneState.axis.duration, 300);
 });
+
+test('point size and summary parent fields survive compilation', () => {
+  const rows = [
+    { id: 'A', region: 'North', x: 10, y: 20 },
+    { id: 'B', region: 'North', x: 20, y: 30 }
+  ];
+  const detailed = point(rows).x('x').y('y').key('id').pointSize(11).color('region');
+  assert.equal(detailed.toSpec().size, 11);
+  assert.throws(() => detailed.radius(0), /positive finite number/);
+
+  const summary = detailed.rollup('region');
+  assert.deepEqual(summary.toSpec().meta.state.sceneState.detail.groupby, ['region']);
+  assert.equal(
+    summary.breakdown('id').toSpec().meta.state.sceneState.detail.parentField,
+    'region'
+  );
+});

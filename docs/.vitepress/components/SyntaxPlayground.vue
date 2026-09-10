@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as d3 from 'd3';
 import { scenarios as barScenarios } from '../../../examples/transition/scenarios.js';
+import { pointScenarios } from '../../../examples/point/scenarios.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -46,7 +47,7 @@ return { from: all, to: northOnly };`
 
 const focused = all.highlight(
   { category: "Software" },
-  { dimOpacity: 0.12 }
+  { opacity: 0.12 }
 );
 
 return { from: all, to: focused };`
@@ -123,7 +124,14 @@ return { from: grid, to: grouped };`
 };
 
 const barLabSamples = Object.fromEntries(barScenarios.map(sample => [sample.id, sample]));
-const availableSamples = computed(() => props.mode === 'bar-lab' ? barLabSamples : samples);
+const pointLabSamples = Object.fromEntries(pointScenarios.map(sample => [sample.id, sample]));
+const labSamples = {
+  'bar-lab': { chart: 'bar', samples: barLabSamples },
+  'point-lab': { chart: 'point', samples: pointLabSamples }
+};
+const isLabMode = computed(() => Boolean(labSamples[props.mode]));
+const labChart = computed(() => labSamples[props.mode]?.chart ?? null);
+const availableSamples = computed(() => labSamples[props.mode]?.samples ?? samples);
 
 const rows = [
   { category: 'Hardware', region: 'North', sales: 86, profit: 34 },
@@ -157,15 +165,16 @@ const units = [
 ];
 
 const chartTarget = ref(null);
-const initialFromHash = props.mode === 'bar-lab' && typeof location !== 'undefined' ? location.hash.slice(1) : '';
-const initialSample = availableSamples.value[initialFromHash]
-  ? initialFromHash
-  : availableSamples.value[props.initial] ? props.initial : Object.keys(availableSamples.value)[0];
+// Keep server and client setup identical. The requested hash is applied after
+// mount so VitePress can hydrate the server-rendered example without a mismatch.
+const initialSample = availableSamples.value[props.initial]
+  ? props.initial
+  : Object.keys(availableSamples.value)[0];
 const selected = ref(initialSample);
 const code = ref(availableSamples.value[initialSample].code);
 const status = ref('Loading runtime');
 const error = ref('');
-const progress = ref(props.mode === 'bar-lab' ? 0 : 0.5);
+const progress = ref(isLabMode.value ? 0 : 0.5);
 const autoRun = ref(true);
 const hasChange = ref(false);
 const deltaText = ref('Waiting for a valid state pair.');
@@ -184,7 +193,7 @@ const statusKind = computed(() => error.value ? 'error' : status.value === 'Read
 const description = computed(() => availableSamples.value[selected.value]?.description ?? '');
 
 onMounted(() => {
-  if (props.mode === 'bar-lab') {
+  if (isLabMode.value) {
     const requested = location.hash.slice(1);
     if (availableSamples.value[requested]) selected.value = requested;
   }
@@ -238,7 +247,7 @@ watch(selected, (next, previous) => {
   drafts.set(previous, code.value);
   code.value = drafts.get(next) ?? availableSamples.value[next].code;
   progress.value = 0;
-  if (props.mode === 'bar-lab' && typeof history !== 'undefined') {
+  if (isLabMode.value && typeof history !== 'undefined') {
     history.replaceState(null, '', `#${next}`);
   }
   if (!autoRun.value) runCode();
@@ -261,15 +270,15 @@ async function runCode() {
   let nextChange = null;
 
   try {
-    const isBarLab = props.mode === 'bar-lab';
-    const evaluate = isBarLab
-      ? new AsyncFunction('bar', `"use strict";\n${code.value}`)
+    const isLab = isLabMode.value;
+    const evaluate = isLab
+      ? new AsyncFunction(labChart.value, `"use strict";\n${code.value}`)
       : new AsyncFunction(
         'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
         `"use strict";\n${code.value}`
       );
-    const result = isBarLab
-      ? await evaluate(api.bar)
+    const result = isLab
+      ? await evaluate(api[labChart.value])
       : await evaluate(
         api.bar, api.line, api.point, api.unit, api.delta,
         structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
@@ -286,7 +295,7 @@ async function runCode() {
       target: candidate,
       d3,
       aq,
-      height: isBarLab ? 400 : 300
+      height: isLab ? 400 : 300
     });
     if (version !== runVersion) {
       nextChange.destroy();
@@ -364,18 +373,18 @@ function handleEditorKeydown(event) {
     <div class="playground-toolbar">
       <label v-if="!compact">
         <span>Example</span>
-        <select :id="mode === 'bar-lab' ? 'scenario' : undefined" v-model="selected" aria-label="Syntax example">
+        <select :id="isLabMode ? 'scenario' : undefined" v-model="selected" aria-label="Syntax example">
           <option v-for="(sample, key) in availableSamples" :key="key" :value="key">{{ sample.label }}</option>
         </select>
       </label>
       <strong v-else class="playground-inline-title">{{ availableSamples[selected].label }}</strong>
       <label class="playground-auto">
-        <input :id="mode === 'bar-lab' ? 'auto-run' : undefined" v-model="autoRun" type="checkbox" @change="autoRun && runCode()" />
+        <input :id="isLabMode ? 'auto-run' : undefined" v-model="autoRun" type="checkbox" @change="autoRun && runCode()" />
         Auto-run
       </label>
-      <button :id="mode === 'bar-lab' ? 'run' : undefined" type="button" @click="runCode">Run <kbd>⌘↵</kbd></button>
-      <button :id="mode === 'bar-lab' ? 'reset' : undefined" type="button" @click="reset">Reset</button>
-      <span :id="mode === 'bar-lab' ? 'status' : undefined" class="playground-status" :data-kind="statusKind">{{ status }}</span>
+      <button :id="isLabMode ? 'run' : undefined" type="button" @click="runCode">Run <kbd>⌘↵</kbd></button>
+      <button :id="isLabMode ? 'reset' : undefined" type="button" @click="reset">Reset</button>
+      <span :id="isLabMode ? 'status' : undefined" class="playground-status" :data-kind="statusKind">{{ status }}</span>
     </div>
     <p v-if="description" class="playground-description">{{ description }}</p>
 
@@ -384,7 +393,7 @@ function handleEditorKeydown(event) {
         <div class="playground-pane-label">Editable JavaScript</div>
         <textarea
           v-model="code"
-          :id="mode === 'bar-lab' ? 'editor' : undefined"
+          :id="isLabMode ? 'editor' : undefined"
           class="playground-editor"
           aria-label="Editable VisDelta code"
           autocomplete="off"
@@ -392,17 +401,17 @@ function handleEditorKeydown(event) {
           spellcheck="false"
           @keydown="handleEditorKeydown"
         ></textarea>
-        <p v-if="mode === 'bar-lab'" class="playground-contract"><code>bar</code> is provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
+        <p v-if="isLabMode" class="playground-contract"><code>{{ labChart }}</code> is provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
         <p v-else class="playground-contract">Available: <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
       </div>
 
       <div class="playground-output-pane">
-        <div class="playground-pane-label">Live output · progress <output :id="mode === 'bar-lab' ? 'value' : undefined">{{ progress.toFixed(2) }}</output></div>
-        <div :id="mode === 'bar-lab' ? 'chart' : undefined" ref="chartTarget" class="playground-chart" aria-label="Editable syntax output"></div>
+        <div class="playground-pane-label">Live output · progress <output :id="isLabMode ? 'value' : undefined">{{ progress.toFixed(2) }}</output></div>
+        <div :id="isLabMode ? 'chart' : undefined" ref="chartTarget" class="playground-chart" aria-label="Editable syntax output"></div>
         <div v-if="error" class="playground-runtime-error" role="alert">{{ error }}</div>
         <input
           type="range"
-          :id="mode === 'bar-lab' ? 'progress' : undefined"
+          :id="isLabMode ? 'progress' : undefined"
           min="0"
           max="1"
           step="0.01"
@@ -412,11 +421,11 @@ function handleEditorKeydown(event) {
           @input="setProgress($event.target.valueAsNumber)"
         />
         <div class="playground-output-actions">
-          <button v-if="mode === 'bar-lab'" id="start" type="button" :disabled="!hasChange" @click="setProgress(0)">Start · 0</button>
-          <button :id="mode === 'bar-lab' ? 'reverse' : undefined" type="button" :disabled="!hasChange" @click="play(0)">← Reverse</button>
-          <button :id="mode === 'bar-lab' ? 'play' : undefined" type="button" :disabled="!hasChange" @click="play(1)">Play →</button>
-          <button v-if="mode === 'bar-lab'" id="pause" type="button" :disabled="!hasChange" @click="pause">Pause</button>
-          <button v-if="mode === 'bar-lab'" id="end" type="button" :disabled="!hasChange" @click="setProgress(1)">End · 1</button>
+          <button v-if="isLabMode" id="start" type="button" :disabled="!hasChange" @click="setProgress(0)">Start · 0</button>
+          <button :id="isLabMode ? 'reverse' : undefined" type="button" :disabled="!hasChange" @click="play(0)">← Reverse</button>
+          <button :id="isLabMode ? 'play' : undefined" type="button" :disabled="!hasChange" @click="play(1)">Play →</button>
+          <button v-if="isLabMode" id="pause" type="button" :disabled="!hasChange" @click="pause">Pause</button>
+          <button v-if="isLabMode" id="end" type="button" :disabled="!hasChange" @click="setProgress(1)">End · 1</button>
         </div>
         <details>
           <summary>Inspect computed delta</summary>

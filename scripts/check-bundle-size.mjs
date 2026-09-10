@@ -14,6 +14,11 @@ const cases = [
     name: 'bar authoring',
     source: 'import { bar } from "./src/bar.ts"; globalThis.__slBundle = { bar };',
     gzipBudget: 8_000
+  },
+  {
+    name: 'point authoring',
+    source: 'import { point } from "./src/point.ts"; globalThis.__slBundle = { point };',
+    gzipBudget: 7_000
   }
 ];
 

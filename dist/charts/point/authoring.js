@@ -16,6 +16,9 @@ export class PointState extends ChartState {
         return super.y(field, { type: 'quantitative', ...options });
     }
     pointSize(value) {
+        if (!Number.isFinite(value) || value <= 0) {
+            throw new Error('Point size must be a positive finite number.');
+        }
         return this.with({ size: value });
     }
     radius(value) {

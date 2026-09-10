@@ -1,4 +1,4 @@
-import type { ChartDeps, ChartType, ChartPlugin, CompilerContext, IntermediateSpec, MarginSpec, Renderer, SpecCompiler, StateOperations, TransitionPlan, ViewSpec } from '../types/index.js';
+import type { ChartDeps, ChartType, ChartPlugin, CanonicalTransitionPair, CompilerContext, IntermediateSpec, MarginSpec, Renderer, SpecCompiler, StateOperations, TransitionPlan, ViewSpec } from '../types/index.js';
 export declare const DEFAULT_SCENES: readonly ["selection", "axis", "detail", "mapping"];
 export declare const DEFAULT_STATE_OPERATIONS: StateOperations;
 export interface ChartTypeConfig<S extends ViewSpec = ViewSpec> {
@@ -16,8 +16,8 @@ export interface ChartTypeConfig<S extends ViewSpec = ViewSpec> {
     inspect?: Record<string, unknown>;
     transition?: {
         plan?: (prev: S | null, next: S | null) => TransitionPlan;
+        canonicalPair?: (prev: S, next: S) => CanonicalTransitionPair<S>;
         intermediateSpecs?: (prev: S, next: S) => IntermediateSpec<S>[];
-        intermediateSpec?: (prev: S, next: S) => IntermediateSpec<S> | null;
     };
     createSpecCompiler?: (context: CompilerContext) => SpecCompiler;
 }

@@ -1,6 +1,6 @@
 import { createBarRenderer } from './render.js';
 import { cloneSpec, uniqueTokens } from '../../runtime/utils.js';
-import { barCollapseIntermediateSpec, canonicalBarTransitionPair, barIntermediateSpecs, barSplitIntermediateSpec, resolveBarTransitionPlan } from './state.js';
+import { canonicalBarTransitionPair, barIntermediateSpecs, resolveBarTransitionPlan } from './state.js';
 export function createBarChart(deps) {
     const renderer = createBarRenderer(deps);
     return {
@@ -10,15 +10,6 @@ export function createBarChart(deps) {
         resolveTransitionPlan: resolveBarTransitionPlan,
         canonicalTransitionPair: canonicalBarTransitionPair,
         intermediateSpecs: barIntermediateSpecs,
-        intermediateSpec(previousSpec, nextSpec) {
-            const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);
-            if (collapseSpec)
-                return { spec: collapseSpec, scene: 'axis' };
-            const splitSpec = barSplitIntermediateSpec(previousSpec, nextSpec);
-            if (splitSpec)
-                return { spec: splitSpec, scene: 'detail' };
-            return null;
-        },
         defaultMargin,
         scenes: ['selection', 'axis', 'detail', 'mapping'],
         stateOperations: { selection: 'filter', axis: 'coordinate', detail: 'aggregate' },

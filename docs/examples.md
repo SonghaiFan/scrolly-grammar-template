@@ -44,6 +44,9 @@ Edit quantitative channels, radius, color, or swap the axes.
 
 <SyntaxPlayground initial="point" compact />
 
+Continue with the [Point transition lab](/point-lab) for the complete editable
+point transition matrix.
+
 ## Unit grammar
 
 Edit unit count, columns, radius, label, or grouping.

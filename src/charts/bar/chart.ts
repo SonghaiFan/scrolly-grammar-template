@@ -9,10 +9,8 @@ import type {
   ViewSpec
 } from '../../types/index.js';
 import {
-  barCollapseIntermediateSpec,
   canonicalBarTransitionPair,
   barIntermediateSpecs,
-  barSplitIntermediateSpec,
   resolveBarTransitionPlan
 } from './state.js';
 
@@ -30,13 +28,6 @@ export function createBarChart(deps: ChartDeps): ChartType<BarSpec> {
     resolveTransitionPlan: resolveBarTransitionPlan as (prev: BarSpec | null, next: BarSpec | null) => TransitionPlan,
     canonicalTransitionPair: canonicalBarTransitionPair,
     intermediateSpecs: barIntermediateSpecs as (prev: BarSpec, next: BarSpec) => IntermediateSpec<BarSpec>[],
-    intermediateSpec(previousSpec: BarSpec, nextSpec: BarSpec): IntermediateSpec<BarSpec> | null {
-      const collapseSpec = barCollapseIntermediateSpec(previousSpec, nextSpec);
-      if (collapseSpec) return { spec: collapseSpec as BarSpec, scene: 'axis' };
-      const splitSpec = barSplitIntermediateSpec(previousSpec, nextSpec);
-      if (splitSpec) return { spec: splitSpec as BarSpec, scene: 'detail' };
-      return null;
-    },
     defaultMargin,
     scenes: ['selection', 'axis', 'detail', 'mapping'],
     stateOperations: { selection: 'filter', axis: 'coordinate', detail: 'aggregate' },

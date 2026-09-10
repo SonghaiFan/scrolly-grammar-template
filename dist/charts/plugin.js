@@ -48,15 +48,12 @@ export function normalizeChartType(chartType, createSpecCompiler) {
     const scenes = uniqueStrings([...(chartType.scenes ?? DEFAULT_SCENES)]);
     const stateOperations = { ...DEFAULT_STATE_OPERATIONS, ...(chartType.stateOperations ?? {}) };
     return {
-        inspect: {},
         ...chartType,
         scenes,
         stateOperations,
         renderer,
         prepareSpec,
         resolveTransitionPlan,
-        intermediateSpecs: chartType.intermediateSpecs,
-        intermediateSpec: chartType.intermediateSpec ?? null,
         defaultMargin: chartType.defaultMargin ?? defaultMargin,
         ...(createSpecCompiler ? { createSpecCompiler } : {})
     };
@@ -71,8 +68,8 @@ function createRuntimeChartType(config, deps) {
         renderer,
         prepareSpec: config.prepareSpec ?? identityPrepare,
         resolveTransitionPlan: config.transition?.plan ?? emptyTransitionPlan,
+        canonicalTransitionPair: config.transition?.canonicalPair,
         intermediateSpecs: config.transition?.intermediateSpecs,
-        intermediateSpec: config.transition?.intermediateSpec,
         defaultMargin: config.defaults?.margin ?? defaultMargin,
         inspect: config.inspect ?? {},
         scenes: config.scenes,

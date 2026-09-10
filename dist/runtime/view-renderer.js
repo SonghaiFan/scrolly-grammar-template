@@ -162,9 +162,7 @@ export function createViewRenderer(chartTypes) {
         return chartType?.prepareSpec?.(spec) || spec;
     }
     function intermediateRenderPhases(chartType, sourceSpec, targetSpec) {
-        const raw = chartType?.intermediateSpecs?.(sourceSpec, targetSpec) ??
-            chartType?.intermediateSpec?.(sourceSpec, targetSpec) ??
-            [];
+        const raw = chartType?.intermediateSpecs?.(sourceSpec, targetSpec) ?? [];
         const phases = Array.isArray(raw) ? raw : raw?.sequence || [raw];
         return phases
             .map((phase) => ({
