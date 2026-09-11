@@ -143,10 +143,10 @@ Overrides transition timing for this view. `timing` merges into the spec's
 
 ### `.where(selector)`
 
-Declare a selected subset. Bar accumulates per-field constraints (see its section
-below); point and unit filter rows. Line's default behavior crops the displayed
-range while retaining source rows. `.filter()` is not a public builder method.
-For low-level filtering, use `{ filter: ... }` entries in a raw view spec.
+Keep matching rows and remove the others. Bar accumulates per-field constraints
+(see its section below); point, line, and unit compile the selector to the same
+row-filter operation. `.filter()` is not a public builder method. For low-level
+filtering, use `{ filter: ... }` entries in a raw view spec.
 
 `selector` shapes:
 
@@ -158,11 +158,24 @@ For low-level filtering, use `{ filter: ... }` entries in a raw view spec.
 
 <SyntaxPlayground initial="filter" compact />
 
+### `.focus(selector)`
+
+Keep every row, but fit the visible positional range around the matching subset.
+Bar focuses its category axis, Line focuses its x-axis, and Point focuses both
+positional axes. Marks outside the view are clipped; they do not exit the data.
+
+```js
+.focus({ region: "North" })
+.focus("datum.year >= 2023")
+```
+
+<SyntaxPlayground initial="focus" compact />
+
 ### `.highlight(selector, options?)`
 
-On **bar and point**, keeps all rows rendered but visually de-emphasizes
-(fades) the non-matching ones. Line and unit currently store highlight metadata
-but do not render selective opacity; do not rely on it for those chart types:
+On **bar, line, and point**, keeps all rows rendered but visually de-emphasizes
+(fades) the non-matching ones. Unit currently stores highlight metadata but does
+not render selective opacity; do not rely on it for that chart type:
 
 ```js
 .highlight({ type: "Cold days" })                       // default fade opacity
@@ -195,30 +208,25 @@ A categorical bar chart. Defaults: `mark: "bar"`, `.x()` type `"nominal"`,
 const base = bar("weatherDays").x("decade").y("count").sort("year");
 ```
 
-### `.where(selector)` — richer on bar
+### `.where(selector)` on Bar
 
-Bar's `.where()` does more than filter rows — it also tries to keep the
-chart readable as the selected category changes:
+Bar follows the shared rule: `.where()` only changes which rows remain. Its one
+convenience is accumulating constraints across fields:
 
 - **Accumulates constraints per field**: calling `.where({ period: "recent" })`
   after `.where({ type: "Hot days" })` keeps both constraints (each new
   selector replaces only the constraint on the *same* field).
-- **Keeps bars matched** when filtering on a "measure-like" field
-  (`type`, `kind`, or any field ending in `_type`/`_kind`): it sets
-  `key: [categoryField, measureField]` and a `semanticKey` descriptor, so
-  switching `{ type: "Hot days" }` → `{ type: "Cold days" }` reads as *the
-  same bars, showing a different measure* rather than a totally new chart.
-- **Updates the y-axis title** to follow the selected measure value (e.g.
-  selecting `{ type: "Cold days" }` retitles the y-axis to "Cold days") —
-  but only while the title hasn't been manually overridden.
 - **`.where(null)`** clears all constraints.
 
 ```js
 base.where({ type: "Hot days" })                          // first selection
 base.where({ type: "Hot days", period: "recent" })        // adds a second constraint
-base.where({ type: "Cold days" })                         // swaps the `type` constraint, retitles y-axis
+base.where({ type: "Cold days" })                         // swaps only the `type` constraint
 base.where(null)                                           // clears everything
 ```
+
+Filtering never rewrites `.key()` or an axis title. Declare those explicitly
+with `.key()`, `.x()`, `.y()`, or `.axis()`.
 
 For a plain filter without bar's extra authoring bookkeeping, supply a raw
 view spec with `transform: [{ filter: ... }]`. It still contributes to the
@@ -382,12 +390,72 @@ const base = line("weather").x("decade").y("hot_days").key("decade");
 
 ### `.curve(value)`
 
-Sets the D3 curve interpolation, e.g. `"linear"`, `"monotone"`, `"natural"`,
-`"step"`, `"basis"` (any name resolvable by VisDelta's curve lookup).
+Use the exact name exported by D3. VisDelta does not rename D3 curves. The
+default is `"curveLinear"`, matching `d3.line()`.
 
 ```js
-.curve("monotone")
+.curve("curveLinear")
+.curve("curveMonotoneX")
+.curve("curveStep")
 ```
+
+| Family | Supported D3 names |
+| --- | --- |
+| Linear | `curveLinear`, `curveLinearClosed` |
+| Step | `curveStep`, `curveStepBefore`, `curveStepAfter` |
+| Monotone | `curveMonotoneX`, `curveMonotoneY` |
+| Basis | `curveBasis`, `curveBasisOpen`, `curveBasisClosed` |
+| Bump | `curveBumpX`, `curveBumpY` |
+| Cardinal | `curveCardinal`, `curveCardinalOpen`, `curveCardinalClosed` |
+| Catmull–Rom | `curveCatmullRom`, `curveCatmullRomOpen`, `curveCatmullRomClosed` |
+| Other | `curveNatural`, `curveBundle` |
+
+These are serializable names, not function values: use
+`.curve("curveNatural")`, not `.curve(d3.curveNatural)`. Open and closed curves
+retain D3's behavior, including their treatment of the first and last points.
+
+When the curve changes, VisDelta does not interpolate the numbers in the SVG
+`d` string by position. For example, `curveLinear` and `curveStep` contain
+different path commands, so that approach can join unrelated coordinates and
+make the line fold backward. The Line module instead takes matching points
+along the two rendered paths, moves each pair together, and preserves the exact
+authored path at progress `0` and `1`. This path matching is owned by Line; the
+Core and other chart types do not load it.
+
+### How Line chooses a path transition
+
+`.key()` identifies observations inside the path, not only the visible point
+circles. Line chooses the simplest plan that describes the actual change:
+
+| What changed | Line transition |
+| --- | --- |
+| Same observations, new positions | **Move points** by key |
+| New or restored observations | **Add points**: move the line first, then show each point |
+| Removed or filtered observations | **Remove points**: hide each point, then retract the same line path |
+| A fixed-size key window moves forward or backward | **Shift window** with clipped edge points |
+| D3 curve name changes | **Change curve** by matching the rendered shapes |
+| No reliable keyed relationship | **Match shape** as a visual fallback |
+
+The selected plan appears above the live output in the Line Lab. These rules
+belong to the Line chart module; they are not built into VisDelta Core.
+
+Add is the canonical direction for a change in observation membership. Remove
+does not use a separately tuned exit effect: it evaluates the same Add frames at
+`1 - progress`. Filter/Restore follows the same rule, including gaps created by
+the default `connect("adjacent")` behavior.
+
+### `.connect(value)`
+
+Choose what happens when `.where()` removes observations from inside a line:
+
+```js
+.connect("adjacent") // default: preserve a visible gap
+.connect("across")   // explicitly join the remaining observations
+```
+
+`"adjacent"` only connects observations that were neighbours in the unfiltered
+lineage. `"across"` treats the surviving observations as a new continuous
+sequence. This is a Line rule, not a Core transition rule.
 
 ### `.strokeWidth(value)` / `.pointSize(value)`
 
@@ -420,14 +488,22 @@ base.breakdown("period", { color: ["#b05d3b", "#888", "#536a9e"] })   // explici
 base.breakdown("period", { color: PERIOD_LUMINANCE_COLOR })            // composite color config
 ```
 
-### `.rollup(groupbyOrOptions?, options?)`
+### `.rollup(options?)`
 
-The inverse: merges multiple series back into a **single line**.
+The inverse: combines multiple series into a **single line**. Rows are grouped
+by the x field and the y field is summed by default. Use `op` to choose another
+supported aggregate, `as` to name its output field, or `color` for a constant
+line color.
 
 ```js
 base.breakdown("period").rollup()
-base.breakdown("period").rollup({ color: "#536a9e" })
+base.breakdown("period").rollup({ op: "mean", color: "#536a9e" })
 ```
+
+For the reverse change, VisDelta uses one shared path in opposite directions.
+The split cuts the total line into colored pieces, moves those pieces to their
+series positions, then connects each series. Merge disconnects, moves, and
+joins the same pieces back into the total.
 
 ### Line state family
 
@@ -508,6 +584,14 @@ base.breakdown({ detail: "year", key: "period" })
 Summary and detail states keep the same parent field in both directions. A
 detail point therefore gathers into its own summary circle, and the reverse
 transition scatters it back out from that same circle.
+
+The shared transition has two plain-language steps: **Set the view**, then
+**Move the points**. Reveal detail first moves the axes, scales, and summary
+circles together into the detail view; only then do the summaries spread into
+their detail points while that view stays fixed. Combine is exactly the same
+path backward: points gather under the fixed detail view, then the summary
+circles and axes move together into the summary view. The axes never move on
+their own while stationary marks temporarily imply the wrong values.
 
 ### Point state family
 

@@ -10,10 +10,12 @@ export {
 } from "./runtime/chart-registry.js";
 export {
   bar,
+  D3_CURVE_NAMES,
   line,
   point,
   unit
 } from "./grammar/index.js";
+export type { D3CurveName } from "./grammar/index.js";
 export { defineChartType } from "./charts/plugin.js";
 export { transition } from "./transition.js";
 export { delta, diffViewStates, visualizationSpec } from "./core.js";

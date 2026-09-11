@@ -158,7 +158,8 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     scrollDriven,
     scrollTransitionName: VISDELTA_TRANSITION_NAME,
     sourceRows: source,
-    domainRows
+    domainRows,
+    aq
   };
   chart.innerWidth = chart.width - chart.margin.left - chart.margin.right;
   chart.innerHeight = chart.height - chart.margin.top - chart.margin.bottom;

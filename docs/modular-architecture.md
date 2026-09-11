@@ -19,6 +19,7 @@ only when it is needed.
 | `visdelta/core` | Chart-state normalization and `delta()` without drawing anything |
 | `visdelta/bar` | The bar-chart builder |
 | `visdelta/point` | The point-chart builder |
+| `visdelta/line` | The line-chart builder |
 | `visdelta/transition` | `transition()`, progress, play, pause, resize, and destroy |
 | `visdelta/plugins` | Build a chart module or register one for plain specs |
 | `visdelta/browser` | The same API using dependencies supplied by the browser |
@@ -53,11 +54,12 @@ position, gesture, or route can drive the same transition.
 
 ## Size checks
 
-`npm run bundle:check` measures four useful bundles:
+`npm run bundle:check` measures five useful bundles:
 
 - core difference calculation;
 - bar authoring;
 - point authoring;
+- line authoring;
 - bar plus transition, including required shared and the selected lazy-loaded
   bar code.
 

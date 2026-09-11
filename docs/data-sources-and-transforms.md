@@ -76,8 +76,8 @@ for the complete validation and missing-value rules.
 ### `filter`
 
 Keeps rows matching a selector. This is a raw transform operation, not a
-`.filter()` builder method. Bar, point and unit `.where()` compile row filters;
-line's default `.where()` instead crops its displayed range.
+`.filter()` builder method. Bar, line, point and unit `.where()` compile row
+filters. `.focus()` is the separate view operation that retains source rows.
 
 ```js
 { filter: { field: "type", equal: "Hot days" } }

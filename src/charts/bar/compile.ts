@@ -13,6 +13,7 @@ import {
   channelFromField,
   cloneEncoding,
   compileFilter,
+  compileFocus,
   compileHighlight,
   identitySpec,
   resolveAxisOrder,
@@ -28,6 +29,7 @@ export function createBarSpecCompiler(_context: AnyRecord = {}): SpecCompiler {
     base: compileBarBase,
     operations: {
       filter: compileFilter,
+      focus: compileFocus,
       highlight: compileHighlight,
       coordinate: compileBarCoordinate,
       scale: compileBarScale,

@@ -7,6 +7,7 @@ import {
   compileCartesianCoordinate,
   compileCartesianScale,
   compileFilter,
+  compileFocus,
   compileHighlight,
   identitySpec,
   mergeXYChannel,
@@ -21,6 +22,7 @@ export function createPointSpecCompiler(_context: AnyRecord = {}): SpecCompiler 
     base: compilePointBase,
     operations: {
       filter: compileFilter,
+      focus: compileFocus,
       highlight: compileHighlight,
       coordinate: compilePointCoordinate,
       scale: compilePointScale,

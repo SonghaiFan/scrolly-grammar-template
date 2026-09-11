@@ -14,6 +14,13 @@ Edit the selector or combine constraints. This example also exercises the real A
 
 <SyntaxPlayground initial="filter" compact />
 
+## Focusing the view with `.focus()`
+
+Every row remains in the visualization. Only the visible positional range
+changes, so the motion reads as a pan or zoom rather than an exit.
+
+<SyntaxPlayground initial="focus" compact />
+
 ## Highlighting with `.highlight()`
 
 All marks remain present while the unmatched subset is visually de-emphasized.
@@ -37,6 +44,10 @@ Change orientation and experiment with the x/y step order.
 Edit `.curve()`, `.pointSize()`, or either encoded field.
 
 <SyntaxPlayground initial="line" compact />
+
+Continue with the [Line transition lab](/line-lab) for the sixteen editable
+Line scenarios, including the staged cut → move → connect split and its exact
+reverse merge.
 
 ## Point grammar
 

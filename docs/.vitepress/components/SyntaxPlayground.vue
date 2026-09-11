@@ -38,6 +38,17 @@ const northOnly = all.where({ region: "North" });
 
 return { from: all, to: northOnly };`
   },
+  focus: {
+    label: 'Focus the view',
+    code: `const all = bar(rows)
+  .x("category")
+  .y("sales")
+  .key("category");
+
+const northView = all.focus({ region: "North" });
+
+return { from: all, to: northView };`
+  },
   highlight: {
     label: 'Highlight a subset',
     code: `const all = bar(rows)
@@ -182,8 +193,10 @@ const status = ref('Loading runtime');
 const error = ref('');
 const progress = ref(isLabMode.value ? 0 : 0.5);
 const autoRun = ref(true);
+const pointEffect = ref('blend');
 const hasChange = ref(false);
 const deltaText = ref('Waiting for a valid state pair.');
+const lineTransition = ref('');
 
 let api = null;
 let aq = null;
@@ -197,6 +210,8 @@ const drafts = new Map();
 
 const statusKind = computed(() => error.value ? 'error' : status.value === 'Ready' ? 'ready' : 'busy');
 const description = computed(() => availableSamples.value[selected.value]?.description ?? '');
+const showPointEffect = computed(() =>
+  labChart.value === 'point' && ['rollup', 'breakdown'].includes(selected.value));
 
 onMounted(() => {
   if (isLabMode.value) {
@@ -261,6 +276,10 @@ watch(selected, (next, previous) => {
   if (!autoRun.value) runCode();
 });
 
+watch(pointEffect, () => {
+  if (api && showPointEffect.value) runCode();
+});
+
 function reset() {
   drafts.delete(selected.value);
   code.value = availableSamples.value[selected.value].code;
@@ -285,12 +304,13 @@ async function runCode() {
         'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
         `"use strict";\n${code.value}`
       );
-    const result = isLab
+    const authoredResult = isLab
       ? await evaluate(await labSamples[props.mode].loadChart())
       : await evaluate(
         api.bar, api.line, api.point, api.unit, api.delta,
         structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
       );
+    const result = pointLabPair(authoredResult);
     if (version !== runVersion) return;
     if (!result?.from || !result?.to) {
       throw new Error('Return an object with { from, to } visualization states.');
@@ -310,6 +330,10 @@ async function runCode() {
       candidate.remove();
       return;
     }
+    // Compile one middle frame so the Line Lab can show which Line-owned path
+    // plan was selected, then restore the user's current frame.
+    if (labChart.value === 'line') nextChange.progress(0.5);
+    lineTransition.value = lineTransitionLabel(result, candidate);
     nextChange.progress(progress.value);
     change?.destroy();
     chartTarget.value.replaceChildren(candidate);
@@ -329,10 +353,94 @@ async function runCode() {
   }
 }
 
+function pointLabPair(result) {
+  if (!showPointEffect.value || pointEffect.value !== 'blend') return result;
+  return {
+    ...result,
+    from: withPointLabEffect(result?.from),
+    to: withPointLabEffect(result?.to)
+  };
+}
+
+function withPointLabEffect(state) {
+  if (!state) return state;
+  const spec = structuredClone(typeof state.toSpec === 'function' ? state.toSpec() : state);
+  const chartModule = typeof state.chartModule === 'function' ? state.chartModule() : null;
+  spec.meta ||= {};
+  spec.meta.state ||= {};
+  spec.meta.state.sceneState ||= {};
+  spec.meta.state.sceneState.detail = {
+    ...(spec.meta.state.sceneState.detail || {}),
+    effect: 'blend'
+  };
+  return {
+    toSpec: () => structuredClone(spec),
+    ...(chartModule ? { chartModule: () => chartModule } : {})
+  };
+}
+
 function showError(cause) {
   const message = cause instanceof Error ? cause.message : String(cause);
   error.value = `${message}${change ? '\nShowing the last successful preview.' : ''}`;
   status.value = 'Error';
+}
+
+function readLineTransition(root) {
+  const names = [...new Set(
+    [...root.querySelectorAll('path.sl-line[data-line-transition]')]
+      .map(node => node.getAttribute('data-line-transition'))
+      .filter(name => name && name !== 'draw-line' && name !== 'remove-line')
+  )];
+  const labels = {
+    'keep-shape': 'Keep shape',
+    'move-points': 'Move points',
+    'add-points': 'Add points',
+    'remove-points': 'Remove points',
+    'shift-window': 'Shift window',
+    'change-curve': 'Change curve',
+    'match-shape': 'Match shape'
+  };
+  return names.map(name => labels[name] || name).join(' + ');
+}
+
+function lineTransitionLabel(result, root) {
+  if (labChart.value !== 'line') return '';
+  const specs = [result?.from, result?.to].map(state =>
+    typeof state?.toSpec === 'function' ? state.toSpec() : state);
+  const focusesView = specs.some(spec =>
+    spec?.meta?.state?.sceneState?.selection?.mode === 'focus');
+  if (focusesView) return 'Focus view';
+  const counts = specs.map(lineObservationCount);
+  if (counts.every(Number.isFinite) && counts[0] !== counts[1]) {
+    return counts[0] < counts[1] ? 'Add points' : 'Remove points';
+  }
+  return readLineTransition(root);
+}
+
+function lineObservationCount(spec) {
+  const source = Array.isArray(spec?.data)
+    ? spec.data
+    : Array.isArray(spec?.data?.values) ? spec.data.values : null;
+  if (!source) return null;
+  let rows = source;
+  for (const transform of spec.transform || []) {
+    if (transform.filter) rows = rows.filter(row => playgroundFilterMatch(row, transform.filter));
+    else if (transform.aggregate || transform.fold || transform.bin || transform.timeUnit || transform.limit != null) return null;
+  }
+  return rows.length;
+}
+
+function playgroundFilterMatch(row, filter) {
+  if (!filter || typeof filter !== 'object') return true;
+  const value = row[filter.field];
+  if ('equal' in filter && value !== filter.equal) return false;
+  if ('notEqual' in filter && value === filter.notEqual) return false;
+  if ('oneOf' in filter && !filter.oneOf.includes(value)) return false;
+  if ('gt' in filter && !(Number(value) > filter.gt)) return false;
+  if ('gte' in filter && !(Number(value) >= filter.gte)) return false;
+  if ('lt' in filter && !(Number(value) < filter.lt)) return false;
+  if ('lte' in filter && !(Number(value) <= filter.lte)) return false;
+  return true;
 }
 
 function setProgress(value) {
@@ -385,7 +493,14 @@ function handleEditorKeydown(event) {
           <option v-for="(sample, key) in availableSamples" :key="key" :value="key">{{ sample.label }}</option>
         </select>
       </label>
-      <strong v-else class="playground-inline-title">{{ availableSamples[selected].label }}</strong>
+      <label v-if="showPointEffect" class="playground-effect">
+        <span>Effect</span>
+        <select id="point-effect" v-model="pointEffect" aria-label="Point detail effect">
+          <option value="clean">Clean</option>
+          <option value="blend">Blend</option>
+        </select>
+      </label>
+      <strong v-if="compact" class="playground-inline-title">{{ availableSamples[selected].label }}</strong>
       <label class="playground-auto">
         <input :id="isLabMode ? 'auto-run' : undefined" v-model="autoRun" type="checkbox" @change="autoRun && runCode()" />
         Auto-run
@@ -415,6 +530,7 @@ function handleEditorKeydown(event) {
 
       <div class="playground-output-pane">
         <div class="playground-pane-label">Live output · progress <output :id="isLabMode ? 'value' : undefined">{{ progress.toFixed(2) }}</output></div>
+        <div v-if="lineTransition" class="playground-line-plan">Line transition <strong>{{ lineTransition }}</strong></div>
         <div :id="isLabMode ? 'chart' : undefined" ref="chartTarget" class="playground-chart" aria-label="Editable syntax output"></div>
         <div v-if="error" class="playground-runtime-error" role="alert">{{ error }}</div>
         <input

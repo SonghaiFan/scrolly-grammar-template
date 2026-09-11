@@ -120,7 +120,7 @@ export interface MarginSpec {
 export interface SelectionSpec {
   field?: string;
   equal?: unknown;
-  mode?: 'highlight' | 'filter';
+  mode?: 'highlight' | 'filter' | 'focus';
   filter?: FilterSpec;
   opacity?: number;
   [key: string]: unknown;
@@ -338,9 +338,6 @@ export interface GrammarMeta {
   operations?: string[];
   /** Per-chart-type scene capabilities (e.g. bar opts out of `mapping`). */
   capabilities?: Record<string, boolean>;
-  /** Field declared via bar's `.measure()` — drives identity/title inference in `.where()`. */
-  measureField?: string;
-  measureSelector?: { title: string; fields: string[] } | null;
 }
 
 // ─── Diff ─────────────────────────────────────────────────────────────────────

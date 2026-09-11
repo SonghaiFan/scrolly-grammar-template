@@ -76,15 +76,17 @@ first frame.
 
 - **Bar:** cached, seekable frames; matched enter/exit; value changes;
   filtering/highlighting; flip; split/merge; and stacked/grouped layouts.
-- **Line:** series updates, series split/merge, coordinate changes, and range
-  cropping. Its default `.where()` crops the x range instead of physically
-  removing source rows.
+- **Line:** keyed move/add/remove point paths; clipped time-window shifts;
+  cut-move-connect split/merge; coordinate changes; filtering with preserved
+  internal gaps; highlighting; and x-range focus without removing rows.
 - **Point:** cached, seekable frames; coordinate, filter, highlight, color,
-  size, data, and summary/detail gather-scatter changes.
+  size, data, and reversible summary/detail changes. Summary → detail first
+  sets the view with the summary marks, then moves the points; detail →
+  summary uses those exact frames backward.
 - **Unit:** filtering and grid, grouped, timeline, and dodge layouts.
 
-Bar and point draw selective highlight opacity. Line and unit can store the
-same state but do not yet render that effect.
+Bar, line, and point draw selective highlight opacity. Unit can store the same
+state but does not yet render that effect.
 
 Bar and point prepare reusable frame data when the transition starts. Line,
 unit, and custom plugins currently rebuild a frame on each seek. See [Visualization

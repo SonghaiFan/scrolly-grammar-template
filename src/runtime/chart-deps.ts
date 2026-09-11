@@ -3,13 +3,12 @@ import type { RenderContext } from './marks.js';
 import { escapeHtml } from './utils.js';
 
 export function createChartRuntimeDeps(context: RenderContext = {}) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, curveFor, drawGrid, drawLegend, drawPath, drawXAxis, drawYAxis, easeFor, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, hideTooltip, moveTooltip, niceExtent, position, quantitativeDomain, quantitativeScale, showTooltip, staggerDelay, themeValue, updateGrid } = createMarkHelpers(context);
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawLegend, drawPath, drawXAxis, drawYAxis, easeFor, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, hideTooltip, moveTooltip, niceExtent, position, quantitativeDomain, quantitativeScale, showTooltip, staggerDelay, themeValue, updateGrid } = createMarkHelpers(context);
   return {
     bandOrLinear,
     bindTooltip,
     channelDomain,
     colorScale,
-    curveFor,
     drawGrid,
     drawLegend,
     drawPath,

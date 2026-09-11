@@ -27,6 +27,14 @@ change.progress(0.42);
 change.play({ duration: 800 });
 ```
 
+The plain-English subset methods have separate jobs:
+
+```js
+base.where({ region: "North" })     // remove the other rows
+base.highlight({ region: "North" }) // keep every row; change emphasis
+base.focus({ region: "North" })     // keep every row; fit the visible range
+```
+
 ## What VisDelta includes
 
 VisDelta owns:
@@ -65,6 +73,7 @@ not require it.
 | `visdelta/core` | DOM-free normalization and semantic delta |
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
+| `visdelta/line` | Focused immutable line authoring |
 | `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
 | `visdelta/plugins` | Chart-module building blocks and plain-spec registration |
 | `visdelta/browser` | Browser-global dependency adapter |

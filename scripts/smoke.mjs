@@ -8,6 +8,7 @@ import * as sourceApi from '../dist/index.js';
 import * as distApi from '../dist/visdelta.esm.js';
 
 const publicApi = [
+  'D3_CURVE_NAMES',
   'availableChartTypes',
   'bar',
   'delta',

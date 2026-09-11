@@ -46,6 +46,10 @@
       "types": "./dist/point.d.ts",
       "import": "./dist/point.js"
     },
+    "./line": {
+      "types": "./dist/line.d.ts",
+      "import": "./dist/line.js"
+    },
     "./transition": {
       "types": "./dist/transition-entry.d.ts",
       "import": "./dist/transition-entry.js"

@@ -43,8 +43,9 @@ across fields, use consecutive filter entries.
 
 Built-in `.where('datum.sales >= 20')` parses the same comparison. Bar also
 accepts multi-field equality shorthand such as `.where({ region: "EU", year: 2025 })`.
-Other chart types' selector shorthand accepts one field at a time. Line's default
-`.where()` uses its predicate for range-cropping rather than deleting source rows.
+Other chart types' selector shorthand accepts one field at a time. `.where()`
+always removes nonmatching rows; use `.focus()` to keep the rows and change only
+the visible coordinate range.
 
 ## Aggregates, bins and time
 

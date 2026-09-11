@@ -28,6 +28,10 @@ const publicExports = {
     types: "./dist/point.d.ts",
     import: "./dist/point.js"
   },
+  "./line": {
+    types: "./dist/line.d.ts",
+    import: "./dist/line.js"
+  },
   "./transition": {
     types: "./dist/transition-entry.d.ts",
     import: "./dist/transition-entry.js"
@@ -56,6 +60,8 @@ const requiredFiles = [
   "dist/bar.js",
   "dist/point.d.ts",
   "dist/point.js",
+  "dist/line.d.ts",
+  "dist/line.js",
   "dist/core.d.ts",
   "dist/core.js",
   "dist/index.d.ts",

@@ -26,5 +26,5 @@ test('the former standalone lab redirects to the canonical in-doc lab', async ({
   await expect(page).toHaveURL(/\/docs\/\.vitepress\/dist\/transition-lab\.html#sort$/);
   await expect(page.locator('#status')).toHaveText('Ready');
   await expect(page.locator('#scenario')).toHaveValue('sort');
-  await expect(page.locator('#scenario option')).toHaveCount(12);
+    await expect(page.locator('#scenario option')).toHaveCount(13);
 });

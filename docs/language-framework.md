@@ -2,7 +2,7 @@
 
 > **Source of truth:** this page defines VisDelta's public words, working features,
 > and development plan. Unfinished ideas are clearly marked instead of being shown
-> as usable API. Last checked against the `0.2.0` candidate on 9 September 2026.
+> as usable API. Last checked against the `0.2.0` candidate on 11 September 2026.
 
 ## Status vocabulary
 
@@ -94,6 +94,7 @@ Current and intended default policies are:
 | Flip | Ordered x and y steps | Available |
 | Stacked ↔ grouped | Ordered x and y steps for the destination layout | Available |
 | Split/merge with a stable scale | Enter/exit + marks; axis stays still | Available |
+| Point summary ↔ detail | Set the view with its summary marks, then move the points | Available |
 | Filter with automatic rescale | Exit first, then scale + axis + remaining marks | Developing |
 | Add data with automatic rescale | Scale + axis + existing marks, then enter | Developing |
 
@@ -141,13 +142,17 @@ effects; the transition planner decides how to show them.
 
 | Family | Public syntax | Status | Meaning |
 | --- | --- | --- | --- |
-| **Filter or highlight** | `.where()`, `.highlight()` | Partial | Filtering works across chart types; selective highlighting is available for bar and point |
+| **Change data membership** | `.where()` | Available | Keep matching rows and remove the others across chart types |
+| **Change attention** | `.highlight()` | Partial | Keep every row; selective visual emphasis is available for bar, line, and point |
+| **Change the view** | `.focus()` | Partial | Keep every row; fit Bar categories, Line x, or Point x and y around a subset |
 | **Change a value or mapping** | change `.x()`, `.y()`, `.color()`, `.size()` | Available | Show the same items through another measure or visual property |
 | **Change detail** | `.breakdown()`, `.rollup()`, `.segment()` | Partial | Split into detail or combine into totals; bar has the richest path |
 | **Change layout or axis** | `.flip()`, `.axis()`, `.layout()` | Partial | Available across relevant chart types, with different rendering depth |
 | **Add labels or help** | titles, descriptions, tooltip metadata | Partial | Titles and tooltips exist; one shared annotation grammar is still developing |
 
 <SyntaxPlayground initial="filter" compact />
+
+<SyntaxPlayground initial="focus" compact />
 
 <SyntaxPlayground initial="highlight" compact />
 
@@ -174,7 +179,7 @@ by the shape drawn in SVG.
 | Chart type | Status | Current role | Transition evaluation |
 | --- | --- | --- | --- |
 | `bar()` | Available | Categorical comparison, filtering, reversible split/merge, grouped/stacked layout | Cached frame data |
-| `line()` | Available | Ordered trends and multiple series | Reconstructs frames |
+| `line()` | Available | Ordered trends, keyed point/path changes, sliding windows, and staged reversible total/series changes | Reconstructs frames |
 | `point()` | Available | Quantitative relationships and reversible summary/detail changes | Cached frame data |
 | `unit()` | Available | Countable units, grids, groups, timelines, dodge | Reconstructs frames |
 | `area()` | Research | Candidate trend/composition chart type | Not implemented |
@@ -227,7 +232,8 @@ and a slider tomorrow without changing its two chart states.
 | `registerChartModule()` | Available | Make a module available to plain JSON specs |
 | Focused `visdelta/bar` entry | Available | Lightweight bar authoring |
 | Focused `visdelta/point` entry | Available | Lightweight point authoring |
-| Focused line and unit entries | Developing | Available through the complete entry; dedicated public subpaths are not shipped |
+| Focused `visdelta/line` entry | Available | Lightweight line authoring |
+| Focused `visdelta/unit` entry | Developing | Available through the complete entry; a dedicated public subpath is not shipped |
 | Automatic builder generation | Not planned | Each chart owns meaningful chart-specific chain methods; the core does not guess them |
 
 ## What “partial” means for current chart types
@@ -240,11 +246,12 @@ should close these differences before adding more chart types.
 | Immutable builder | Available | Available | Available | Available |
 | Same-type transition | Available | Available | Available | Available |
 | Cached arbitrary-frame evaluation | Available | Developing | Available | Developing |
-| `.where()` filtering | Available | Available with range-oriented semantics | Available | Available |
-| Selective `.highlight()` rendering | Available | Developing | Available | Developing |
-| Detail changes | Split/merge | Series/single | Summary/detail | Not currently a primary change |
+| `.where()` row filtering | Available | Available; internal gaps stay disconnected by default | Available | Available |
+| `.focus()` view fitting | Available | Available on x | Available on x and y | Developing |
+| Selective `.highlight()` rendering | Available | Available | Available | Developing |
+| Detail changes | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
 | Axis/layout changes | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Grid, group, timeline, dodge |
-| Focused package entry | Available | Developing | Available | Developing |
+| Focused package entry | Available | Available | Available | Developing |
 
 ## Development plan
 
@@ -279,9 +286,9 @@ The target is one colocated side-by-side editor for every public syntax section.
 
 <span class="language-status is-developing">Developing</span>
 
-1. Add focused entries for line and unit.
+1. Add a focused entry for unit.
 2. Extend cached seek evaluation to line and unit.
-3. Add selective highlight rendering to line and unit.
+3. Add selective highlight rendering to unit.
 4. Document and test every chart-specific detail, layout, and axis change.
 
 ### Milestone C — control abstraction

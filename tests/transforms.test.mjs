@@ -68,9 +68,7 @@ test('string selectors compile to real filters on all built-in chart types', () 
   for (const factory of [bar, line, point, unit]) {
     const view = factory(rows).x('id').y('value').where('datum.value >= 2');
     const spec = view.toSpec();
-    // Line keeps full data and crops its domain; its selector is scene state.
-    const transforms = spec.transform ?? [{ filter: spec.meta.state.sceneState.selection.filter }];
-    assert.deepEqual(run(transforms), rows.slice(1));
+    assert.deepEqual(run(spec.transform), rows.slice(1));
     assert.throws(() => factory(rows).where('datum.value + 1'), /filter expression/);
     assert.throws(() => factory(rows).where({ field: 'value', equals: 2 }), /Unsupported filter/);
   }

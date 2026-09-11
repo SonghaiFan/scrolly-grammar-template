@@ -142,10 +142,11 @@ authoring.js / grammar.js
   the transition plan's `stack-base` baseline means the segment's `__stack0`
   anchor, so a segment exits back to where it originally grew from.
 
-Point, line, and unit now have authoring entry points, chart-local spec
-compilers, and minimal transition plans. They still use renderer-local
-transition behavior rather than the full bar-style `semantic.js` / `diff.js` /
-`state.js` transition-plan stack.
+Point, line, and unit have chart-local authoring, compilation, rendering, and
+change rules. Line now owns its cut → move → connect total/series plan and uses
+that same plan backward for merge. Point owns its cached summary/detail path.
+That Point path is `set view → move points`; combine reuses it backward.
+Unit still has a minimal plan. None of these rules live in the core.
 Future chart types should use the bar folder as the reference shape when they
 need custom multi-step plans, intermediate specs, or inspector metadata.
 

@@ -187,6 +187,14 @@
   background: var(--vp-c-bg-soft);
 }
 
+/* The labs are an editing surface, not long-form prose. Let their two panes
+   use the space VitePress normally reserves beyond the readable text column. */
+@media (min-width: 960px) {
+  .VPDoc:has(.syntax-playground) .content-container {
+    max-width: 1280px;
+  }
+}
+
 .playground-toolbar {
   display: flex;
   align-items: end;
@@ -196,7 +204,9 @@
 }
 
 .playground-toolbar label:first-child { display: grid; flex: 1 1 220px; gap: 3px; }
+.playground-toolbar .playground-effect { display: grid; flex: 0 1 110px; gap: 3px; }
 .playground-toolbar label:first-child span,
+.playground-toolbar .playground-effect span,
 .playground-pane-label {
   color: var(--vp-c-text-3);
   font: 700 9px/1.4 var(--vp-font-family-mono);
@@ -237,6 +247,8 @@
 .playground-output-pane { min-width: 0; padding: 14px; }
 .playground-editor-pane { border-right: 1px solid var(--vp-c-divider); }
 .playground-pane-label { margin-bottom: 8px; }
+.playground-line-plan { display: flex; justify-content: space-between; gap: 12px; margin: -2px 0 9px; padding: 6px 8px; border: 1px solid var(--vp-c-divider); border-radius: 4px; color: var(--vp-c-text-2); font: 10px/1.4 var(--vp-font-family-mono); }
+.playground-line-plan strong { color: var(--vp-c-brand-1); font-weight: 700; }
 .playground-editor {
   display: block;
   width: 100%;

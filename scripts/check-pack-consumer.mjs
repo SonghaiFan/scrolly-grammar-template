@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const expectedApi = [
+  "D3_CURVE_NAMES",
   "availableChartTypes",
   "bar",
   "defineChartType",
@@ -78,6 +79,7 @@ import * as api from "visdelta";
 import * as browserApi from "visdelta/browser";
 import { bar as selectedBar, barModule } from "visdelta/bar";
 import { point as selectedPoint, pointModule } from "visdelta/point";
+import { D3_CURVE_NAMES as selectedCurveNames, line as selectedLine, lineModule } from "visdelta/line";
 import { delta as selectedDelta } from "visdelta/core";
 import { transition as selectedTransition } from "visdelta/transition";
 import {
@@ -95,7 +97,9 @@ if (globalThis.vd !== globalThis.VisDelta) throw new Error("vd global alias mism
 assertSame(api.availableChartTypes(), ["bar", "line", "point", "unit"], "chart types");
 if (typeof selectedBar !== "function") throw new Error("bar subpath did not export bar()");
 if (typeof selectedPoint !== "function") throw new Error("point subpath did not export point()");
-if (barModule.key !== "bar" || pointModule.key !== "point") throw new Error("focused chart module mismatch");
+if (typeof selectedLine !== "function") throw new Error("line subpath did not export line()");
+if (selectedCurveNames.length !== 20) throw new Error("line subpath did not export all D3 curve names");
+if (barModule.key !== "bar" || pointModule.key !== "point" || lineModule.key !== "line") throw new Error("focused chart module mismatch");
 if (typeof selectedDelta !== "function") throw new Error("core subpath did not export delta()");
 if (typeof selectedTransition !== "function") throw new Error("transition subpath did not export transition()");
 if (typeof selectedPlugin !== "function") throw new Error("plugins subpath did not export defineChartType()");

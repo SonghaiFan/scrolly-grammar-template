@@ -41,5 +41,6 @@ export const scenarios = [
   sample('merge', '09 · Merge stacked segments', 'Aggregate the detailed segments into one total per category.', segmented, 'detailed', 'detailed.rollup()'),
   sample('layout', '10 · Stacked → grouped', 'Keep the detailed data and change how segments are positioned.', segmented, 'detailed', 'detailed.layout("grouped")'),
   sample('grouped-split', '11 · Split into grouped segments', 'Move from category totals to side-by-side detail.', segmented, 'detailed.rollup()', 'detailed.layout("grouped")'),
-  sample('grouped-merge', '12 · Merge grouped segments', 'Move from side-by-side detail back to category totals.', segmented, 'detailed.layout("grouped")', 'detailed.rollup()')
+  sample('grouped-merge', '12 · Merge grouped segments', 'Move from side-by-side detail back to category totals.', segmented, 'detailed.layout("grouped")', 'detailed.rollup()'),
+  sample('focus', '13 · Focus the view', 'Keep all three bars in the data while fitting the category view around A and B. C moves beyond the clipped plot instead of exiting.', basic, 'base', 'base.focus({ field: "category", oneOf: ["A", "B"] })')
 ];

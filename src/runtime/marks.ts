@@ -215,11 +215,6 @@ function staggerDelay(spec, datum, index, override) {
   return Math.min(index * step, max);
 }
 
-function curveFor(spec, d3) {
-  const curves = { linear: d3.curveLinear, monotoneX: d3.curveMonotoneX, basis: d3.curveBasis, step: d3.curveStep };
-  return curves[spec.curve] || d3.curveMonotoneX;
-}
-
 function drawPath(selection, transition, d3) {
   selection.each(function() {
     const path = d3.select(this);
@@ -672,8 +667,8 @@ function tooltipHtml(row, tooltipSpec) {
     .join('<br>');
 }
 
-return { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, curveFor, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive };
+return { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive };
 }
 
 // Context-free utilities and compatibility imports retain their old signatures.
-export const { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, curveFor, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive } = createMarkHelpers();
+export const { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive } = createMarkHelpers();

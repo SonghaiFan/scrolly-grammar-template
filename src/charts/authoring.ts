@@ -124,6 +124,16 @@ export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
     return this.with({ selection: selectorFrom(selector) } as Partial<S>, 'selection');
   }
 
+  /** Keep every row, but fit the visible coordinate range to a subset. */
+  focus(selector: string | Record<string, unknown> | FilterSpec): this {
+    return this.with({
+      selection: {
+        mode: 'focus',
+        filter: selectorFrom(selector)
+      } as SelectionSpec
+    } as Partial<S>, 'selection');
+  }
+
   highlight(
     selector: string | Record<string, unknown> | FilterSpec,
     options: { opacity?: number } = {}

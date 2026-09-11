@@ -1,7 +1,7 @@
 import { serializeViewSpec } from '../../spec-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { normalizeFilter } from '../../data/filter.js';
-import { labelFromValue, titleize } from '../../labels.js';
+import { titleize } from '../../labels.js';
 import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
@@ -92,30 +92,8 @@ export class BarState extends ChartState<BarViewState> {
       return this.with({ where: [] } as Partial<BarViewState>, 'selection');
     }
     const selectors = normalizeSelectors(selector);
-    const identity = identityFromSelectors(this.state as BarViewState, selectors);
-    const measureTitle = measureTitleFromSelectors(this.state as BarViewState, selectors);
     return this.with({
-      where: setConstraints((this.state as BarViewState).where ?? [], selectors),
-      ...(identity ?? {}),
-      ...(measureTitle
-        ? {
-            encoding: {
-              y: {
-                ...((this.state as BarViewState).encoding?.y ?? {}),
-                title: measureTitle
-              }
-            }
-          }
-        : {}),
-      __grammar: {
-        lastWhere: {
-          selectors: cloneState(selectors),
-          fields: selectors.map((s) => s.field)
-        },
-        ...(measureTitle
-          ? { measureSelector: { title: measureTitle, fields: selectors.map((s) => s.field) } }
-          : {})
-      }
+      where: setConstraints((this.state as BarViewState).where ?? [], selectors)
     } as Partial<BarViewState>, 'selection');
   }
 
@@ -355,7 +333,6 @@ function aggregateBarState(
         groupby,
         op: normalized.op
       } as DetailSpec,
-      __grammar: { measureSelector: null },
       ...(normalized.tooltip ? { encoding: { tooltip: cloneState(normalized.tooltip) } } : {})
     } as Partial<BarViewState>, 'detail');
   }
@@ -374,8 +351,7 @@ function aggregateBarState(
           fields: [{ op: normalized.op, field: normalized.value, as: normalized.as }]
         }
       }
-    ],
-    __grammar: { measureSelector: null }
+    ]
   } as Partial<BarViewState>, 'detail');
 }
 
@@ -396,55 +372,6 @@ function setConstraints(constraints: FilterSpec[], selectors: FilterSpec[]): Fil
 
 function clearConstraint(constraints: FilterSpec[], field: string): FilterSpec[] {
   return constraints.filter((c) => c.field !== field);
-}
-
-function identityFromSelectors(
-  state: BarViewState,
-  selectors: FilterSpec[]
-): Partial<BarViewState> | null {
-  const category = state.encoding?.x?.field;
-  const measure = selectors.find(
-    (s) => s.field && Object.prototype.hasOwnProperty.call(s, 'equal') && isMeasureSelectorField(s.field)
-  );
-  if (!category || !measure) return null;
-  return {
-    key: [category, measure.field],
-    semanticKey: {
-      entity: { field: category },
-      measure: { field: measure.field }
-    }
-  };
-}
-
-function measureTitleFromSelectors(state: BarViewState, selectors: FilterSpec[]): string | null {
-  const y = state.encoding?.y;
-  if (!y?.field) return null;
-  const measure = selectors.find(
-    (s) => s.field && Object.prototype.hasOwnProperty.call(s, 'equal') && isMeasureSelectorField(s.field)
-  );
-  if (!measure) return null;
-
-  const currentTitle = y.title ?? titleize(y.field);
-  const previousMeasureTitle = (state as Record<string, unknown>).__grammar
-    ? ((state as Record<string, unknown>).__grammar as Record<string, unknown>)?.measureSelector
-      ? ((
-          (state as Record<string, unknown>).__grammar as Record<string, unknown>
-        ).measureSelector as { title?: string })?.title
-      : undefined
-    : undefined;
-
-  const titleCanFollowSelector =
-    currentTitle === titleize(y.field) || currentTitle === previousMeasureTitle;
-  return titleCanFollowSelector ? labelFromValue(measure.equal) : null;
-}
-
-function isMeasureSelectorField(field: string): boolean {
-  return (
-    field === 'type' ||
-    field === 'kind' ||
-    field.endsWith('_type') ||
-    field.endsWith('_kind')
-  );
 }
 
 function normalizeAggregation(
@@ -510,7 +437,7 @@ function pruneAuthoringState(spec: ViewSpec): ViewSpec {
   const selection = sceneState.selection ?? state.selection;
   const axis = sceneState.axis ?? state.axis;
 
-  if ((selection as Record<string, unknown> | undefined)?.mode === 'highlight') {
+  if (['highlight', 'focus'].includes(String((selection as Record<string, unknown> | undefined)?.mode))) {
     preservedSceneState.selection = selection;
   }
   if (hasCustomAxisOrder(axis as Record<string, unknown> | null)) {

@@ -74,7 +74,9 @@ function operationForState(
   operationSpec: Record<string, unknown> | null,
   operations: StateOperations
 ): string {
-  if (stateKey === 'selection' && operationSpec?.['mode'] === 'highlight') return 'highlight';
+  if (stateKey === 'selection' && typeof operationSpec?.['mode'] === 'string') {
+    return operationSpec['mode'];
+  }
   return operations[stateKey] || DEFAULT_STATE_OPERATION[stateKey];
 }
 

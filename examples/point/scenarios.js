@@ -52,8 +52,9 @@ export const pointScenarios = [
   sample('color', '08 · Map color', 'Introduce a categorical color mapping without changing position.', base, 'base', 'base.color("region")'),
   sample('size', '09 · Map size', 'Map population to point radius using an explicit visual range.', base, 'base.radius(6)', 'base.size("population", { range: [5, 18] })'),
   sample('flip', '10 · Swap x and y', 'Swap the axes and move the points with their changing scales and labels.', base, 'base', 'base.flip({ order: ["x", "y"] })'),
-  sample('rollup', '11 · Combine into summaries', 'Gather detailed places into one mean-position summary circle per region.', summarySetup, 'detailed', 'summary'),
-  sample('breakdown', '12 · Reveal detail', 'Reverse the same path: split each regional summary into its places.', summarySetup, 'summary', 'detailed')
+  sample('rollup', '11 · Combine into summaries', 'Gather the points under one fixed view, then let the view return to the summary scale.', summarySetup, 'detailed', 'summary'),
+  sample('breakdown', '12 · Reveal detail', 'Set the detail view first, then spread each regional summary into its places.', summarySetup, 'summary', 'detailed'),
+  sample('focus', '13 · Focus the view', 'Keep every point in the data while fitting both axes around the North region.', base, 'base', 'base.focus({ region: "North" })')
 ];
 
 export const scenarios = pointScenarios;

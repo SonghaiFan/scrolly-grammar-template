@@ -1,7 +1,7 @@
 import * as core from './index.js';
 import type { Visualization, TransitionOptions } from './transition.js';
 
-export { availableChartTypes, bar, delta, diffViewStates, defineChartType,
+export { availableChartTypes, bar, D3_CURVE_NAMES, delta, diffViewStates, defineChartType,
   line, point, registerChartType, registerChartModule, unit,
   visualizationSpec } from './index.js';
 

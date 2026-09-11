@@ -109,7 +109,9 @@ VisDelta classifies endpoint differences into four semantic families:
 
 | Family | Question | Typical authoring trigger |
 | --- | --- | --- |
-| Filter or highlight | Which items are visible or emphasized? | `.where()`, `.highlight()` |
+| Data membership | Which observations remain in the data? | `.where()` |
+| Attention | Which existing marks receive emphasis? | `.highlight()` |
+| View | Which part of the unchanged data is visible? | `.focus()` |
 | Axis or layout | How is the same data arranged or read? | `.flip()`, `.axis()`, `.layout()` |
 | Detail | Are we showing totals or their parts? | `.breakdown()`, `.rollup()`, `.segment()` |
 | Value or mapping | Which field is shown through x, y, color, or size? | `.x()`, `.y()`, `.color()` |

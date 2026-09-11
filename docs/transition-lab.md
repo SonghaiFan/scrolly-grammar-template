@@ -1,6 +1,6 @@
 # Bar transition lab
 
-These twelve scenarios are the executable transition matrix for VisDelta's
+These thirteen scenarios are the executable transition matrix for VisDelta's
 current bar implementation. Edit either endpoint, run the code, scrub any
 frame, reverse playback, and inspect the computed semantic delta.
 

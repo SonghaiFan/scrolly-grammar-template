@@ -43,6 +43,17 @@ export function compileHighlight(spec: ViewSpec, operationSpec: SelectionSpec = 
   });
 }
 
+export function compileFocus(spec: ViewSpec, operationSpec: SelectionSpec = {}): ViewSpec {
+  const filter = operationSpec.filter ? normalizeFilter(operationSpec.filter) : selectorToFilter(operationSpec);
+  if (!filter) return spec;
+  return withSceneState(spec, {
+    selection: {
+      mode: 'focus',
+      filter
+    }
+  });
+}
+
 export function compileCartesianCoordinate(spec: ViewSpec, operationSpec: AnyRecord = {}): ViewSpec {
   const encoding = cloneEncoding(spec.encoding);
   const shouldFlip = Boolean(operationSpec['flip']);

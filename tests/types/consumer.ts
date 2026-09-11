@@ -3,6 +3,7 @@ import { transition } from 'visdelta/transition';
 import { delta as selectedDelta } from 'visdelta/core';
 import { bar as selectedBar, barModule } from 'visdelta/bar';
 import { point as selectedPoint, pointModule } from 'visdelta/point';
+import { line as selectedLine, lineModule } from 'visdelta/line';
 import {
   ChartState,
   defineChartModule,
@@ -21,8 +22,12 @@ delta(a, b).hasDelta('encoding.y');
 selectedDelta(a, b).hasDelta('encoding.y');
 selectedBar().data([]).x('key');
 selectedPoint().data([]).x('x').y('y').radius(6);
+selectedLine().data([]).x('x').y('y').curve('curveMonotoneX').strokeWidth(3).pointSize(4);
+// @ts-expect-error VisDelta uses exact D3 curve names rather than aliases.
+selectedLine().curve('smooth');
 registerChartModule(barModule);
 registerChartModule(pointModule);
+registerChartModule(lineModule);
 // @ts-expect-error Pair progress accepts only a number.
 pair.progress('0.5');
 // @ts-expect-error ESM dependencies are explicit.

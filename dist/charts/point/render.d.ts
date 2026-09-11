@@ -1,2 +1,0 @@
-export declare function createPointRenderer(deps: any): (chart: import("../../types/index.js").ChartContext, rows: unknown[], spec: import("../../core.js").ViewSpec, tooltip: unknown, d3: import("../../types/index.js").D3Lib) => void;
-export declare function pointSelectionOpacity(row: any, spec?: {}, dimOpacity?: number): number;

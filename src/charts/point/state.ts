@@ -6,6 +6,13 @@ import { colorField } from './encoding.js';
 interface PointState {
   parentField: string | string[] | null;
   detailMode: string | null;
+  effect: string | null;
+  view: PointScaleView | null;
+}
+
+interface PointScaleView {
+  encoding?: Record<string, ChannelSpec>;
+  transform?: ViewSpec['transform'];
 }
 
 interface ParentAnchor {
@@ -27,7 +34,9 @@ export function pointState(spec: ViewSpec = {}, enc: Record<string, ChannelSpec>
     || {};
   return {
     parentField: parentFromGroupby(detail['groupby'] as string[] | null) || (detail['parentField'] as string | null) || colorField(enc),
-    detailMode: (detail['mode'] as string) || null
+    detailMode: (detail['mode'] as string) || null,
+    effect: (detail['effect'] as string) || null,
+    view: (detail['view'] as PointScaleView | undefined) || null
   };
 }
 
@@ -73,6 +82,12 @@ export function pointIntermediateSpecs<S extends ViewSpec>(
   previousSpec: S,
   nextSpec: S
 ): IntermediateSpec<S>[] {
+  const previousIsSummary = aggregateGroup(previousSpec).length > 0;
+  const nextIsSummary = aggregateGroup(nextSpec).length > 0;
+  if (previousIsSummary && !nextIsSummary) {
+    return [{ spec: pointSummaryAtDetailView(previousSpec, nextSpec), scene: 'detail' }];
+  }
+
   const axis = pointAxisState(nextSpec);
   if (!axis?.['flip']) return [];
   const previousEncoding = previousSpec.encoding || {};
@@ -92,6 +107,24 @@ export function pointIntermediateSpecs<S extends ViewSpec>(
     [second]: cloneState(previousEncoding[second])
   };
   return [{ spec: intermediate, scene: 'axis' }];
+}
+
+/** Keep summary marks, but set their axes and scale to the detail view. */
+function pointSummaryAtDetailView<S extends ViewSpec>(summarySpec: S, detailSpec: S): S {
+  return withSpecMeta(cloneState(summarySpec), {
+    state: {
+      sceneState: {
+        detail: {
+          ...pointDetailState(summarySpec),
+          step: 'set-view',
+          view: {
+            encoding: cloneState(detailSpec.encoding || {}),
+            transform: cloneState(detailSpec.transform || [])
+          }
+        }
+      }
+    }
+  }) as S;
 }
 
 export function parentAnchors(

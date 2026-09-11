@@ -1,6 +1,8 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { BaseChart } from '../base.js';
+import { focusedScale, viewSelection } from '../focus.js';
 import { matchesFilter } from '../../data/filter.js';
+import { applyTransforms } from '../../data/transforms.js';
 import { specState } from '../../spec-meta.js';
 import { applyPointIdentity, pointKeyAccessor, pointStoredKey } from './keys.js';
 import { defaultPointRadius, parentAnchors, parentKey, pointState, radiusScale } from './state.js';
@@ -16,6 +18,8 @@ class PointChart extends BaseChart {
       colorScale,
       drawLegend,
       fadeNonPointShapes,
+      bandOrLinear,
+      niceExtent,
       position,
       quantitativeDomain,
       quantitativeScale,
@@ -26,9 +30,25 @@ class PointChart extends BaseChart {
     const enc = spec.encoding || {};
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
     const state = pointState(spec, enc);
-    const t = chart.transition.base;
-    const x = quantitativeScale(rows, enc.x, [0, chart.innerWidth], d3);
-    const y = quantitativeScale(rows, enc.y, [chart.innerHeight, 0], d3);
+    const viewEnc = state.view?.encoding || enc;
+    const viewRows = state.view
+      ? applyTransforms(chart.sourceRows, state.view.transform || [], chart.aq)
+      : rows;
+    const selection = viewSelection(spec);
+    const movesPoints = state.detailMode === 'detail' && !state.view;
+    // Summary -> detail is the canonical path. Giving that path ease-out makes
+    // its exact reverse (detail -> summary) ease-in: gather starts slowly and
+    // accelerates as the points converge.
+    const t = movesPoints
+      ? chart.transition.base.ease(d3.easeCubicOut)
+      : chart.transition.base;
+    const focusDeps = { bandOrLinear, d3, niceExtent, position };
+    const x = selection?.mode === 'focus'
+      ? focusedScale(viewRows, viewEnc.x, [0, chart.innerWidth], selection, focusDeps)
+      : quantitativeScale(viewRows, viewEnc.x, [0, chart.innerWidth], d3);
+    const y = selection?.mode === 'focus'
+      ? focusedScale(viewRows, viewEnc.y, [chart.innerHeight, 0], selection, focusDeps)
+      : quantitativeScale(viewRows, viewEnc.y, [chart.innerHeight, 0], d3);
     const color = colorScale(domainRows, enc.color, d3);
     const fallbackRadius = Number.isFinite(Number(spec.size))
       ? Number(spec.size)
@@ -62,14 +82,26 @@ class PointChart extends BaseChart {
     }
 
     fadeNonPointShapes(chart);
-    this.setCartesianState(chart, enc, { x, y, color }, {
+    this.setCartesianState(chart, viewEnc, { x, y, color }, {
       x: (d) => position(x, d[enc.x?.field]),
       y: (d) => position(y, d[enc.y?.field])
     });
-    this.drawCartesianAxes(chart, x, y, enc, d3);
+    this.drawCartesianAxes(chart, x, y, viewEnc, d3);
     drawLegend(chart, rows, enc.color, d3);
 
-    chart.g.selectAll('circle.sl-point')
+    const crispLayer = chart.g.selectAll('g.sl-point-crisp-layer')
+      .data([null])
+      .join('g')
+      .attr('class', 'sl-point-crisp-layer');
+    const blendMotion = pointBlendMotion({
+      rows, state, radius, enterAnchor, exitAnchor, chartPosition
+    });
+    drawPointBlend({
+      chart, rows, state, key, radius, color, enterAnchor, exitAnchor,
+      chartPosition, crispLayer, blendMotion, movesPoints, transition: t, d3
+    });
+
+    crispLayer.selectAll('circle.sl-point')
       .data(rows, (d, i) => pointStoredKey(d, i, key))
       .join(
         (enter) => enter
@@ -100,14 +132,17 @@ class PointChart extends BaseChart {
           .attr('r', (d) => radius(d))
           .attr('fill', (d) => color(d))
           .style('opacity', (d) => opacity(d)),
-        (exit) => exit
-          .transition(t)
-          .delay((d, i) => staggerDelay(spec, d, i))
-          .style('opacity', 0)
-          .attr('cx', (d) => exitAnchor(d).x)
-          .attr('cy', (d) => exitAnchor(d).y)
-          .attr('r', 0)
-          .remove()
+        (exit) => {
+          const leaving = exit
+            .transition(t)
+            .delay((d, i) => staggerDelay(spec, d, i))
+            .style('opacity', 0)
+            .attr('cx', (d) => exitAnchor(d).x)
+            .attr('cy', (d) => exitAnchor(d).y);
+          if (blendMotion) leaving.attrTween('r', blendMotion.parentRadiusTween);
+          else leaving.attr('r', 0);
+          return leaving.remove();
+        }
       );
 
     // Persist per-step anchor positions for the next transition.
@@ -123,6 +158,196 @@ class PointChart extends BaseChart {
       .style('opacity', 0)
       .remove();
   }
+}
+
+/** A deterministic, decorative layer for summary/detail movement. */
+function drawPointBlend({
+  chart, rows, state, key, radius, color, enterAnchor, exitAnchor,
+  chartPosition, crispLayer, blendMotion, movesPoints, transition, d3
+}) {
+  const enabled = state.effect === 'blend';
+  crispLayer.interrupt().style('opacity', 1);
+  const layer = chart.g.selectAll('g.sl-point-blend-layer')
+    .data(enabled ? [null] : [])
+    .join(
+      (enter) => enter.append('g')
+        .attr('class', 'sl-point-blend-layer')
+        .style('pointer-events', 'none')
+        .style('opacity', 0)
+        .raise(),
+      (update) => update,
+      (exit) => exit.remove()
+    );
+  if (!enabled) return;
+
+  const filterId = ensurePointBlendFilter(chart.scene, d3);
+  const groups = Array.from(
+    d3.group(rows, (row) => parentKey(row, state.parentField)),
+    ([parent, values]) => ({ parent, values })
+  );
+  const group = layer.selectAll('g.sl-point-blend-group')
+    .data(groups, (entry) => entry.parent)
+    .join(
+      (enter) => enter.append('g').attr('class', 'sl-point-blend-group'),
+      (update) => update,
+      (exit) => exit.remove()
+    )
+    .attr('filter', `url(#${filterId})`);
+
+  group.each(function(entry) {
+    d3.select(this).selectAll('circle.sl-point-blend')
+      .data(entry.values, (row, index) => pointStoredKey(row, index, key))
+      .join(
+        (enter) => enter.append('circle')
+          .attr('class', 'sl-point-blend')
+          .attr('data-blend-role', state.detailMode === 'aggregate' ? 'summary' : 'child')
+          .attr('cx', (row) => enterAnchor(row).x)
+          .attr('cy', (row) => enterAnchor(row).y)
+          .attr('r', (row) => Math.max(4, radius(row)))
+          .attr('fill', (row) => color(row))
+          .transition(transition)
+          .attr('cx', (row) => chartPosition(row).x)
+          .attr('cy', (row) => chartPosition(row).y),
+        (update) => update
+          .attr('data-blend-role', state.detailMode === 'aggregate' ? 'summary' : 'child')
+          .transition(transition)
+          .attr('cx', (row) => chartPosition(row).x)
+          .attr('cy', (row) => chartPosition(row).y)
+          .attr('r', (row) => Math.max(4, radius(row)))
+          .attr('fill', (row) => color(row)),
+        (exit) => {
+          const leaving = exit
+            .attr('data-blend-role', 'parent')
+            .transition(transition)
+            .attr('cx', (row) => exitAnchor(row).x)
+            .attr('cy', (row) => exitAnchor(row).y);
+          if (blendMotion) leaving.attrTween('r', blendMotion.parentRadiusTween);
+          else leaving.attr('r', 0);
+          return leaving.remove();
+        }
+      );
+  });
+
+  layer.interrupt().style('opacity', 0);
+  if (movesPoints) {
+    layer.transition(transition)
+      .styleTween('opacity', () => (progress) =>
+        String(pointBlendAmount(progress)));
+    crispLayer.transition(transition)
+      .styleTween('opacity', () => (progress) =>
+        String(1 - pointBlendAmount(progress)));
+  }
+}
+
+function pointBlendAmount(progress) {
+  return Math.min(1, Math.sin(Math.PI * progress) * 1.45);
+}
+
+const POINT_BLEND_BLUR = 5;
+const POINT_BLEND_REACH = POINT_BLEND_BLUR * 2;
+
+/**
+ * Keep a summary circle only while at least one of its children is close
+ * enough to share the gooey silhouette. The same distance rule runs backward
+ * for merge, so the summary starts growing only after the first child connects.
+ */
+function pointBlendMotion({
+  rows, state, radius, enterAnchor, exitAnchor, chartPosition
+}) {
+  if (state.effect !== 'blend' || state.detailMode !== 'detail' || state.view) return null;
+
+  const childrenByParent = new Map();
+  rows.forEach((row) => {
+    const parent = parentKey(row, state.parentField);
+    const children = childrenByParent.get(parent) || [];
+    children.push({
+      start: enterAnchor(row),
+      end: chartPosition(row),
+      radius: Math.max(4, radius(row))
+    });
+    childrenByParent.set(parent, children);
+  });
+
+  return {
+    parentRadiusTween: function parentRadiusTween(row) {
+      const startRadius = Math.max(0, Number(this.getAttribute('r')) || 0);
+      const parentStart = {
+        x: Number(this.getAttribute('cx')) || 0,
+        y: Number(this.getAttribute('cy')) || 0
+      };
+      const parentEnd = exitAnchor(row);
+      const children = childrenByParent.get(parentKey(row, state.parentField)) || [];
+      return (progress) => String(pointBlendParentRadius({
+        progress, startRadius, parentStart, parentEnd, children
+      }));
+    }
+  };
+}
+
+function pointBlendParentRadius({
+  progress, startRadius, parentStart, parentEnd, children
+}) {
+  const parent = interpolatePoint(parentStart, parentEnd, progress);
+  const connectionTotal = children.reduce((total, child) => {
+    const point = interpolatePoint(child.start, child.end, progress);
+    const distance = Math.hypot(point.x - parent.x, point.y - parent.y);
+    // Once the child is farther away than its own visible edge plus the
+    // filter's bridge reach, a zero-radius parent can no longer connect it.
+    // The parent must already be gone at that point.
+    const disconnectAt = child.radius + POINT_BLEND_REACH;
+    const shrinkFrom = disconnectAt * 0.7;
+    const strength = 1 - smoothStep(shrinkFrom, disconnectAt, distance);
+    return total + strength;
+  }, 0);
+  // Every child contributes an equal share of the final parent radius. A group
+  // of ten therefore grows through 10%, 20%, 30%, ... as children connect.
+  // Partial connections keep those steps smooth instead of making the radius
+  // jump. Reversing the same calculation makes split shrink identically.
+  const connectedShare = children.length ? connectionTotal / children.length : 0;
+
+  // A child can finish unusually close to its parent's centroid. The endpoint
+  // still belongs to detail, so the obsolete summary must be fully gone.
+  const endpoint = 1 - smoothStep(0.82, 1, progress);
+  return startRadius * Math.min(connectedShare, endpoint);
+}
+
+function interpolatePoint(from, to, progress) {
+  return {
+    x: from.x + (to.x - from.x) * progress,
+    y: from.y + (to.y - from.y) * progress
+  };
+}
+
+function smoothStep(from, to, value) {
+  const progress = Math.max(0, Math.min(1, (value - from) / Math.max(Number.EPSILON, to - from)));
+  return progress * progress * (3 - 2 * progress);
+}
+
+function ensurePointBlendFilter(scene, d3) {
+  const id = `sl-point-blend-${scene.clipIdentity}`;
+  const defs = scene.svg.selectAll('defs.sl-point-blend-defs')
+    .data([null])
+    .join('defs')
+    .attr('class', 'sl-point-blend-defs');
+  let filter = defs.select(`#${id}`);
+  if (!filter.empty()) return id;
+
+  filter = defs.append('filter')
+    .attr('id', id)
+    .attr('x', '-60%')
+    .attr('y', '-60%')
+    .attr('width', '220%')
+    .attr('height', '220%')
+    .attr('color-interpolation-filters', 'sRGB');
+  filter.append('feGaussianBlur')
+    .attr('in', 'SourceGraphic')
+    .attr('stdDeviation', 5)
+    .attr('result', 'blur');
+  filter.append('feColorMatrix')
+    .attr('in', 'blur')
+    .attr('mode', 'matrix')
+    .attr('values', '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8');
+  return id;
 }
 
 export function pointSelectionOpacity(row, spec = {}, dimOpacity = 0.22) {

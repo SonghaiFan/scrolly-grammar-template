@@ -95,8 +95,9 @@ a new chart state and leaves the previous state untouched.
 | `.key(fieldOrFields)` | Tell VisDelta how to match the same item | `key` |
 | `.tooltip(items)` | Declare tooltip fields | `encoding.tooltip` |
 | `.sort(field, order?)` | Append a sort transform | `transform[]` |
-| `.where(selector)` | Keep matching rows or a matching range | selection or filter state |
-| `.highlight(selector, options?)` | De-emphasize nonmatching bars | selection state |
+| `.where(selector)` | Keep matching rows and remove the others | filter transform |
+| `.focus(selector)` | Keep every row and fit the visible range to a subset | selection state |
+| `.highlight(selector, options?)` | De-emphasize nonmatching marks | selection state |
 | `.axis(config)` | Configure scales, axes, orientation, or transition order | axis state |
 | `.transition(timing)` | Configure duration, easing, and stagger | transition metadata |
 | `.toSpec()` | Return the plain JavaScript object behind the chart state | `ViewSpec` |
@@ -144,8 +145,12 @@ built-in chart type using cached frame evaluation.
 ### `line()`
 
 Trends and series. X defaults to nominal and y to quantitative. Chart-specific
-methods are `.curve()`, `.strokeWidth()`, `.pointSize()`, `.flip()`,
+methods are `.curve()`, `.connect()`, `.strokeWidth()`, `.pointSize()`, `.flip()`,
 `.breakdown(series)`, and `.rollup()`.
+
+`.curve()` accepts the exact D3 curve export names, such as `"curveLinear"`,
+`"curveMonotoneX"`, `"curveNatural"`, and `"curveStep"`. It does not accept
+VisDelta-specific aliases.
 
 ### `point()`
 
@@ -235,6 +240,7 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | `visdelta/core` | DOM-free normalization and semantic delta |
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
+| `visdelta/line` | Focused immutable line authoring |
 | `visdelta/transition` | Pair initialization, seek, play, resize, and destroy |
 | `visdelta/plugins` | Chart-module building blocks and plain-spec registration |
 | `visdelta/composition` | Adapter contract used by external control packages |
@@ -300,7 +306,7 @@ VisDelta target not found: selector
 
 - Transitions between different chart types are not supported. Bar-to-line is outside the current contract.
 - Bar and point use cached frame evaluation. Line, unit, and unspecified plugins reconstruct when seeking.
-- Focused entries do not yet exist for line and unit authoring.
+- A focused entry does not yet exist for unit authoring.
 - Arquero is optional only when no transform pipeline is declared.
 - The composition adapter is deliberately lower level and is not a beginner API.
 - CSS selectors are not isolated through Shadow DOM.

@@ -1,10 +1,11 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
+import { focusedScale, viewSelection } from '../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey } from './index.js';
 import { specState } from '../../../spec-meta.js';
 
 export function createStackedBarRenderer(deps, kit) {
-  const { bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, position, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, themeValue, updateGrid } = deps;
 
   return function renderStackedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -18,6 +19,7 @@ export function createStackedBarRenderer(deps, kit) {
     const valueField = measureChannel?.field;
     const state = specState(spec);
     const stateSegments = state.sceneState?.detail?.segments || state.detail?.segments;
+    const selection = viewSelection(spec);
     const categories = channelDomain(rows, categoryChannel);
     const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
     const color = colorScale(domainRows, enc.color, d3);
@@ -26,8 +28,10 @@ export function createStackedBarRenderer(deps, kit) {
     const stackBaseEnter = kit.baselineEnterPlan(chart, 'stack-base');
     const stackBaseExit = kit.baselineExitPlan(chart, 'stack-base');
 
-    const categoryScale = d3.scaleBand().domain(categories)
-      .range(horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth]).padding(0.24);
+    const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
+    const categoryScale = selection?.mode === 'focus'
+      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
+      : d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
     const stackedRows = stackBarRows(rows, categoryField, segmentField, valueField, segments);
     const domainStackedRows = stackBarRows(domainRows, categoryField, segmentField, valueField, segments);
     const stackDomain = stackedValueDomain(domainStackedRows, measureChannel, d3);

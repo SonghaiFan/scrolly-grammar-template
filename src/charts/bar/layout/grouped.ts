@@ -1,12 +1,13 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
+import { focusedScale, viewSelection } from '../../focus.js';
 import {
   barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey
 } from './index.js';
 import { specState } from '../../../spec-meta.js';
 
 export function createGroupedBarRenderer(deps, kit) {
-  const { bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, quantitativeDomain, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, quantitativeDomain, themeValue, updateGrid } = deps;
 
   return function renderGroupedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -20,6 +21,7 @@ export function createGroupedBarRenderer(deps, kit) {
     const valueField = measureChannel?.field;
     const state = specState(spec);
     const stateSegments = state.sceneState?.detail?.segments || state.detail?.segments;
+    const selection = viewSelection(spec);
     const categories = channelDomain(rows, categoryChannel);
     const segments = channelDomain(rows, { field: segmentField, domain: stateSegments });
     const color = colorScale(domainRows, enc.color, d3);
@@ -28,8 +30,10 @@ export function createGroupedBarRenderer(deps, kit) {
     const zeroBaselineEnter = kit.baselineEnterPlan(chart, 'zero-baseline');
     const zeroBaselineExit = kit.baselineExitPlan(chart, 'zero-baseline');
 
-    const categoryScale = d3.scaleBand().domain(categories)
-      .range(horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth]).padding(0.24);
+    const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
+    const categoryScale = selection?.mode === 'focus'
+      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
+      : d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
     const segmentScale = d3.scaleBand().domain(segments)
       .range([0, categoryScale.bandwidth()]).padding(0.08);
     const measureScale = d3.scaleLinear()

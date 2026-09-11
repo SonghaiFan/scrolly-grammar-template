@@ -1,9 +1,10 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
+import { focusedScale, viewSelection } from '../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding } from './index.js';
 
 export function createSimpleBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, position, quantitativeDomain, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, quantitativeDomain, themeValue, updateGrid } = deps;
 
   return function renderSimpleBar(chart, rows, spec, tooltip, d3) {
     const enc = spec.encoding || {};
@@ -15,10 +16,14 @@ export function createSimpleBarRenderer(deps, kit) {
     const categoryField = categoryChannel?.field;
     const valueField = measureChannel?.field;
     const key = barKeyAccessor(chart, spec, categoryField || valueField);
+    const selection = viewSelection(spec);
+    const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
 
-    const categoryScale = horizontal
-      ? d3.scaleBand().domain(channelDomain(rows, categoryChannel)).range([0, chart.innerHeight]).padding(0.22)
-      : bandOrLinear(rows, categoryChannel, [0, chart.innerWidth], d3);
+    const categoryScale = selection?.mode === 'focus'
+      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
+      : horizontal
+        ? d3.scaleBand().domain(channelDomain(rows, categoryChannel)).range(categoryRange).padding(0.22)
+        : bandOrLinear(rows, categoryChannel, categoryRange, d3);
     const measureScale = d3.scaleLinear()
       .domain(quantitativeDomain(domainRows, measureChannel, 0))
       .range(horizontal ? [0, chart.innerWidth] : [chart.innerHeight, 0]).nice();

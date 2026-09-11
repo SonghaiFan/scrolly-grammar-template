@@ -14,7 +14,7 @@ for (const sample of scenarios) {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`/docs/.vitepress/dist/transition-lab.html#${sample.id}`);
     await ready(page);
-    await expect(page.locator('#scenario option')).toHaveCount(12);
+    await expect(page.locator('#scenario option')).toHaveCount(13);
     const editor = page.getByRole('textbox', { name: 'Editable VisDelta code' });
     await expect(editor).toHaveValue(sample.code);
     const start = await snapshot(page);
@@ -57,6 +57,33 @@ test('invalid code and invalid pairs preserve preview; reset recovers', async ({
   await page.locator('#reset').click();
   await ready(page);
   await expect(page.getByRole('alert')).toBeHidden();
+});
+
+test('bar focus moves the category view without filtering bars', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#focus');
+  await ready(page);
+  const start = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
+    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
+  await page.locator('#end').click();
+  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
+  const focused = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
+    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
+  expect(focused).not.toEqual(start);
+  const visibility = await page.locator('#chart').evaluate(chart => {
+    const clip = chart.querySelector('clipPath rect');
+    const width = Number(clip?.getAttribute('width'));
+    const bars = [...chart.querySelectorAll('rect.sl-bar')].map(node => ({
+      key: node.getAttribute('data-key'),
+      x: Number(node.getAttribute('x')),
+      width: Number(node.getAttribute('width'))
+    }));
+    return {
+      all: bars.map(bar => bar.key),
+      inside: bars.filter(bar => bar.x + bar.width > 0 && bar.x < width).map(bar => bar.key)
+    };
+  });
+  expect(visibility.all).toHaveLength(3);
+  expect(visibility.inside).toHaveLength(2);
 });
 
 test('manual run, drafts, switching and playback controls', async ({ page }) => {

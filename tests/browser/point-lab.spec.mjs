@@ -15,7 +15,7 @@ for (const sample of pointScenarios) {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`/docs/.vitepress/dist/point-lab.html#${sample.id}`);
     await ready(page);
-    await expect(page.locator('#scenario option')).toHaveCount(12);
+    await expect(page.locator('#scenario option')).toHaveCount(13);
     const editor = page.getByRole('textbox', { name: 'Editable VisDelta code' });
     await expect(editor).toHaveValue(sample.code);
 
@@ -68,6 +68,18 @@ test('point radius, highlight, and cached node identity are real renderer behavi
   const radii = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
     nodes.map(node => Number(node.getAttribute('r'))));
   expect(new Set(radii.map(value => value.toFixed(3))).size).toBeGreaterThan(1);
+});
+
+test('point focus moves the view without filtering points', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#focus');
+  await ready(page);
+  const start = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
+  await page.locator('#end').click();
+  await expect(page.locator('#chart circle.sl-point')).toHaveCount(6);
+  const focused = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
+  expect(focused).not.toEqual(start);
 });
 
 test('point flip changes the authored first axis before the second axis', async ({ page }) => {
@@ -155,6 +167,151 @@ test('point rollup and breakdown are the same transition in reverse', async ({ p
     });
   });
   for (const frame of frames) expect(frame.merge).toEqual(frame.split);
+});
+
+test('point detail sets the view before summary points spread', async ({ page }) => {
+  await page.goto('/tests/fixtures/runtime.html');
+  const frames = await page.evaluate(async () => {
+    const [{ point }, { transition }] = await Promise.all([
+      import('/dist/point.js'),
+      import('/dist/transition-entry.js')
+    ]);
+    document.body.innerHTML = '<div id="chart"></div>';
+    const rows = [
+      { id: 'A', region: 'North', x: 10, y: 20 },
+      { id: 'B', region: 'North', x: 20, y: 30 },
+      { id: 'C', region: 'South', x: 70, y: 80 },
+      { id: 'D', region: 'South', x: 90, y: 60 }
+    ];
+    const detail = point(rows).x('x', { title: 'X' }).y('y', { title: 'Y' })
+      .key('id').color('region');
+    const summary = detail.rollup('region', { key: 'region' });
+    const change = await transition(summary, detail, {
+      target: '#chart', d3, aq, height: 360
+    });
+    const snapshot = () => ({
+      points: [...document.querySelectorAll('#chart circle.sl-point')]
+        .filter(node => Number(node.style.opacity || 1) > 0)
+        .map(node => node.getAttribute('data-key'))
+        .sort(),
+      axes: [...document.querySelectorAll('#chart .sl-x-axis .tick, #chart .sl-y-axis .tick')]
+        .map(node => [node.textContent, node.getAttribute('transform')])
+    });
+    change.progress(0);
+    const start = snapshot();
+    change.progress(0.49);
+    const viewSet = snapshot();
+    change.progress(1);
+    const end = snapshot();
+    return { start, viewSet, end };
+  });
+
+  expect(frames.start.points).toHaveLength(2);
+  expect(frames.viewSet.points).toHaveLength(2);
+  expect(frames.end.points).toHaveLength(4);
+  expect(frames.viewSet.axes).not.toEqual(frames.start.axes);
+  expect(frames.start.axes).not.toEqual(frames.end.axes);
+});
+
+test('point lab Blend is deterministic decoration and Clean removes it', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#breakdown');
+  await ready(page);
+  const effect = page.locator('#point-effect');
+  await expect(effect).toHaveValue('blend');
+
+  await page.locator('#progress').fill('0.75');
+  const layer = page.locator('#chart .sl-point-blend-layer');
+  await expect(layer).toHaveCount(1);
+  const first = await layer.evaluate(node => ({
+    opacity: Number(node.style.opacity),
+    circles: [...node.querySelectorAll('circle')].map(circle => [
+      circle.getAttribute('cx'), circle.getAttribute('cy'), circle.getAttribute('r')
+    ])
+  }));
+  expect(first.opacity).toBeGreaterThan(0.5);
+  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '0');
+  // Six entering detail circles plus two exiting summary circles share the
+  // temporary layer while the same cached frame remains reversible.
+  expect(first.circles).toHaveLength(8);
+
+  await page.locator('#progress').fill('0.2');
+  await page.locator('#progress').fill('0.75');
+  expect(await layer.evaluate(node => ({
+    opacity: Number(node.style.opacity),
+    circles: [...node.querySelectorAll('circle')].map(circle => [
+      circle.getAttribute('cx'), circle.getAttribute('cy'), circle.getAttribute('r')
+    ])
+  }))).toEqual(first);
+
+  await effect.selectOption('clean');
+  await ready(page);
+  await page.locator('#progress').fill('0.75');
+  await expect(page.locator('#chart .sl-point-blend-layer')).toHaveCount(0);
+  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '1');
+});
+
+test('point Blend parent exists only while a child is close enough to connect', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#breakdown');
+  await ready(page);
+
+  const connectionFrames = async (progressValues) => {
+    const frames = [];
+    for (const progress of progressValues) {
+      await page.locator('#progress').fill(String(progress));
+      frames.push(await page.locator('#chart .sl-point-blend-group').evaluateAll(groups =>
+        groups.map(group => {
+          const parent = group.querySelector('[data-blend-role="parent"]');
+          const children = [...group.querySelectorAll('[data-blend-role="child"]')];
+          if (!parent) return null;
+          const px = Number(parent.getAttribute('cx'));
+          const py = Number(parent.getAttribute('cy'));
+          const strengths = children.map(child => {
+            const distance = Math.hypot(
+              Number(child.getAttribute('cx')) - px,
+              Number(child.getAttribute('cy')) - py
+            );
+            const disconnectAt = Number(child.getAttribute('r')) + 10;
+            const shrinkFrom = disconnectAt * 0.7;
+            const t = Math.max(0, Math.min(1,
+              (distance - shrinkFrom) / (disconnectAt - shrinkFrom)
+            ));
+            return 1 - t * t * (3 - 2 * t);
+          });
+          return {
+            radius: Number(parent.getAttribute('r')),
+            connectedShare: strengths.reduce((sum, strength) => sum + strength, 0) / children.length,
+            childIsClose: strengths.some(strength => strength > 0)
+          };
+        }).filter(Boolean)
+      ));
+    }
+    return frames;
+  };
+
+  const splitFrames = await connectionFrames([0.66, 0.72, 0.78, 0.84, 0.9, 0.96]);
+  for (const frame of splitFrames) {
+    for (const parent of frame) {
+      expect(parent.radius <= 0.01 || parent.childIsClose).toBe(true);
+    }
+  }
+  expect(splitFrames.some(frame => frame.some(parent => parent.radius > 1))).toBe(true);
+  expect(splitFrames.some(frame => frame.some(parent => parent.radius <= 0.01))).toBe(true);
+  // Before the endpoint guard is needed, each of the three children owns one
+  // third of the authored 24px final parent radius.
+  for (const frame of splitFrames.slice(0, 3)) {
+    for (const parent of frame) {
+      expect(parent.radius / 24).toBeCloseTo(parent.connectedShare, 4);
+    }
+  }
+
+  await page.locator('#scenario').selectOption('rollup');
+  await ready(page);
+  const mergeFrames = await connectionFrames([0.04, 0.1, 0.16, 0.22, 0.28, 0.34]);
+  for (const frame of mergeFrames) {
+    for (const parent of frame) {
+      expect(parent.radius <= 0.01 || parent.childIsClose).toBe(true);
+    }
+  }
 });
 
 test('point lab fits a narrow viewport and keeps progress after resize', async ({ page }) => {

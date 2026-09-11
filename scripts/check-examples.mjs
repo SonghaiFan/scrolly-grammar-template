@@ -10,10 +10,11 @@ const html = await readFile(join(exampleDir, 'index.html'), 'utf8');
 await assertLocalAssets(html, exampleDir);
 assertPublicImports(html);
 const labs = await discoverLabs(examplesDir);
-assertLab(labs.get('bar'), 'bar', 12);
-assertLab(labs.get('point'), 'point', 12);
+assertLab(labs.get('bar'), 'bar', 13);
+assertLab(labs.get('point'), 'point', 13);
+assertLab(labs.get('line'), 'line', 16);
 
-console.log('Bar and point example invariants ok.');
+console.log('Bar, point, and line example invariants ok.');
 
 async function discoverLabs(directory) {
   const labs = new Map();
