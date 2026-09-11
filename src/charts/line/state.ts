@@ -3,6 +3,7 @@ import { matchesFilter, normalizeFilter } from '../../data/filter.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { specState, withSpecMeta } from '../../spec-meta.js';
 import { focusedScale } from '../focus.js';
+import { connectedStretches } from '../continuity.js';
 import { linePointKeyAccessor } from './keys.js';
 
 interface LineState {
@@ -67,7 +68,7 @@ export function canonicalLineTransitionPair<S extends ViewSpec>(
 }
 
 export interface LineObservationChange {
-  mode: 'add' | 'remove';
+  mode: 'add' | 'remove' | 'add-and-remove';
   addedKeys: string[];
   removedKeys: string[];
 }
@@ -88,6 +89,9 @@ export function lineObservationChange(
   }
   if (removedKeys.length && !addedKeys.length) {
     return { mode: 'remove', addedKeys: [], removedKeys };
+  }
+  if (addedKeys.length && removedKeys.length) {
+    return { mode: 'add-and-remove', addedKeys, removedKeys };
   }
   return null;
 }
@@ -246,7 +250,7 @@ export function lineSeries(rows: Record<string, unknown>[], seriesField: string 
  * connect across removed observations. The first run keeps the series key so
  * it updates the existing path; later runs enter as additional path pieces.
  */
-export function connectedLineSeries(
+export function connectedLineStretches(
   rows: Record<string, unknown>[],
   lineageRows: Record<string, unknown>[],
   seriesField: string | null,
@@ -256,39 +260,29 @@ export function connectedLineSeries(
 ): LineSeries[] {
   const series = lineSeries(rows, seriesField);
   const isRowFilter = Boolean(selection?.filter) && selection?.mode !== 'focus' && selection?.mode !== 'highlight';
-  if (connect === 'across' || !isRowFilter || rows.length === lineageRows.length) return series;
-
   const lineageBySeries = new Map(
     lineSeries(lineageRows, seriesField).map((entry) => [entry.key, entry.rows])
   );
 
   return series.flatMap((entry) => {
-    const lineage = lineageBySeries.get(entry.key) || [];
-    const lineageIndex = new Map(
-      lineage.map((row, index) => [String(pointKey(row, index)), index])
+    const preserveLineage = connect === 'adjacent' && isRowFilter && rows.length !== lineageRows.length;
+    const lineage = preserveLineage
+      ? lineageBySeries.get(entry.key) || entry.rows
+      : entry.rows;
+    const stretches = connectedStretches(
+      entry.rows,
+      lineage,
+      (row, index) => String(pointKey(row, index))
     );
-    const runs: Record<string, unknown>[][] = [];
-    let current: Record<string, unknown>[] = [];
-    let previousIndex: number | null = null;
 
-    entry.rows.forEach((row, index) => {
-      const nextIndex = lineageIndex.get(String(pointKey(row, index)));
-      const adjacent = previousIndex == null || nextIndex == null || nextIndex === previousIndex + 1;
-      if (!adjacent && current.length) {
-        runs.push(current);
-        current = [];
-      }
-      current.push(row);
-      previousIndex = nextIndex ?? null;
-    });
-    if (current.length) runs.push(current);
-
-    return runs.map((run, index) => ({
+    return stretches.map((stretch, index) => ({
       // A filtered run is a new visible piece of the original path. Keeping it
       // separate lets the intact source path fade while the honest gaps appear,
       // instead of folding the source geometry into the first surviving run.
-      key: `${entry.key}::filtered-run:${index}:${String(pointKey(run[0], 0))}`,
-      rows: run
+      key: preserveLineage
+        ? `${entry.key}::filtered-stretch:${index}:${String(pointKey(stretch[0], 0))}`
+        : entry.key,
+      rows: stretch
     }));
   });
 }

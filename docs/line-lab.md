@@ -21,15 +21,18 @@ The line-style example also tests path matching. Changing from `curveLinear` to
 the two visible paths before moving them, so intermediate frames stay continuous
 instead of pairing unrelated numbers from the two `d` strings.
 
-The time-window example demonstrates a different plan. VisDelta matches the
-observations by `.key()`, moves the shared points left, and keeps the leaving and
-entering edge points outside the clipped plot. The path therefore expresses a
-window shift rather than pairing unrelated SVG path commands by array index.
+The time-window example combines the same Add and Remove behavior. VisDelta
+matches observations by `.key()`: the leaving point disappears before its line
+retracts, shared observations move with the axis, the entering line reaches its
+new position, and then the entering point appears. The same keyed observation
+matcher handles both changes; there is no separate time-window transition.
 
 Filter and focus are deliberately separate. Filter removes observations; when
 it removes observations from the middle, the default `connect("adjacent")`
 keeps a gap. Focus keeps all observations and the full line, changes the x view,
-and clips what falls outside it.
+and clips what falls outside it. Line and Area share the same connected-stretch
+rule: a stretch needs at least two observations. An isolated Line observation
+keeps its point mark but does not create a line path.
 
 <SyntaxPlayground mode="line-lab" initial="x" />
 

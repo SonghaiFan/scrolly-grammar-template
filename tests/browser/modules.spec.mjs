@@ -31,7 +31,7 @@ test('selected bar transition loads no Story runtime or unrelated chart types', 
   await page.locator('#progress').fill('0.37');
   await expect(page.locator('#value')).toHaveText('0.37');
   expect(modules).toContain('/dist/charts/bar/plugin.js');
-  expect(modules.filter(path => /\/charts\/(line|point|unit)\//.test(path))).toEqual([]);
+  expect(modules.filter(path => /\/charts\/(area|line|point|unit)\//.test(path))).toEqual([]);
   expect(modules.filter(path => /\/(visdelta|story|seq|manifest)\.js$/.test(path))).toEqual([]);
   expect(modules.filter(path => /\/(shell|navigation)\.js$|\/scroll-drivers\//.test(path))).toEqual([]);
 });

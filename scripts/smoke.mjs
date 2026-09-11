@@ -8,7 +8,9 @@ import * as sourceApi from '../dist/index.js';
 import * as distApi from '../dist/visdelta.esm.js';
 
 const publicApi = [
+  'D3_AREA_CURVE_NAMES',
   'D3_CURVE_NAMES',
+  'area',
   'availableChartTypes',
   'bar',
   'delta',
@@ -26,7 +28,7 @@ const publicApi = [
 const registry = createChartTypeRegistry();
 registerChartModules(registry, chartModules, {});
 const compilerKeys = Object.keys(createSpecCompilerRegistry(chartModules)).sort();
-const expectedTypes = ['bar', 'line', 'point', 'unit'];
+const expectedTypes = ['area', 'bar', 'line', 'point', 'unit'];
 
 assertSame(Object.keys(sourceApi).sort(), publicApi.sort(), 'source public API');
 assertSame(Object.keys(distApi).sort(), publicApi.sort(), 'dist public API');
@@ -40,6 +42,14 @@ const first = sourceApi.bar([{ category: 'A', value: 1, other: 2 }])
 const second = first.y('other');
 if (!sourceApi.delta(first, second).has('encoding.y')) {
   throw new Error('Core delta smoke check did not detect the y encoding change.');
+}
+
+const areaDetail = sourceApi.area([
+  { period: 'Q1', region: 'North', value: 2 },
+  { period: 'Q1', region: 'South', value: 3 }
+]).x('period').y('value').breakdown('region');
+if (areaDetail.toSpec().meta.state.sceneState.detail.mode !== 'stacked') {
+  throw new Error('Area smoke check did not compile stacked detail.');
 }
 
 console.log(JSON.stringify({ types: registry.types(), compilerKeys }, null, 2));

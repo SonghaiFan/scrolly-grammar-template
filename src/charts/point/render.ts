@@ -166,14 +166,14 @@ function drawPointBlend({
   chartPosition, crispLayer, blendMotion, movesPoints, transition, d3
 }) {
   const enabled = state.effect === 'blend';
-  crispLayer.interrupt().style('opacity', 1);
+  crispLayer.interrupt().style('visibility', 'visible');
   const layer = chart.g.selectAll('g.sl-point-blend-layer')
     .data(enabled ? [null] : [])
     .join(
       (enter) => enter.append('g')
         .attr('class', 'sl-point-blend-layer')
         .style('pointer-events', 'none')
-        .style('opacity', 0)
+        .style('visibility', 'hidden')
         .raise(),
       (update) => update,
       (exit) => exit.remove()
@@ -228,19 +228,23 @@ function drawPointBlend({
       );
   });
 
-  layer.interrupt().style('opacity', 0);
+  layer.interrupt().style('visibility', 'hidden');
   if (movesPoints) {
     layer.transition(transition)
-      .styleTween('opacity', () => (progress) =>
-        String(pointBlendAmount(progress)));
+      .styleTween('visibility', () => (progress) =>
+        pointBlendVisibility(progress));
     crispLayer.transition(transition)
-      .styleTween('opacity', () => (progress) =>
-        String(1 - pointBlendAmount(progress)));
+      .styleTween('visibility', () => (progress) =>
+        pointCrispVisibility(progress));
   }
 }
 
-function pointBlendAmount(progress) {
-  return Math.min(1, Math.sin(Math.PI * progress) * 1.45);
+function pointBlendVisibility(progress) {
+  return progress > 0 && progress < 1 ? 'visible' : 'hidden';
+}
+
+function pointCrispVisibility(progress) {
+  return progress > 0 && progress < 1 ? 'hidden' : 'visible';
 }
 
 const POINT_BLEND_BLUR = 5;

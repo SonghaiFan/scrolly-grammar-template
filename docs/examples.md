@@ -49,6 +49,15 @@ Continue with the [Line transition lab](/line-lab) for the sixteen editable
 Line scenarios, including the staged cut → move → connect split and its exact
 reverse merge.
 
+## Area grammar
+
+Edit the upper boundary of an ordinary area.
+
+<SyntaxPlayground initial="area" compact />
+
+Continue with the [Area transition lab](/area-lab) for ordinary and stacked
+areas, explicit baselines, and reversible total/stack changes.
+
 ## Point grammar
 
 Edit quantitative channels, radius, color, or swap the axes.

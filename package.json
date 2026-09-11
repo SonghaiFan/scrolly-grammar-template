@@ -38,6 +38,10 @@
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
     },
+    "./area": {
+      "types": "./dist/area.d.ts",
+      "import": "./dist/area.js"
+    },
     "./bar": {
       "types": "./dist/bar.d.ts",
       "import": "./dist/bar.js"

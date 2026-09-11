@@ -3,8 +3,8 @@ import { BaseChart } from '../base.js';
 import { matchesFilter } from '../../data/filter.js';
 import { d3Curve } from './curve.js';
 import { linePointKeyAccessor, lineSeriesKey } from './keys.js';
-import { findLineWindowShift, matchLinePathFrames } from './path.js';
-import { connectedLineSeries, selectedLineXScale, lineRowsAtTotal, lineState } from './state.js';
+import { matchLinePathFrames } from './path.js';
+import { connectedLineStretches, selectedLineXScale, lineRowsAtTotal, lineState } from './state.js';
 
 export function createLineRenderer(deps) {
   return new LineChart(deps).renderer();
@@ -27,16 +27,19 @@ class LineChart extends BaseChart {
     const enc = spec.encoding || {};
     const state = lineState(spec, enc);
     const observation = chart.transitionPlan?.observation;
-    const addsObservations = observation?.mode === 'add';
+    const addedKeys = new Set((observation?.addedKeys || []).map(String));
+    const removedKeys = new Set((observation?.removedKeys || []).map(String));
+    const addsObservations = addedKeys.size > 0;
+    const addsAndRemoves = addsObservations && removedKeys.size > 0;
     const totalDuration = Number(chart.transitionPlan?.timing?.duration) || 900;
-    const lineDuration = addsObservations ? Math.round(totalDuration * 0.7) : totalDuration;
-    const pointDuration = Math.max(1, totalDuration - lineDuration);
+    const pointStart = addsObservations ? Math.round(totalDuration * 0.7) : totalDuration;
+    const lineDuration = addsObservations && !addsAndRemoves ? pointStart : totalDuration;
+    const pointDuration = Math.max(1, totalDuration - pointStart);
     // Geometry and axes move together first. New points use the remaining
     // time. Canonical reverse playback makes a removal do the exact opposite.
-    const t = addsObservations
+    const t = addsObservations && !addsAndRemoves
       ? chart.transition.base.duration(lineDuration)
       : chart.transition.base;
-    const addedKeys = new Set((observation?.addedKeys || []).map(String));
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
     const plottedRows = state.detailPosition === 'total'
       ? lineRowsAtTotal(rows, enc.x?.field, enc.y?.field, state.detailParentOp)
@@ -53,7 +56,7 @@ class LineChart extends BaseChart {
     const y = bandOrLinear(scaleRows, enc.y, [chart.innerHeight, 0], d3);
     const color = colorScale(domainRows, enc.color, d3);
     const key = linePointKeyAccessor(spec, enc.x?.field);
-    const series = connectedLineSeries(
+    const series = connectedLineStretches(
       plottedRows,
       lineageRows,
       state.seriesField,
@@ -90,17 +93,10 @@ class LineChart extends BaseChart {
       x: position(x, row[enc.x.field]),
       y: y(row[enc.y.field])
     }));
-    const windowShift = findLineWindowShift(previousPointFrame, targetPointFrame);
     const targetPoint = (row, index) => ({
       x: position(x, row[enc.x.field]),
       y: y(row[enc.y.field])
     });
-    const enteringPoint = (row, index) => {
-      const target = targetPoint(row, index);
-      return windowShift
-        ? { x: target.x - windowShift.dx, y: target.y }
-        : target;
-    };
     const pointRadius = Number.isFinite(Number(spec.pointSize))
       ? Number(spec.pointSize)
       : themeValue('--sl-line-point-size', 4.5);
@@ -192,8 +188,8 @@ class LineChart extends BaseChart {
           .append('circle')
           .attr('class', 'sl-line-point')
           .attr('data-key', (d, i) => key(d, i))
-          .attr('cx', (d, i) => enteringPoint(d, i).x)
-          .attr('cy', (d, i) => enteringPoint(d, i).y)
+          .attr('cx', (d, i) => targetPoint(d, i).x)
+          .attr('cy', (d, i) => targetPoint(d, i).y)
           .attr('r', 0)
           .attr('data-scroll-radius', pointRadius)
           .attr('fill', (d) => color(d))
@@ -202,8 +198,8 @@ class LineChart extends BaseChart {
           .call(bindTooltip, spec, tooltip)
           .transition(t)
           .delay((d, i) => addedKeys.has(String(key(d, i)))
-            ? lineDuration
-            : windowShift ? 0 : 260 + staggerDelay(spec, d, i))
+            ? pointStart
+            : 260 + staggerDelay(spec, d, i))
           .duration((d, i) => addedKeys.has(String(key(d, i))) ? pointDuration : lineDuration)
           .style('opacity', (d) => visiblePointOpacity(d))
           .attr('cx', (d, i) => targetPoint(d, i).x)
@@ -222,11 +218,13 @@ class LineChart extends BaseChart {
           .attr('r', visiblePointRadius),
         (exit) => exit
           .transition(t)
-          .style('opacity', 0)
-          .attr('cx', function() {
-            return windowShift
-              ? Number(this.getAttribute('cx')) + windowShift.dx
-              : Number(this.getAttribute('cx'));
+          .duration((d, i) => removedKeys.has(String(key(d, i)))
+            ? pointDuration
+            : lineDuration)
+          .style('opacity', function(d, i) {
+            return removedKeys.has(String(key(d, i)))
+              ? this.style.opacity || 1
+              : 0;
           })
           .attr('r', 0)
           .remove()

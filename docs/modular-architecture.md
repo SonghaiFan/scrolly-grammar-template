@@ -7,7 +7,7 @@ Core:        state -> difference -> transition -> frame
 Chart module: builder + compiler + drawing + chart-specific change rules
 ```
 
-The core does not import `bar`, `point`, `line`, or `unit`. A chart state carries
+The core does not import `area`, `bar`, `point`, `line`, or `unit`. A chart state carries
 a small reference to its own chart module, and `transition()` loads that module
 only when it is needed.
 
@@ -17,6 +17,7 @@ only when it is needed.
 | --- | --- |
 | `visdelta` | All chart builders, differences, transitions, and plugin registration |
 | `visdelta/core` | Chart-state normalization and `delta()` without drawing anything |
+| `visdelta/area` | The area-chart builder |
 | `visdelta/bar` | The bar-chart builder |
 | `visdelta/point` | The point-chart builder |
 | `visdelta/line` | The line-chart builder |
@@ -57,6 +58,7 @@ position, gesture, or route can drive the same transition.
 `npm run bundle:check` measures five useful bundles:
 
 - core difference calculation;
+- area authoring;
 - bar authoring;
 - point authoring;
 - line authoring;
@@ -69,7 +71,7 @@ when a chart uses a data transform.
 ## Current boundaries
 
 - The two endpoint states must use the same chart type.
-- Bar and point have cached frame data; line, unit, and custom chart types
+- Area, Bar, and Point have cached frame data; Line, Unit, and custom chart types
   currently rebuild a frame when progress changes.
 - `visdelta/composition` is an advanced integration entry, not the beginner API.
 - A chart package owns its builder. VisDelta does not invent chain methods from

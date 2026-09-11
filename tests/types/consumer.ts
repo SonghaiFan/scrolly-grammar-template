@@ -2,6 +2,7 @@ import { bar, delta } from 'visdelta';
 import { transition } from 'visdelta/transition';
 import { delta as selectedDelta } from 'visdelta/core';
 import { bar as selectedBar, barModule } from 'visdelta/bar';
+import { area as selectedArea, areaModule } from 'visdelta/area';
 import { point as selectedPoint, pointModule } from 'visdelta/point';
 import { line as selectedLine, lineModule } from 'visdelta/line';
 import {
@@ -23,8 +24,12 @@ selectedDelta(a, b).hasDelta('encoding.y');
 selectedBar().data([]).x('key');
 selectedPoint().data([]).x('x').y('y').radius(6);
 selectedLine().data([]).x('x').y('y').curve('curveMonotoneX').strokeWidth(3).pointSize(4);
+selectedArea().data([]).x('x').y('y').curve('curveMonotoneX');
 // @ts-expect-error VisDelta uses exact D3 curve names rather than aliases.
 selectedLine().curve('smooth');
+// @ts-expect-error D3 curveBundle is for Line and does not implement the Area interface.
+selectedArea().curve('curveBundle');
+registerChartModule(areaModule);
 registerChartModule(barModule);
 registerChartModule(pointModule);
 registerChartModule(lineModule);

@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bar, D3_CURVE_NAMES, line, point, unit } from '../dist/index.js';
-import { connectedLineSeries, lineRowsAtTotal } from '../dist/charts/line/state.js';
+import { area, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, point, unit } from '../dist/index.js';
+import { areaCells, areaLayers } from '../dist/charts/area/state.js';
+import { matchAreaFramePoints } from '../dist/charts/area/render.js';
+import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
 import { pointIntermediateSpecs } from '../dist/charts/point/state.js';
 
 test('documented filtering uses where, not a nonexistent filter method', () => {
-  for (const factory of [bar, line, point, unit]) {
+  for (const factory of [area, bar, line, point, unit]) {
     const declaration = factory([{ x: 'A', y: 2 }, { x: 'B', y: 3 }]).x('x').y('y');
     assert.equal(typeof declaration.filter, 'undefined');
     assert.doesNotThrow(() => declaration.where('datum.y >= 2').toSpec());
@@ -18,6 +20,7 @@ test('where changes rows while focus keeps rows and changes the view', () => {
     { id: 'B', category: 'B', x: 30, y: 40, region: 'South' }
   ];
   const charts = [
+    area(rows).x('category').y('y').key('id'),
     bar(rows).x('category').y('y').key('id'),
     point(rows).x('x').y('y').key('id'),
     line(rows).x('x', { type: 'quantitative' }).y('y').key('id')
@@ -34,6 +37,101 @@ test('where changes rows while focus keeps rows and changes the view', () => {
   const filteredBar = charts[0].where({ type: 'Hot days' }).toSpec();
   assert.equal(filteredBar.meta.object.key, 'id');
   assert.equal(filteredBar.encoding.y.title, 'Y');
+});
+
+test('area owns explicit baseline and diverging stacked boundaries', () => {
+  const rows = [
+    { period: 'Q1', region: 'North', value: 12 },
+    { period: 'Q1', region: 'South', value: -4 },
+    { period: 'Q2', region: 'North', value: 8 },
+    { period: 'Q2', region: 'South', value: 5 }
+  ];
+  const detailed = area(rows).x('period').y('value').key(['period', 'region'])
+    .baseline(10).breakdown('region', { color: ['#111111', '#eeeeee'] });
+  assert.equal(
+    area(rows).x('period').y('value').breakdown('region').toSpec().encoding.color,
+    undefined
+  );
+  const spec = detailed.toSpec();
+  assert.equal(spec.baseline, 10);
+  assert.equal(spec.meta.state.sceneState.detail.mode, 'stacked');
+  assert.deepEqual(spec.encoding.color.range, ['#111111', '#eeeeee']);
+
+  const layers = areaLayers(rows, 'period', 'value', {
+    selection: null, mode: 'stacked', seriesField: 'region', baseline: 10
+  });
+  assert.deepEqual(layers[0].points.map(point => [point.y0, point.y1]), [[10, 22], [10, 18]]);
+  assert.deepEqual(layers[1].points.map(point => [point.y0, point.y1]), [[10, 6], [18, 23]]);
+
+  const total = detailed.rollup().toSpec();
+  assert.deepEqual(total.transform.at(-1), {
+    aggregate: {
+      groupby: ['period'],
+      fields: [{ op: 'sum', field: 'value', as: 'value' }]
+    }
+  });
+  assert.equal(total.encoding.color, undefined);
+  assert.throws(() => detailed.baseline(Number.NaN), /finite number/);
+  assert.equal(detailed.connect('adjacent').toSpec().connect, 'adjacent');
+  assert.equal(detailed.connect('across').toSpec().connect, 'across');
+  assert.throws(() => detailed.connect('sometimes'), /adjacent.*across/);
+  assert.equal(D3_AREA_CURVE_NAMES.length, 19);
+  for (const curve of D3_AREA_CURVE_NAMES) {
+    assert.equal(area(rows).x('period').y('value').curve(curve).toSpec().curve, curve);
+  }
+  assert.throws(() => detailed.curve('curveBundle'), /supports areas/);
+  assert.throws(() => detailed.curve('smooth'), /supports areas/);
+});
+
+test('area filters keep separate connected stretches unless the author connects across', () => {
+  const lineage = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6']
+    .map((id, index) => ({ id, period: id, value: index + 1 }));
+  const rows = lineage.filter(row => !['Q3', 'Q4'].includes(row.id));
+  const selection = { filter: { field: 'id', oneOf: rows.map(row => row.id) } };
+  const state = {
+    selection, mode: 'single', seriesField: null, baseline: 0, connect: 'adjacent'
+  };
+  const key = row => row.id;
+  const layers = areaLayers(rows, 'period', 'value', state, key);
+  const lineageLayers = areaLayers(lineage, 'period', 'value', state, key);
+  const adjacent = areaCells(layers, lineageLayers);
+  const cell = (cells, key) => cells.find(value => value.observationKey === key);
+  assert.deepEqual(adjacent.map(value => value.observationKey), ['Q1', 'Q2', 'Q5', 'Q6']);
+  assert.equal(cell(adjacent, 'Q1').left, null);
+  assert.equal(cell(adjacent, 'Q1').right.key, 'Q2');
+  assert.equal(cell(adjacent, 'Q2').left.key, 'Q1');
+  assert.equal(cell(adjacent, 'Q2').right, null);
+  assert.equal(cell(adjacent, 'Q5').left, null);
+  assert.equal(cell(adjacent, 'Q5').right.key, 'Q6');
+  assert.equal(cell(adjacent, 'Q6').left.key, 'Q5');
+  assert.equal(cell(adjacent, 'Q6').right, null);
+
+  const across = areaCells(layers, layers);
+  assert.equal(cell(across, 'Q2').right.key, 'Q5');
+  assert.equal(cell(across, 'Q5').left.key, 'Q2');
+
+  const isolatedLayers = areaLayers([lineage[2]], 'period', 'value', state, key);
+  assert.deepEqual(areaCells(isolatedLayers, lineageLayers), []);
+});
+
+test('area observations enter and exit at zero thickness without moving x', () => {
+  const fewer = [
+    { key: 'Q1', x: 10, y0: 100, y1: 70 },
+    { key: 'Q3', x: 30, y0: 100, y1: 40 }
+  ];
+  const more = [
+    { key: 'Q1', x: 10, y0: 100, y1: 70 },
+    { key: 'Q2', x: 20, y0: 100, y1: 55 },
+    { key: 'Q3', x: 30, y0: 100, y1: 40 }
+  ];
+  const enter = matchAreaFramePoints(fewer, more).find(pair => pair.key === 'Q2');
+  assert.deepEqual(enter.from, { x: 20, y0: 100, y1: 100 });
+  assert.equal(enter.to.x, 20);
+  assert.equal(enter.to.y1, 55);
+
+  const exit = matchAreaFramePoints(more, fewer).find(pair => pair.key === 'Q2');
+  assert.equal(exit.from.x, 20);
+  assert.deepEqual(exit.to, { x: 20, y0: 100, y1: 100 });
 });
 
 test('color is an explicit encoding, including for bar breakdowns', () => {
@@ -133,13 +231,17 @@ test('line filters keep gaps unless the author connects across them', () => {
   const selection = { filter: { field: 'id', oneOf: rows.map(row => row.id) } };
   const key = row => row.id;
 
-  const adjacent = connectedLineSeries(rows, lineage, null, key, selection, 'adjacent');
+  const adjacent = connectedLineStretches(rows, lineage, null, key, selection, 'adjacent');
   assert.deepEqual(adjacent.map(series => series.rows.map(row => row.id)), [
     ['Q1', 'Q2'],
     ['Q5', 'Q6']
   ]);
   assert.deepEqual(
-    connectedLineSeries(rows, lineage, null, key, selection, 'across')[0].rows.map(row => row.id),
+    connectedLineStretches(rows, lineage, null, key, selection, 'across')[0].rows.map(row => row.id),
     ['Q1', 'Q2', 'Q5', 'Q6']
+  );
+  assert.deepEqual(
+    connectedLineStretches([lineage[2]], lineage, null, key, selection, 'adjacent'),
+    []
   );
 });

@@ -163,37 +163,106 @@ test('line flip changes x before y', async ({ page }) => {
   expect(firstAxis.map(point => point.x)).not.toEqual(start.map(point => point.x));
 });
 
-test('line time window uses the keyed shift plan without a path wiggle', async ({ page }) => {
+test('line time window combines keyed add and remove without a path wiggle', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/line-lab.html#shift');
   await ready(page);
-  await expect(page.locator('.playground-line-plan')).toContainText('Shift window');
-  const startLeft = await page.locator('#chart path.sl-line').evaluate(node => {
+  await expect(page.locator('.playground-line-plan')).toContainText('Add and remove points');
+  const startPoint = await page.locator('#chart path.sl-line').evaluate(node => {
     const point = node.getPointAtLength(0);
-    return point.x;
+    return { x: point.x, y: point.y };
   });
-  await page.locator('#progress').fill('0.5');
-  const result = await page.locator('#chart path.sl-line').evaluate(node => {
-    const length = node.getTotalLength();
-    const points = Array.from({ length: 121 }, (_, index) =>
-      node.getPointAtLength(length * index / 120));
-    return {
-      strategy: node.getAttribute('data-line-transition'),
-      left: Math.min(...points.map(point => point.x)),
-      right: Math.max(...points.map(point => point.x)),
-      backwards: points.some((point, index) => index > 0 && point.x < points[index - 1].x - 0.5),
-      circles: [...node.parentElement.querySelectorAll('circle.sl-line-point')].map(point => ({
-        key: point.getAttribute('data-key'),
-        x: Number(point.getAttribute('cx'))
-      }))
-    };
+  const frameAt = async progress => {
+    await page.locator('#progress').fill(String(progress));
+    return page.locator('#chart path.sl-line').evaluate(node => {
+      const length = node.getTotalLength();
+      const points = Array.from({ length: 121 }, (_, index) =>
+        node.getPointAtLength(length * index / 120));
+      return {
+        strategy: node.getAttribute('data-line-transition'),
+        d: node.getAttribute('d'),
+        first: { x: points[0].x, y: points[0].y },
+        last: { x: points.at(-1).x, y: points.at(-1).y },
+        left: Math.min(...points.map(point => point.x)),
+        right: Math.max(...points.map(point => point.x)),
+        backwards: points.some((point, index) => index > 0 && point.x < points[index - 1].x - 0.5),
+        circles: [...node.parentElement.querySelectorAll('circle.sl-line-point')].map(point => ({
+          key: point.getAttribute('data-key'),
+          x: Number(point.getAttribute('cx')),
+          radius: Number(point.getAttribute('r'))
+        }))
+      };
+    });
+  };
+  const early = await frameAt(0.2);
+  const middle = await frameAt(0.5);
+  const beforeEnter = await frameAt(0.69);
+  const late = await frameAt(0.8);
+  const end = await frameAt(1);
+  const radius = (frame, key) => frame.circles.find(point => point.key === key)?.radius ?? 0;
+
+  expect(middle.strategy).toBe('add-remove-points');
+  expect(middle.d).not.toBe(early.d);
+  expect(middle.backwards).toBe(false);
+  expect(radius(early, 'Q1')).toBeGreaterThan(0);
+  expect(Math.abs(early.first.x - startPoint.x)).toBeLessThan(1);
+  expect(Math.abs(early.first.y - startPoint.y)).toBeLessThan(1);
+  expect(radius(middle, 'Q1')).toBe(0);
+  expect(radius(beforeEnter, 'Q7')).toBe(0);
+  expect(Math.abs(beforeEnter.last.x - end.last.x)).toBeLessThan(1);
+  expect(Math.abs(beforeEnter.last.y - end.last.y)).toBeLessThan(1);
+  expect(radius(late, 'Q7')).toBeGreaterThan(0);
+});
+
+test('opposite time-window endpoints use the same add-and-remove frames in reverse', async ({ page }) => {
+  await page.goto('/tests/fixtures/runtime.html');
+  const frames = await page.evaluate(async () => {
+    const [{ line }, { transition }] = await Promise.all([
+      import('/dist/line.js'),
+      import('/dist/transition-entry.js')
+    ]);
+    document.body.innerHTML = '<div id="forward"></div><div id="reverse"></div>';
+    const rows = [
+      { id: 'Q1', period: 'Q1', sales: 28 },
+      { id: 'Q2', period: 'Q2', sales: 47 },
+      { id: 'Q3', period: 'Q3', sales: 39 },
+      { id: 'Q4', period: 'Q4', sales: 66 },
+      { id: 'Q5', period: 'Q5', sales: 58 },
+      { id: 'Q6', period: 'Q6', sales: 79 },
+      { id: 'Q7', period: 'Q7', sales: 63 }
+    ];
+    const first = line(rows.slice(0, 6)).x('period').y('sales', { domain: [0, 100] })
+      .key('id').curve('curveMonotoneX').transition({ duration: 900, ease: 'linear' });
+    const next = first.data(rows.slice(1));
+    const options = target => ({ target, d3, aq, height: 360 });
+    const forward = await transition(first, next, options('#forward'));
+    const reverse = await transition(next, first, options('#reverse'));
+    const number = value => value == null ? null : value.replace(
+      /-?\d*\.?\d+(?:e[-+]?\d+)?/gi,
+      item => String(Math.round(Number(item) * 1e6) / 1e6)
+    );
+    const geometry = selector => [...document.querySelectorAll(
+      `${selector} path.sl-line, ${selector} circle.sl-line-point, ` +
+      `${selector} .sl-x-axis .tick, ${selector} .sl-y-axis .tick`
+    )].map(node => ({
+      tag: node.tagName,
+      key: node.getAttribute('data-key'),
+      text: node.textContent,
+      d: number(node.getAttribute('d')),
+      cx: number(node.getAttribute('cx')),
+      cy: number(node.getAttribute('cy')),
+      r: number(node.getAttribute('r')),
+      transform: number(node.getAttribute('transform')),
+      opacity: Number(getComputedStyle(node).opacity)
+    })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+    return [0, 0.17, 0.5, 0.83, 1].map(progress => {
+      forward.progress(progress);
+      reverse.progress(1 - progress);
+      return { forward: geometry('#forward'), reverse: geometry('#reverse') };
+    });
   });
 
-  expect(result.strategy).toBe('shift-window');
-  expect(result.left).toBeLessThan(startLeft);
-  expect(result.right).toBeGreaterThan(0);
-  expect(result.backwards).toBe(false);
-  expect(Math.abs(result.circles.find(point => point.key === 'Q1').x - result.left)).toBeLessThan(1);
-  expect(Math.abs(result.circles.find(point => point.key === 'Q7').x - result.right)).toBeLessThan(1);
+  for (const frame of frames) expect(frame.reverse).toEqual(frame.forward);
 });
 
 test('line add and remove are the same transition in reverse', async ({ page }) => {
@@ -274,7 +343,7 @@ test('line filter and restore are the same transition in reverse', async ({ page
       import('/dist/line.js'),
       import('/dist/transition-entry.js')
     ]);
-    document.body.innerHTML = '<div id="filter"></div><div id="restore"></div>';
+    document.body.innerHTML = '<div id="filter"></div><div id="restore"></div><div id="isolated"></div>';
     const rows = [
       { id: 'Q1', period: 'Q1', sales: 28 },
       { id: 'Q2', period: 'Q2', sales: 47 },
@@ -290,6 +359,11 @@ test('line filter and restore are the same transition in reverse', async ({ page
     const options = target => ({ target, d3, aq, height: 360 });
     const filter = await transition(base, filtered, options('#filter'));
     const restore = await transition(filtered, base, options('#restore'));
+    const isolated = await transition(
+      base,
+      base.where({ field: 'id', equal: 'Q3' }),
+      options('#isolated')
+    );
     const geometryNumber = value => value == null ? null : value.replace(
       /-?\d*\.?\d+(?:e[-+]?\d+)?/gi,
       number => String(Math.round(Number(number) * 1e9) / 1e9)
@@ -320,7 +394,16 @@ test('line filter and restore are the same transition in reverse', async ({ page
         lineOffset: Number(document.querySelector('#filter path[data-key="__line"]')?.getAttribute('stroke-dashoffset'))
       };
     };
-    return { frames, pointIsLeaving: removalFrame(0.25), lineIsRetracting: removalFrame(0.35) };
+    isolated.progress(1);
+    return {
+      frames,
+      pointIsLeaving: removalFrame(0.25),
+      lineIsRetracting: removalFrame(0.35),
+      isolated: {
+        paths: document.querySelectorAll('#isolated path.sl-line').length,
+        points: document.querySelectorAll('#isolated circle.sl-line-point').length
+      }
+    };
   });
 
   for (const frame of result.frames) expect(frame.restore).toEqual(frame.filter);
@@ -328,6 +411,7 @@ test('line filter and restore are the same transition in reverse', async ({ page
   expect(result.pointIsLeaving.lineOffset).toBe(0);
   expect(result.lineIsRetracting.radius).toBe(0);
   expect(result.lineIsRetracting.lineOffset).toBeGreaterThan(0);
+  expect(result.isolated).toEqual({ paths: 0, points: 1 });
 });
 
 test('line split and merge are one transition in reverse', async ({ page }) => {

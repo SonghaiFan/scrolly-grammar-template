@@ -160,7 +160,8 @@
   stroke-width: 1px;
 }
 
-.sl-bar-seam {
+.sl-bar-seam,
+.sl-area-divider {
   fill: none;
   stroke: #fff;
   stroke-width: 1px;

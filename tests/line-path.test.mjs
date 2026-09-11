@@ -94,7 +94,7 @@ test('adding and removing a keyed point use the same local path in reverse', () 
   }
 });
 
-test('a shifted key window moves shared points and clips one point at each edge', () => {
+test('a shifted key window combines add and remove timing', () => {
   const first = frame([
     { key: 'A', x: 0, y: 10 },
     { key: 'B', x: 10, y: 20 },
@@ -108,9 +108,9 @@ test('a shifted key window moves shared points and clips one point at each edge'
   const forward = matchLinePathFrames(null, first, next, renderPoints);
   const reverse = matchLinePathFrames(null, next, first, renderPoints);
 
-  assert.equal(forward.strategy, 'shift-window');
-  assert.equal(reverse.strategy, 'shift-window');
-  assert.equal(forward.interpolate(0.5), 'M-5,10L5,20L15,30L25,15');
+  assert.equal(forward.strategy, 'add-remove-points');
+  assert.equal(reverse.strategy, 'add-remove-points');
+  assert.equal(forward.interpolate(0.5), 'M0,12.857L5,20L15,30L20,19.286');
   for (const progress of [0, 0.17, 0.5, 0.83, 1]) {
     assert.equal(forward.interpolate(progress), reverse.interpolate(1 - progress));
   }

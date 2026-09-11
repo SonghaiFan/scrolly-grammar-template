@@ -1,3 +1,8 @@
+import {
+  interpolatePathPoints,
+  matchRenderedPaths
+} from '../path-interpolation.js';
+
 export type LinePathPoint = { x: number; y: number };
 export type LinePathInterpolator = (progress: number) => string;
 
@@ -16,7 +21,7 @@ export type LinePathStrategy =
   | 'move-points'
   | 'add-points'
   | 'remove-points'
-  | 'shift-window'
+  | 'add-remove-points'
   | 'change-curve'
   | 'match-shape';
 
@@ -24,16 +29,6 @@ export interface LinePathMatch {
   strategy: LinePathStrategy;
   interpolate: LinePathInterpolator;
 }
-
-export interface LineWindowShift {
-  direction: 'forward' | 'reverse';
-  dx: number;
-}
-
-const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-const MIN_SEGMENTS = 32;
-const MAX_SEGMENTS = 160;
-const PIXELS_PER_SEGMENT = 4;
 
 /**
  * Choose a Line-owned transition from keyed observations before falling back
@@ -71,17 +66,12 @@ export function matchLinePathFrames(
     return semanticMatch('move-points', from, to, pairSameKeys(from.points, to.points), renderPoints);
   }
 
-  const windowPairs = pairShiftedWindow(from.points, to.points);
-  if (windowPairs) {
-    return semanticMatch('shift-window', from, to, windowPairs, renderPoints);
-  }
-
-  if (isSubset(fromKeys, toKeys)) {
-    return semanticMatch('add-points', from, to, pairAddedPoints(from.points, to.points), renderPoints);
-  }
-
-  if (isSubset(toKeys, fromKeys)) {
-    return semanticMatch('remove-points', from, to, pairRemovedPoints(from.points, to.points), renderPoints);
+  const observation = pairObservationChanges(from.points, to.points);
+  if (observation) {
+    const strategy = observation.added && observation.removed
+      ? 'add-remove-points'
+      : observation.added ? 'add-points' : 'remove-points';
+    return semanticMatch(strategy, from, to, observation.pairs, renderPoints);
   }
 
   return {
@@ -102,39 +92,7 @@ export function matchLinePaths(
   fromNode: SVGPathElement,
   toPath: string | null | undefined
 ): LinePathInterpolator {
-  const fromPath = fromNode.getAttribute('d') || '';
-  const to = toPath || '';
-  if (fromPath === to) return () => to;
-  if (!fromPath || !to) return stepBetweenPaths(fromPath, to);
-
-  const targetNode = fromNode.ownerDocument.createElementNS(SVG_NAMESPACE, 'path');
-  targetNode.setAttribute('d', to);
-  targetNode.setAttribute('visibility', 'hidden');
-  targetNode.setAttribute('pointer-events', 'none');
-
-  // WebKit needs geometry nodes to be in an SVG tree before measuring them.
-  const measurementRoot = fromNode.ownerSVGElement || fromNode.parentNode;
-  measurementRoot?.appendChild(targetNode);
-  try {
-    const fromLength = finiteLength(fromNode);
-    const toLength = finiteLength(targetNode);
-    const segmentCount = Math.max(
-      MIN_SEGMENTS,
-      Math.min(MAX_SEGMENTS, Math.ceil(Math.max(fromLength, toLength) / PIXELS_PER_SEGMENT))
-    );
-    const fromPoints = sampleLinePath(fromNode, fromLength, segmentCount);
-    const toPoints = sampleLinePath(targetNode, toLength, segmentCount);
-    const movePoints = interpolateLinePoints(fromPoints, toPoints);
-
-    return (progress: number) => {
-      const value = clampProgress(progress);
-      if (value === 0) return fromPath;
-      if (value === 1) return to;
-      return movePoints(value);
-    };
-  } finally {
-    targetNode.remove();
-  }
+  return matchRenderedPaths(fromNode, toPath);
 }
 
 /** Pure point interpolation used by matchLinePaths and its unit tests. */
@@ -142,38 +100,14 @@ export function interpolateLinePoints(
   fromPoints: readonly LinePathPoint[],
   toPoints: readonly LinePathPoint[]
 ): LinePathInterpolator {
-  if (!fromPoints.length || fromPoints.length !== toPoints.length) {
-    throw new Error('Line path matching requires two non-empty point lists of equal length.');
-  }
-
-  return (progress: number) => {
-    const value = clampProgress(progress);
-    let path = '';
-    for (let index = 0; index < fromPoints.length; index += 1) {
-      const from = fromPoints[index];
-      const to = toPoints[index];
-      const x = from.x + (to.x - from.x) * value;
-      const y = from.y + (to.y - from.y) * value;
-      path += `${index === 0 ? 'M' : 'L'}${shortNumber(x)},${shortNumber(y)}`;
-    }
-    return path;
-  };
-}
-
-function sampleLinePath(
-  node: SVGPathElement,
-  length: number,
-  segmentCount: number
-): LinePathPoint[] {
-  return Array.from({ length: segmentCount + 1 }, (_, index) => {
-    const point = node.getPointAtLength(length * index / segmentCount);
-    return { x: point.x, y: point.y };
-  });
+  return interpolatePathPoints(fromPoints, toPoints);
 }
 
 interface PointPair {
   from: LinePathPoint;
   to: LinePathPoint;
+  start?: number;
+  end?: number;
 }
 
 function semanticMatch(
@@ -189,10 +123,13 @@ function semanticMatch(
       const value = clampProgress(progress);
       if (value === 0) return from.path;
       if (value === 1) return to.path;
-      return renderPoints(pairs.map((pair) => ({
-        x: pair.from.x + (pair.to.x - pair.from.x) * value,
-        y: pair.from.y + (pair.to.y - pair.from.y) * value
-      })));
+      return renderPoints(pairs.map((pair) => {
+        const local = phaseProgress(value, pair.start ?? 0, pair.end ?? 1);
+        return {
+          x: pair.from.x + (pair.to.x - pair.from.x) * local,
+          y: pair.from.y + (pair.to.y - pair.from.y) * local
+        };
+      }));
     }
   };
 }
@@ -204,93 +141,74 @@ function pairSameKeys(
   return from.map((point, index) => ({ from: point, to: to[index] }));
 }
 
-/** New points grow out of the line segment or endpoint nearest to their key. */
-function pairAddedPoints(
-  from: readonly LinePathKeyPoint[],
-  to: readonly LinePathKeyPoint[]
-): PointPair[] {
-  const fromByKey = pointMap(from);
-  return to.map((point, index) => ({
-    from: fromByKey.get(point.key) ?? anchorMissingPoint(index, to, fromByKey),
-    to: point
-  }));
-}
-
-/** Removed points collapse back into the surviving line instead of fading globally. */
-function pairRemovedPoints(
-  from: readonly LinePathKeyPoint[],
-  to: readonly LinePathKeyPoint[]
-): PointPair[] {
-  const toByKey = pointMap(to);
-  return from.map((point, index) => ({
-    from: point,
-    to: toByKey.get(point.key) ?? anchorMissingPoint(index, from, toByKey)
-  }));
-}
-
 /**
- * A sliding window keeps a contiguous run of keys while one edge exits and
- * the other enters. Keep both edge points just outside the clipped plot and
- * move the shared observations by identity; this removes the vertical wiggle
- * caused by pairing path commands by index.
+ * One keyed matcher owns every observation membership change. Add supplies
+ * enter pairs, Remove supplies exit pairs, and a moving window simply has
+ * both. There is no separate window-transition geometry.
  */
-function pairShiftedWindow(
+function pairObservationChanges(
   from: readonly LinePathKeyPoint[],
   to: readonly LinePathKeyPoint[]
-): PointPair[] | null {
-  const shift = findLineWindowShift(from, to);
-  if (!shift) return null;
+): { pairs: PointPair[]; added: boolean; removed: boolean } | null {
+  const fromKeys = from.map((point) => point.key);
+  const toKeys = to.map((point) => point.key);
+  const fromSet = new Set(fromKeys);
+  const toSet = new Set(toKeys);
+  const added = toKeys.some((key) => !fromSet.has(key));
+  const removed = fromKeys.some((key) => !toSet.has(key));
+  if (!added && !removed) return null;
+
+  const sharedFrom = fromKeys.filter((key) => toSet.has(key));
+  const sharedTo = toKeys.filter((key) => fromSet.has(key));
+  if (!sameKeysInOrder(sharedFrom, sharedTo)) return null;
+
+  const order = mergeObservationOrder(fromKeys, toKeys, sharedFrom);
   const fromByKey = pointMap(from);
   const toByKey = pointMap(to);
-  const ordered = shift.direction === 'forward'
-    ? [...from, ...to.filter((point) => !fromByKey.has(point.key))]
-    : [...to.filter((point) => !fromByKey.has(point.key)), ...from];
-
-  return ordered.map((point) => {
-    const source = fromByKey.get(point.key);
-    const target = toByKey.get(point.key);
-    return {
-      from: source ?? { x: target!.x - shift.dx, y: target!.y },
-      to: target ?? { x: source!.x + shift.dx, y: source!.y }
-    };
-  });
+  const ordered = order.map((key) => fromByKey.get(key) ?? toByKey.get(key)!);
+  const stagesBoth = added && removed;
+  return {
+    added,
+    removed,
+    pairs: ordered.map((point, index) => {
+      const source = fromByKey.get(point.key);
+      const target = toByKey.get(point.key);
+      return {
+        from: source ?? anchorMissingPoint(index, ordered, fromByKey),
+        to: target ?? anchorMissingPoint(index, ordered, toByKey),
+        start: stagesBoth && !target ? 0.3 : 0,
+        end: stagesBoth && !source ? 0.7 : 1
+      };
+    })
+  };
 }
 
-/** Return the shared horizontal movement for a contiguous sliding key window. */
-export function findLineWindowShift(
-  from: readonly LinePathKeyPoint[],
-  to: readonly LinePathKeyPoint[]
-): LineWindowShift | null {
-  if (from.length !== to.length || from.length < 3) return null;
-  const direction = shiftedWindowDirection(from, to);
-  if (!direction) return null;
-
-  const toByKey = pointMap(to);
-  const common = from.filter((point) => toByKey.has(point.key));
-  if (common.length < 2) return null;
-  const dxValues = common.map((point) => toByKey.get(point.key)!.x - point.x);
-  const dx = dxValues.reduce((sum, value) => sum + value, 0) / dxValues.length;
-  if (!Number.isFinite(dx) || Math.abs(dx) < 0.001) return null;
-  return { direction, dx };
+function phaseProgress(value: number, start: number, end: number): number {
+  return clampProgress((value - start) / Math.max(Number.EPSILON, end - start));
 }
 
-function shiftedWindowDirection(
-  from: readonly LinePathKeyPoint[],
-  to: readonly LinePathKeyPoint[]
-): 'forward' | 'reverse' | null {
-  const forwardOffset = from.findIndex((point) => point.key === to[0].key);
-  if (
-    forwardOffset > 0 &&
-    from.slice(forwardOffset).every((point, index) => point.key === to[index]?.key)
-  ) return 'forward';
+function mergeObservationOrder(
+  from: readonly string[],
+  to: readonly string[],
+  shared: readonly string[]
+): string[] {
+  const order: string[] = [];
+  let fromIndex = 0;
+  let toIndex = 0;
+  const append = (key: string) => {
+    if (order[order.length - 1] !== key) order.push(key);
+  };
 
-  const reverseOffset = to.findIndex((point) => point.key === from[0].key);
-  if (
-    reverseOffset > 0 &&
-    to.slice(reverseOffset).every((point, index) => point.key === from[index]?.key)
-  ) return 'reverse';
-
-  return null;
+  for (const sharedKey of shared) {
+    while (from[fromIndex] !== sharedKey) append(from[fromIndex++]);
+    while (to[toIndex] !== sharedKey) append(to[toIndex++]);
+    append(sharedKey);
+    fromIndex += 1;
+    toIndex += 1;
+  }
+  while (fromIndex < from.length) append(from[fromIndex++]);
+  while (toIndex < to.length) append(to[toIndex++]);
+  return order;
 }
 
 function anchorMissingPoint(
@@ -333,24 +251,6 @@ function samePointPositions(
     Math.abs(point.x - to[index].x) < 0.001 && Math.abs(point.y - to[index].y) < 0.001);
 }
 
-function isSubset(subset: readonly string[], superset: readonly string[]): boolean {
-  const keys = new Set(superset);
-  return subset.length < superset.length && subset.every((key) => keys.has(key));
-}
-
-function finiteLength(node: SVGPathElement): number {
-  const length = node.getTotalLength();
-  return Number.isFinite(length) && length > 0 ? length : 0;
-}
-
-function stepBetweenPaths(fromPath: string, toPath: string): LinePathInterpolator {
-  return (progress: number) => clampProgress(progress) < 1 ? fromPath : toPath;
-}
-
 function clampProgress(progress: number): number {
   return Math.max(0, Math.min(1, Number(progress) || 0));
-}
-
-function shortNumber(value: number): string {
-  return String(Math.round(value * 1000) / 1000);
 }

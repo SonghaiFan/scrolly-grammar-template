@@ -112,7 +112,7 @@ test('language map is the status source of truth with inline live grammar', asyn
 
 test('examples are inline editors rather than source-file references', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/examples.html');
-  await expect(page.locator('.syntax-playground')).toHaveCount(9);
+  await expect(page.locator('.syntax-playground')).toHaveCount(10);
   await expect(page.getByText(/^Source:/)).toHaveCount(0);
 
   const finalPlayground = page.locator('.syntax-playground').last();

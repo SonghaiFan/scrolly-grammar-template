@@ -9,8 +9,9 @@ import { specState } from '../../spec-meta.js';
 
 interface LineTransitionPlanExtension {
   observation?: {
-    mode: 'add';
+    mode: 'add' | 'add-and-remove';
     addedKeys: string[];
+    removedKeys: string[];
     reason: string;
   };
 }
@@ -30,13 +31,18 @@ export const plugin: ChartPlugin<LineViewState> = defineChartType<LineViewState>
       const observation = previousSpec && nextSpec
         ? lineObservationChange(previousSpec, nextSpec)
         : null;
-      if (observation?.mode === 'add') {
+      if (observation && observation.mode !== 'remove') {
         plan.observation = {
-          mode: 'add',
+          mode: observation.mode,
           addedKeys: observation.addedKeys,
-          reason: 'line-reaches-observation-before-point-appears'
+          removedKeys: observation.removedKeys,
+          reason: observation.mode === 'add'
+            ? 'line-reaches-observation-before-point-appears'
+            : 'line-adds-and-removes-observations'
         };
-        plan.reason = 'add-line-observations';
+        plan.reason = observation.mode === 'add'
+          ? 'add-line-observations'
+          : 'add-and-remove-line-observations';
       }
       const detail = nextSpec
         ? specState(nextSpec).sceneState?.detail as Record<string, unknown> | undefined

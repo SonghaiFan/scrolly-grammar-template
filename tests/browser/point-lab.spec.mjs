@@ -245,13 +245,16 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   const layer = page.locator('#chart .sl-point-blend-layer');
   await expect(layer).toHaveCount(1);
   const first = await layer.evaluate(node => ({
-    opacity: Number(node.style.opacity),
+    visibility: node.style.visibility,
+    opacity: getComputedStyle(node).opacity,
     circles: [...node.querySelectorAll('circle')].map(circle => [
       circle.getAttribute('cx'), circle.getAttribute('cy'), circle.getAttribute('r')
     ])
   }));
-  expect(first.opacity).toBeGreaterThan(0.5);
-  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '0');
+  expect(first.visibility).toBe('visible');
+  expect(first.opacity).toBe('1');
+  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('visibility', 'hidden');
+  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '1');
   // Six entering detail circles plus two exiting summary circles share the
   // temporary layer while the same cached frame remains reversible.
   expect(first.circles).toHaveLength(8);
@@ -259,7 +262,8 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   await page.locator('#progress').fill('0.2');
   await page.locator('#progress').fill('0.75');
   expect(await layer.evaluate(node => ({
-    opacity: Number(node.style.opacity),
+    visibility: node.style.visibility,
+    opacity: getComputedStyle(node).opacity,
     circles: [...node.querySelectorAll('circle')].map(circle => [
       circle.getAttribute('cx'), circle.getAttribute('cy'), circle.getAttribute('r')
     ])
@@ -269,7 +273,7 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   await ready(page);
   await page.locator('#progress').fill('0.75');
   await expect(page.locator('#chart .sl-point-blend-layer')).toHaveCount(0);
-  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '1');
+  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('visibility', 'visible');
 });
 
 test('point Blend parent exists only while a child is close enough to connect', async ({ page }) => {

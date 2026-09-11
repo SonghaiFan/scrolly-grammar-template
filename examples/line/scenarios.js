@@ -95,6 +95,6 @@ export const scenarios = [
   sample('flip', '12 · Flip orientation', 'Move from a vertical value axis to a horizontal value axis, changing x before y.', base, 'base', 'base.flip({ order: ["x", "y"] })'),
   sample('split', '13 · Split into series', 'Cut the total line into colored pieces, move those pieces to each series, then connect them.', series, 'total', 'detailed'),
   sample('merge', '14 · Merge series', 'Use the exact reverse: disconnect, move back to the total, then join the pieces.', series, 'detailed', 'total'),
-  sample('shift', '15 · Shift the time window', 'Keep matching observations moving left, clip the old and new edge points, and avoid the vertical path wiggle.', slidingWindow, 'firstWindow', 'nextWindow'),
+  sample('shift', '15 · Shift the time window', 'Remove the leaving point, move the shared observations, extend the line, then reveal the entering point.', slidingWindow, 'firstWindow', 'nextWindow'),
   sample('focus', '16 · Focus the view', 'Keep all observations and the full line, but fit the x-axis around the later years and clip what is outside.', base, 'base', 'base.focus("datum.year >= 2023")')
 ];

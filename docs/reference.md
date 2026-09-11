@@ -81,7 +81,7 @@ event. Scrolling is one control, not the definition of the animation system.
 
 ## Chart grammar
 
-All four built-in chart types share the same base methods. Every method creates
+All five built-in chart types share the same base methods. Every method creates
 a new chart state and leaves the previous state untouched.
 
 | Method | Meaning | Saved as |
@@ -128,11 +128,19 @@ base.x({
 
 ## Chart types
 
+### `area()`
+
+Ordered magnitude and composition. X defaults to nominal and y to quantitative.
+Chart-specific methods are `.curve()`, `.connect()`, `.baseline()`,
+`.breakdown(series)`, and `.rollup()`. Stacked Area computes explicit lower and
+upper boundaries for every layer. Area curve names are the exact D3 exports;
+`curveBundle` is Line-only in D3 and is therefore rejected for Area.
+
 ### `bar()`
 
 Categorical comparison and composition. X defaults to nominal and y defaults to
-quantitative. Bar currently has the richest transition support and is the only
-built-in chart type using cached frame evaluation.
+quantitative. Bar currently has the richest transition support. Area, Bar, and
+Point use cached frame evaluation.
 
 | Method | Purpose |
 | --- | --- |
@@ -238,6 +246,7 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | Entry | Responsibility |
 | --- | --- |
 | `visdelta/core` | DOM-free normalization and semantic delta |
+| `visdelta/area` | Focused immutable area authoring |
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
 | `visdelta/line` | Focused immutable line authoring |
@@ -247,9 +256,9 @@ See [Data sources](/data-sources-and-transforms) and the [strict transform gramm
 | `visdelta` | Visualization grammar, delta, transition, and plugin API |
 | `visdelta/browser` | Transition API with browser-global dependency fallback |
 
-Current gzip gates are under 4 KB for the core delta fixture, under 9 KB for
-bar authoring, under 8 KB for point authoring, and under 35.5 KB for bar plus
-transition. These exclude D3, optional Arquero, and CSS.
+Current gzip gates are under 4 KB for the core delta fixture, under 8 KB for
+Area, Point, and Line authoring, under 9 KB for Bar authoring, and under 35.5 KB
+for Bar plus transition. These exclude D3, optional Arquero, and CSS.
 
 ## Chart module boundary
 

@@ -217,7 +217,7 @@ export interface ResolvedChartState {
 
 // ─── View Spec ────────────────────────────────────────────────────────────────
 
-export type Mark = 'bar' | 'line' | 'point' | 'unit' | (string & {});
+export type Mark = 'area' | 'bar' | 'line' | 'point' | 'unit' | (string & {});
 export type ScrollSpec = true | { ease?: string; [key: string]: unknown };
 
 export interface ViewSpec {

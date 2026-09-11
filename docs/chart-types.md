@@ -1,27 +1,26 @@
 # Chart types
 
-VisDelta includes four chart types: `bar`, `line`, `point`, and `unit`. Their
+VisDelta includes five chart types: `area`, `bar`, `line`, `point`, and `unit`. Their
 methods can be chained like a sentence. Call `.toSpec()` when you need the plain
 JavaScript object behind a chart state.
 
 ```js
-import { bar, line, point, unit } from "visdelta";
+import { area, bar, line, point, unit } from "visdelta";
 
+area("dataset")    // → AreaState
 bar("dataset")     // → BarState
 line("dataset")    // → LineState
 point("dataset")   // → PointState
 unit("dataset")    // → UnitState
 ```
 
-All four extend the same `ChartState` base, so most data mapping, filtering,
+All five extend the same `ChartState` base, so most data mapping, filtering,
 and styling methods work identically across chart types.
 This page documents the shared methods first, then each chart type's specific
 methods, defaults, and example progressions.
 
 > **Every change makes a new state.** The original stays untouched, so you can
 > make several versions from one `base` chart and move between them safely.
-
----
 
 ## Shared methods (all chart types)
 
@@ -196,6 +195,115 @@ order of x/y transition steps. Most of the time `.flip()` is simpler:
 .axis({ y: { scale: { type: "log" } } })
 .axis({ flip: true, order: ["y", "x"], duration: 500 })
 ```
+
+---
+
+## Area — `area(dataset)`
+
+An area chart describes a band across an ordered x field. It is not merely a
+Line with fill: its geometry always has a lower boundary `y0` and an upper
+boundary `y1`. X defaults to nominal and y to quantitative.
+
+```js
+const sales = area(rows).x("period").y("sales").key("period");
+```
+
+### `.baseline(value)`
+
+Sets the lower boundary for an ordinary area. The default is `0`.
+
+```js
+sales.baseline(20)
+```
+
+### `.breakdown(field, options?)`
+
+Turns each x total into stacked parts. Stacking changes geometry; color remains
+an explicit mapping. Positive and negative values stack on opposite sides of
+the baseline.
+
+```js
+const stacked = area(rows)
+  .x("period")
+  .y("sales")
+  .key(["period", "region"])
+  .breakdown("region", {
+    color: ["#1c6ae4", "#fa4d1d"]
+  });
+```
+
+Use `.breakdown("region")` without color for black layers separated by a thin
+boundary. Use `.color("region")` or the `color` option when parts should carry
+distinct hues.
+
+### `.rollup(options?)`
+
+Combines the parts into one total at each x position. It uses `sum` by default.
+
+```js
+const total = stacked.rollup();
+const average = stacked.rollup({ op: "mean" });
+```
+
+Total → stacked is the canonical direction. Stacked → total evaluates the same
+cached frames backward.
+
+### `.curve(value)`
+
+Shape both the upper and lower Area boundaries with an exact D3 curve export
+name. This is the same grammar used by Line:
+
+```js
+.curve("curveLinear")
+.curve("curveMonotoneX")
+.curve("curveNatural")
+.curve("curveStep")
+```
+
+The default is `curveLinear`. VisDelta does not rename or remap D3 curves.
+`curveBundle` is rejected for Area because D3 defines it for Line only; it does
+not implement the Area curve interface. Every other curve name in the Line
+curve reference is supported. A curve change matches the rendered SVG geometry
+rather than interpolating unrelated numbers from the two path strings.
+
+### How Area adds and removes observations
+
+Area matches observations with `.key()` before moving either boundary. A new
+observation starts at its target x position with zero thickness: `y1` initially
+equals `y0`, then grows into its authored value. This is the same for an
+observation in the middle, at the start, or at the end.
+
+Restore and Add use this same rule; their only difference is where the new key
+appears. Filter and Remove evaluate the corresponding frames backward, so an
+exiting value keeps its x position and flattens into the baseline. In a stacked
+Area, a part flattens into its own lower boundary. VisDelta does not interpolate
+unrelated numbers from two SVG `d` strings, because that can reorder polygon
+vertices and make the Area cross itself.
+
+### `.connect(value)`
+
+Choose whether a filter may bridge over removed observations:
+
+```js
+.connect("adjacent") // default: keep separate connected stretches around the gap
+.connect("across")   // explicitly join the surviving observations into one band
+```
+
+This has the same continuity meaning as Line. With the default `"adjacent"`,
+removing observations from the middle produces separate connected stretches at
+their original x positions. It does not crop the remaining values together or
+invent a filled connection across data that is no longer present.
+
+For an ordinal x axis, every observation owns a cell made from the available
+half-interval on either side. An interior observation owns both halves. The
+first observation in a connected stretch owns only the right half, and the last
+owns only the left half. A stretch must contain at least two observations. One
+isolated ordinal observation has no connection and therefore draws no Line and
+no Area.
+
+<SyntaxPlayground initial="area" compact />
+
+See the [Area transition lab](/area-lab) for the executable matrix.
 
 ---
 
@@ -432,7 +540,7 @@ circles. Line chooses the simplest plan that describes the actual change:
 | Same observations, new positions | **Move points** by key |
 | New or restored observations | **Add points**: move the line first, then show each point |
 | Removed or filtered observations | **Remove points**: hide each point, then retract the same line path |
-| A fixed-size key window moves forward or backward | **Shift window** with clipped edge points |
+| A fixed-size key window moves forward or backward | **Add and remove points** at opposite window edges |
 | D3 curve name changes | **Change curve** by matching the rendered shapes |
 | No reliable keyed relationship | **Match shape** as a visual fallback |
 
@@ -443,6 +551,10 @@ Add is the canonical direction for a change in observation membership. Remove
 does not use a separately tuned exit effect: it evaluates the same Add frames at
 `1 - progress`. Filter/Restore follows the same rule, including gaps created by
 the default `connect("adjacent")` behavior.
+
+A moving time window combines those same two behaviors: one edge removes an
+observation while the other edge adds one. Shared observations move by key.
+There is no separate time-window transition underneath this composition.
 
 ### `.connect(value)`
 
@@ -455,7 +567,9 @@ Choose what happens when `.where()` removes observations from inside a line:
 
 `"adjacent"` only connects observations that were neighbours in the unfiltered
 lineage. `"across"` treats the surviving observations as a new continuous
-sequence. This is a Line rule, not a Core transition rule.
+sequence. A connected stretch needs at least two observations; an isolated
+observation keeps its point mark but does not form a line path. Line and Area
+use the same shared rule. This is a chart-layer rule, not a Core transition rule.
 
 ### `.strokeWidth(value)` / `.pointSize(value)`
 
@@ -706,10 +820,11 @@ const states = [
 |---|---|
 | Comparisons across categories | `bar` |
 | Trends over an ordered axis (time, sequence) | `line` |
+| Magnitude or composition over an ordered axis | `area` |
 | Relationships between two quantities | `point` |
 | Concrete counts as countable objects ("32 of these") | `unit` |
 
-All four share the same authoring vocabulary (`.x`, `.y`, `.color`, `.key`,
+All five share the same authoring vocabulary (`.x`, `.y`, `.color`, `.key`,
 `.where`, `.highlight`, `.axis`, …), so trying the same data with another chart
 type is mostly a matter of
 swapping the factory call and adjusting chart-specific methods.

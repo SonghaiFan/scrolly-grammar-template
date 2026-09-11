@@ -13,8 +13,9 @@ const labs = await discoverLabs(examplesDir);
 assertLab(labs.get('bar'), 'bar', 13);
 assertLab(labs.get('point'), 'point', 13);
 assertLab(labs.get('line'), 'line', 16);
+assertLab(labs.get('area'), 'area', 14);
 
-console.log('Bar, point, and line example invariants ok.');
+console.log('Bar, point, line, and area example invariants ok.');
 
 async function discoverLabs(directory) {
   const labs = new Map();

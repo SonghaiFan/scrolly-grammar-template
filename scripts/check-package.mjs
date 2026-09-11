@@ -20,6 +20,10 @@ const publicExports = {
     types: "./dist/core.d.ts",
     import: "./dist/core.js"
   },
+  "./area": {
+    types: "./dist/area.d.ts",
+    import: "./dist/area.js"
+  },
   "./bar": {
     types: "./dist/bar.d.ts",
     import: "./dist/bar.js"
@@ -56,6 +60,8 @@ const requiredFiles = [
   "README.md",
   "dist/browser.d.ts",
   "dist/browser.js",
+  "dist/area.d.ts",
+  "dist/area.js",
   "dist/bar.d.ts",
   "dist/bar.js",
   "dist/point.d.ts",

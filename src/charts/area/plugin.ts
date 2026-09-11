@@ -1,0 +1,54 @@
+import type { ChannelSpec, ChartPlugin } from '../../types/index.js';
+import { createDefaultTransitionPlan } from '../transition-plan.js';
+import { defineChartType } from '../plugin.js';
+import type { AreaViewState } from './authoring.js';
+import { createAreaSpecCompiler } from './compile.js';
+import { createAreaRenderer } from './render.js';
+import { areaObservationChange, areaState, canonicalAreaTransitionPair } from './state.js';
+
+export const plugin: ChartPlugin<AreaViewState> = defineChartType<AreaViewState>({
+  key: 'area',
+  transitionEvaluation: 'cached',
+  scenes: ['selection', 'axis', 'detail', 'mapping'],
+  createRenderer: createAreaRenderer,
+  createSpecCompiler: createAreaSpecCompiler,
+  transition: {
+    canonicalPair: canonicalAreaTransitionPair,
+    plan: (previousSpec, nextSpec) => {
+      const plan = createDefaultTransitionPlan(previousSpec, nextSpec, {
+        reason: 'area-default-plan'
+      }) as ReturnType<typeof createDefaultTransitionPlan> & {
+        observation?: { mode: string; addedKeys: string[]; removedKeys: string[]; reason: string };
+        detailChange?: { mode: 'split'; reason: string };
+      };
+      const previous = previousSpec
+        ? areaState(previousSpec, previousSpec.encoding as Record<string, ChannelSpec>)
+        : null;
+      const next = nextSpec
+        ? areaState(nextSpec, nextSpec.encoding as Record<string, ChannelSpec>)
+        : null;
+      if (previous?.mode === 'single' && next?.mode === 'stacked') {
+        plan.detailChange = {
+          mode: 'split',
+          reason: 'draw-area-dividers-before-revealing-layers'
+        };
+        plan.reason = 'split-area-detail';
+      }
+      const observation = previousSpec && nextSpec
+        ? areaObservationChange(previousSpec, nextSpec)
+        : null;
+      if (observation && observation.mode !== 'remove') {
+        plan.observation = {
+          ...observation,
+          reason: observation.mode === 'add'
+            ? 'grow-area-observations'
+            : 'add-and-remove-area-observations'
+        };
+        plan.reason = observation.mode === 'add'
+          ? 'add-area-observations'
+          : 'add-and-remove-area-observations';
+      }
+      return plan;
+    }
+  }
+});

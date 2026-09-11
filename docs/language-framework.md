@@ -41,8 +41,8 @@ control that movement.
 | --- | --- | --- |
 | **Data** | Inline rows, `{ values }`, URL input, or a named dataset | A transformed table |
 | **Transform** | An ordered change to the data, such as filter, fold, combine, sort, or limit | A visual transition |
-| **Chart state** | A chart description returned by `bar()`, `line()`, `point()`, or `unit()`; changing it creates a new state and leaves the old one alone | A chart already drawn on a web page |
-| **Chart type** | A chart family such as bar, line, point, or unit | A layout change within one chart type |
+| **Chart state** | A chart description returned by `area()`, `bar()`, `line()`, `point()`, or `unit()`; changing it creates a new state and leaves the old one alone | A chart already drawn on a web page |
+| **Chart type** | A chart family such as area, bar, line, point, or unit | A layout change within one chart type |
 | **Mapping** | A link from a data field to x, y, color, or size | Pixel geometry |
 | **Scale** | A function that maps a data domain into a screen range | Its visible axis or grid |
 | **Axis** | The visible ticks, grid, and title that explain a scale | The scale function itself |
@@ -168,7 +168,8 @@ by the shape drawn in SVG.
 | Chart family | Reader question | Current language |
 | --- | --- | --- |
 | **Comparison** | How do categories differ? | `bar()` — Available |
-| **Trend** | How does a value change over an ordered dimension? | `line()` — Available |
+| **Trend** | How does a value change over an ordered dimension? | `line()` and `area()` — Available |
+| **Composition over time** | How do parts of a total change over an ordered dimension? | stacked `area()` — Available |
 | **Relationship** | How do two quantities relate? | `point()` — Available |
 | **Countable magnitude** | How many concrete units are there? | `unit()` — Available |
 | **Distribution** | What is the shape, spread, or density? | Developing; point aggregation is partial coverage |
@@ -182,12 +183,14 @@ by the shape drawn in SVG.
 | `line()` | Available | Ordered trends, keyed point/path changes, sliding windows, and staged reversible total/series changes | Reconstructs frames |
 | `point()` | Available | Quantitative relationships and reversible summary/detail changes | Cached frame data |
 | `unit()` | Available | Countable units, grids, groups, timelines, dodge | Reconstructs frames |
-| `area()` | Research | Candidate trend/composition chart type | Not implemented |
+| `area()` | Available | Ordered magnitude, explicit baseline, and reversible total/stacked composition | Cached frame data |
 | `rect()` / heatmap | Research | Candidate matrix and density chart type | Not implemented |
 | `arc()` | Research | Candidate part-to-whole chart type | Not implemented |
 | `text()` / annotation marks | Research | Candidate editorial annotation chart type | Not implemented |
 
 The research rows are a taxonomy of likely language space, not release promises.
+
+<SyntaxPlayground initial="area" compact />
 
 <SyntaxPlayground initial="line" compact />
 
@@ -231,6 +234,7 @@ and a slider tomorrow without changing its two chart states.
 | `state.chartModule()` | Available | Let an imported builder work without global registration |
 | `registerChartModule()` | Available | Make a module available to plain JSON specs |
 | Focused `visdelta/bar` entry | Available | Lightweight bar authoring |
+| Focused `visdelta/area` entry | Available | Lightweight area authoring |
 | Focused `visdelta/point` entry | Available | Lightweight point authoring |
 | Focused `visdelta/line` entry | Available | Lightweight line authoring |
 | Focused `visdelta/unit` entry | Developing | Available through the complete entry; a dedicated public subpath is not shipped |
@@ -238,20 +242,20 @@ and a slider tomorrow without changing its two chart states.
 
 ## What “partial” means for current chart types
 
-The four chart types are all usable, but they are not yet symmetric. The roadmap
-should close these differences before adding more chart types.
+The five chart types are all usable, but they are not yet symmetric. The roadmap
+closes these differences while new chart modules expose gaps in the ontology.
 
-| Capability | Bar | Line | Point | Unit |
-| --- | --- | --- | --- | --- |
-| Immutable builder | Available | Available | Available | Available |
-| Same-type transition | Available | Available | Available | Available |
-| Cached arbitrary-frame evaluation | Available | Developing | Available | Developing |
-| `.where()` row filtering | Available | Available; internal gaps stay disconnected by default | Available | Available |
-| `.focus()` view fitting | Available | Available on x | Available on x and y | Developing |
-| Selective `.highlight()` rendering | Available | Available | Available | Developing |
-| Detail changes | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
-| Axis/layout changes | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Grid, group, timeline, dodge |
-| Focused package entry | Available | Available | Available | Developing |
+| Capability | Area | Bar | Line | Point | Unit |
+| --- | --- | --- | --- | --- | --- |
+| Immutable builder | Available | Available | Available | Available | Available |
+| Same-type transition | Available | Available | Available | Available | Available |
+| Cached arbitrary-frame evaluation | Available | Available | Developing | Available | Developing |
+| `.where()` row filtering | Available | Available | Available; internal gaps stay disconnected by default | Available | Available |
+| `.focus()` view fitting | Available on x | Available | Available on x | Available on x and y | Developing |
+| Selective `.highlight()` rendering | Available by layer | Available | Available | Available | Developing |
+| Detail changes | Total/stacked exact reverse | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
+| Axis/layout changes | Axis; curves developing | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Grid, group, timeline, dodge |
+| Focused package entry | Available | Available | Available | Available | Developing |
 
 ## Development plan
 
@@ -266,7 +270,7 @@ The side-by-side editor is part of the language acceptance surface, not a market
 | Data | Inline rows and `.where()` transform path | Method-level transform examples Developing |
 | Visualization/encoding | Editable x, y, key, color, measure changes | Available |
 | Chart changes | Editable filtering, value, detail, layout, and axis examples | Available |
-| Chart types | Editable bar, line, point, and unit examples | Available |
+| Chart types | Editable area, bar, line, point, and unit examples | Available |
 | Delta/transition | Editable endpoints plus delta inspector, progress, and playback | Available |
 | Controls | Time and numeric progress controls | Declarative control examples Developing |
 | Runtime/extensions | Runtime is exercised by every editor | Plugin-authoring editor Developing |

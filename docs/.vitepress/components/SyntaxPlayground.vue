@@ -118,6 +118,18 @@ const reordered = sales
 
 return { from: sales, to: reordered };`
   },
+  area: {
+    label: 'Area chart',
+    code: `const sales = area(series)
+  .x("quarter")
+  .y("sales")
+  .key("quarter")
+  .color("#1c6ae4");
+
+const profit = sales.y("profit");
+
+return { from: sales, to: profit };`
+  },
   unit: {
     label: 'Unit chart',
     code: `const grid = unit(units)
@@ -301,13 +313,13 @@ async function runCode() {
     const evaluate = isLab
       ? new AsyncFunction(labChart.value, `"use strict";\n${code.value}`)
       : new AsyncFunction(
-        'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
+        'area', 'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
         `"use strict";\n${code.value}`
       );
     const authoredResult = isLab
       ? await evaluate(await labSamples[props.mode].loadChart())
       : await evaluate(
-        api.bar, api.line, api.point, api.unit, api.delta,
+        api.area, api.bar, api.line, api.point, api.unit, api.delta,
         structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
       );
     const result = pointLabPair(authoredResult);
@@ -396,7 +408,7 @@ function readLineTransition(root) {
     'move-points': 'Move points',
     'add-points': 'Add points',
     'remove-points': 'Remove points',
-    'shift-window': 'Shift window',
+    'add-remove-points': 'Add and remove points',
     'change-curve': 'Change curve',
     'match-shape': 'Match shape'
   };
@@ -525,7 +537,7 @@ function handleEditorKeydown(event) {
           @keydown="handleEditorKeydown"
         ></textarea>
         <p v-if="isLabMode" class="playground-contract"><code>{{ labChart }}</code> is provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
-        <p v-else class="playground-contract">Available: <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
+        <p v-else class="playground-contract">Available: <code>area</code>, <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
       </div>
 
       <div class="playground-output-pane">

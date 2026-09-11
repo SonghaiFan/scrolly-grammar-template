@@ -71,6 +71,7 @@ not require it.
 | --- | --- |
 | `visdelta` | Visualization grammar, delta, transition, and plugin registration |
 | `visdelta/core` | DOM-free normalization and semantic delta |
+| `visdelta/area` | Focused immutable area authoring |
 | `visdelta/bar` | Focused immutable bar authoring |
 | `visdelta/point` | Focused immutable point authoring |
 | `visdelta/line` | Focused immutable line authoring |

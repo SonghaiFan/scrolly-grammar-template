@@ -12,6 +12,8 @@ The summary/detail examples also include an experimental **Clean / Blend**
 control. Blend adds a temporary liquid-like connection while points gather or
 spread. It is a deterministic Point Lab rendering experiment, not public
 grammar, and it never changes the real point positions or the computed delta.
+Dots stay fully opaque: the renderer hands visibility from the clean dots to
+the blended shape during movement, then hands it back at the endpoint.
 Each child contributes an equal share of its summary circle's final radius, so
 the summary grows and shrinks with the number of children currently connected.
 Combining starts slowly and accelerates as the points converge; revealing detail

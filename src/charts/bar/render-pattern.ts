@@ -1,6 +1,7 @@
 // @ts-nocheck — D3 rendering pattern; typed via deps injection
 import { specState } from '../../spec-meta.js';
 import { matchesFilter as rowMatchesFilter } from '../../data/filter.js';
+import { DIVIDER_DRAW_PROGRESS } from '../detail-timing.js';
 
 export function createBarRenderKit(deps) {
   const { easeFor, staggerDelay, themeValue } = deps;
@@ -135,7 +136,7 @@ export function createBarRenderKit(deps) {
       .attr('d', startPath)
       .merge(seams)
       .transition(chart.transition.base)
-      .duration(draw ? Math.max(1, chart.transition.duration * 0.32) : chart.transition.duration)
+      .duration(draw ? Math.max(1, chart.transition.duration * DIVIDER_DRAW_PROGRESS) : chart.transition.duration)
       .style('opacity', 1)
       .attr('d', (d) => d);
   }

@@ -11,6 +11,11 @@ const cases = [
     gzipBudget: 4_000
   },
   {
+    name: 'area authoring',
+    source: 'import { area } from "./src/area.ts"; globalThis.__slBundle = { area };',
+    gzipBudget: 8_000
+  },
+  {
     name: 'bar authoring',
     source: 'import { bar } from "./src/bar.ts"; globalThis.__slBundle = { bar };',
     gzipBudget: 9_000
