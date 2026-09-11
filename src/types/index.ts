@@ -498,9 +498,9 @@ export interface SpecCompiler {
 }
 
 export interface ChartDeps {
-  drawGrid?: (chart: ChartContext, scale: unknown, d3: D3Lib) => void;
-  drawXAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib) => void;
-  drawYAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib) => void;
+  drawGrid?: (chart: ChartContext, scale: unknown, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
+  drawXAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
+  drawYAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
   drawLegend?: (chart: ChartContext, rows: DataRow[], colorSpec: ChannelSpec | undefined, d3: D3Lib) => void;
   fadeNonBarShapes?: (chart: ChartContext) => void;
   [key: string]: unknown;

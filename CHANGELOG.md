@@ -15,14 +15,17 @@ and no migration guide yet.
   `timeline`, and `dodge` layouts; explicit `.group()` meaning; cached seekable
   frames; highlight rendering; a focused `visdelta/unit` entry; and a thirteen-
   scenario editable Unit Lab. Unit intentionally has no split/merge mechanic.
-- Added reversible staged Unit layout motion: set the target view, globally
-  match equal units to slots by shortest total travel, then start short trips
-  before long trips. The opposite direction reuses the same cached frames.
+- Added reversible staged Unit layout motion: set the target view, preserve
+  matching keys regardless of distance, globally minimize travel for unmatched
+  units, then start short trips before long trips. The opposite direction
+  reuses the same cached frames.
 - Added `delta(from, to)` and `transition(from, to, options)` for two states of
   the same chart type.
 - Made transitions playable, reversible, resizable, and directly controllable
   at any progress value from `0` to `1`.
 - Added ordered x/y steps that keep marks, scales, and axes together.
+- Made entering and exiting axes use their own chart side as the motion anchor;
+  bottom, left, top, and right axes no longer fly from the SVG top-left origin.
 - Added reversible bar changes for values, filters, highlights, colors, order,
   orientation, data updates, stacked/grouped layouts, and split/merge.
 - Added cached point transitions for x/y changes, filters, highlights, colors,

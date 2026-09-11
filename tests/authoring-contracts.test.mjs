@@ -5,7 +5,11 @@ import { areaCells, areaLayers } from '../dist/charts/area/state.js';
 import { matchAreaFramePoints } from '../dist/charts/area/render.js';
 import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
 import { pointIntermediateSpecs } from '../dist/charts/point/state.js';
-import { expandUnits, minimumTravelMatching } from '../dist/charts/unit/state.js';
+import {
+  expandUnits,
+  keyFirstTravelMatching,
+  minimumTravelMatching
+} from '../dist/charts/unit/state.js';
 
 test('documented filtering uses where, not a nonexistent filter method', () => {
   for (const factory of [area, bar, line, point, unit]) {
@@ -90,6 +94,28 @@ test('unit matching fills each target slot with the closest available unit globa
     [3, 2]
   ]);
   assert.equal(matches.reduce((sum, match) => sum + match.distance, 0), 0);
+});
+
+test('unit matching preserves the same key before minimizing unmatched travel', () => {
+  const sources = [
+    { key: 'A', x: 100, y: 0 },
+    { key: 'X', x: 0, y: 0 },
+    { key: 'Y', x: 10, y: 0 }
+  ];
+  const targets = [
+    { key: 'A', x: 0, y: 0 },
+    { key: 'P', x: 9, y: 0 },
+    { key: 'Q', x: 1, y: 0 }
+  ];
+  const matches = keyFirstTravelMatching(sources, targets);
+
+  assert.deepEqual(matches.map(({ sourceIndex, targetIndex, matchedBy }) => [
+    sourceIndex, targetIndex, matchedBy
+  ]), [
+    [0, 0, 'key'],
+    [2, 1, 'travel'],
+    [1, 2, 'travel']
+  ]);
 });
 
 test('area owns explicit baseline and diverging stacked boundaries', () => {

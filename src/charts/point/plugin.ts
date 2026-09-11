@@ -10,6 +10,10 @@ export const plugin: ChartPlugin<PointViewState> = defineChartType<PointViewStat
   key: 'point',
   transitionEvaluation: 'cached',
   scenes: ['selection', 'axis', 'detail', 'mapping'],
+  defaults: {
+    // Two readable header rows: legend first, then the upward y-axis title.
+    margin: () => ({ top: 56, right: 20, bottom: 40, left: 44 })
+  },
   createRenderer: createPointRenderer,
   createSpecCompiler: createPointSpecCompiler,
   transition: {

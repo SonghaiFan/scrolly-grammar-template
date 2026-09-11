@@ -200,10 +200,16 @@ test('flip crossfades incompatible axes instead of replacing them at the first f
     const frame = progress => {
       change.progress(progress);
       const opacity = node => Number(getComputedStyle(node).opacity);
+      const translate = node => {
+        const values = (node.getAttribute('transform') || '').match(/-?[\d.]+/g) || [];
+        return values.slice(0, 2).map(Number);
+      };
       return {
         progress,
         x: opacity(change.view.querySelector('.sl-x-axis')),
         y: opacity(change.view.querySelector('.sl-y-axis')),
+        xPosition: translate(change.view.querySelector('.sl-x-axis')),
+        yPosition: translate(change.view.querySelector('.sl-y-axis')),
         ghostAxes: [...change.view.querySelectorAll('.sl-axis-ghost')].map(node => ({
           opacity: opacity(node),
           labels: [...node.querySelectorAll('.tick text')].map(label => label.textContent)
@@ -220,6 +226,10 @@ test('flip crossfades incompatible axes instead of replacing them at the first f
   expect(frames[1].ghostAxes.every(axis => axis.opacity > 0.99)).toBe(true);
   expect(frames[1].ghostAxes.some(axis => axis.labels.includes('A'))).toBe(true);
   expect(frames[1].ghostLabels.map(label => label.text).sort()).toEqual(['Category', 'Value']);
+  expect(frames[1].xPosition[0]).toBeCloseTo(frames[3].xPosition[0], 2);
+  expect(frames[1].xPosition[1]).toBeGreaterThan(frames[3].xPosition[1]);
+  expect(frames[1].yPosition[0]).toBeLessThan(frames[3].yPosition[0]);
+  expect(frames[1].yPosition[1]).toBeCloseTo(frames[3].yPosition[1], 2);
   expect(frames[2].ghostAxes.some(axis => axis.opacity < 0.99)).toBe(true);
   expect(frames[3].ghostAxes).toHaveLength(0);
   expect(frames[3].ghostLabels).toHaveLength(0);

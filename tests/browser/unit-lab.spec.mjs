@@ -141,7 +141,7 @@ test('a Unit transition does not import another chart module', async ({ page }) 
   expect(modules.filter(path => /\/charts\/(area|bar|line|point)\//.test(path))).toEqual([]);
 });
 
-test('grid reflow stages the view, minimizes travel, and uses the same path backward', async ({ page }) => {
+test('grid reflow stages the view, preserves keyed identity, and uses the same path backward', async ({ page }) => {
   await page.goto('/tests/fixtures/isolated.html');
   const result = await page.evaluate(async () => {
     const [{ unit }, { transition }] = await Promise.all([
@@ -163,18 +163,9 @@ test('grid reflow stages the view, minimizes travel, and uses the same path back
         Number(node.getAttribute('cy')).toFixed(3),
         Number(node.getAttribute('r')).toFixed(3)
       ].join('|')).sort();
-    const positions = host => new Map([...host.querySelectorAll('circle.sl-unit')]
-      .map(node => [node.dataset.key, {
-        x: Number(node.getAttribute('cx')),
-        y: Number(node.getAttribute('cy'))
-      }]));
-    const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-
     forward.progress(0);
     const sourceGeometry = geometry(forwardHost);
-    const source = positions(forwardHost);
     forward.progress(1);
-    const target = positions(forwardHost);
     forward.progress(0.15);
     const viewStageGeometry = geometry(forwardHost);
     forward.progress(0.5);
@@ -182,25 +173,22 @@ test('grid reflow stages the view, minimizes travel, and uses the same path back
       source: node.dataset.sourceKey,
       target: node.dataset.key
     }));
-    const minimumTravel = assignments.reduce((sum, match) =>
-      sum + distance(source.get(match.source), target.get(match.target)), 0);
-    const stableTravel = [...target.keys()].reduce((sum, key) =>
-      sum + distance(source.get(key), target.get(key)), 0);
-
     forward.progress(0.37);
     reverse.progress(0.63);
     return {
       sourceGeometry,
       viewStageGeometry,
-      minimumTravel,
-      stableTravel,
+      keyedIdentityPreserved: assignments.every(match => match.source === match.target),
+      matchedByKey: [...forwardHost.querySelectorAll('circle.sl-unit')]
+        .every(node => node.dataset.matchedBy === 'key'),
       reverseMatches: JSON.stringify(geometry(forwardHost)) === JSON.stringify(geometry(reverseHost)),
       steps: forward.view.dataset.transitionSteps
     };
   });
 
   expect(result.viewStageGeometry).toEqual(result.sourceGeometry);
-  expect(result.minimumTravel).toBeLessThan(result.stableTravel);
+  expect(result.keyedIdentityPreserved).toBe(true);
+  expect(result.matchedByKey).toBe(true);
   expect(result.reverseMatches).toBe(true);
   expect(result.steps).toBe('view marks');
 });

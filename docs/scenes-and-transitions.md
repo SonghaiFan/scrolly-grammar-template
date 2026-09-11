@@ -70,7 +70,9 @@ const horizontal = first.flip({ order: ["x", "y"] });
 
 If the old and new axes use incompatible scale kinds, VisDelta fades between
 them inside the same coordinate step. It does not abruptly swap the axis at the
-first frame.
+first frame. A new bottom axis enters from the bottom edge, a left axis from the
+left edge, and top/right axes from their matching sides. No axis uses the SVG
+top-left origin as its entry point.
 
 ## Current behavior by chart type
 
@@ -85,8 +87,8 @@ first frame.
   summary uses those exact frames backward.
 - **Unit:** cached, seekable frames; count, filter, highlight, color, grid,
   categorical unit bar, timeline, and dodge changes. Layout changes set the
-  view, then use shortest-total-travel matching so nearby equal units fill
-  target slots before distant ones. The reverse uses the same frames backward.
+  view, preserve every matching key, then minimize travel only for unmatched
+  units and open slots. The reverse uses the same frames backward.
   Group meaning and layout remain separate, and Unit has no summary/detail
   split or merge.
 

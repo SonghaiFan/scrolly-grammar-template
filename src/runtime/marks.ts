@@ -330,17 +330,25 @@ function colorScale(rows, channel, d3) {
   return (row) => scale(row[channel.field]);
 }
 
-function drawXAxis(chart, scale, title, d3, transition = chart.transition.base) {
+function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, options = {}) {
+  const side = options.side === 'top' ? 'top' : 'bottom';
   if (!scale) {
+    const inactiveSide = activeAxisSide(chart.scene.xAxis, side);
     markAxisInactive(chart.scene.xAxis);
-    chart.scene.xAxis.transition(transition).style('opacity', 0);
-    chart.scene.xLabel.transition(transition).style('opacity', 0);
+    chart.scene.xAxis.transition(transition)
+      .attr('transform', axisSideTransform(chart, inactiveSide, true))
+      .style('opacity', 0);
+    chart.scene.xLabel.transition(transition)
+      .attr('transform', `translate(${chart.margin.left},0)`)
+      .attr('y', xLabelSideY(chart, inactiveSide, true, themeValue('--sl-axis-label-offset', 48)))
+      .style('opacity', 0);
     return;
   }
   applyXAxisClip(chart);
-  const tickCount = themeValue('--sl-tick-count', 6);
+  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
   const labelOffset = themeValue('--sl-axis-label-offset', 48);
-  let axis = typeof scale.bandwidth === 'function' ? d3.axisBottom(scale) : d3.axisBottom(scale).ticks(tickCount);
+  const axisFactory = side === 'top' ? d3.axisTop : d3.axisBottom;
+  let axis = typeof scale.bandwidth === 'function' ? axisFactory(scale) : axisFactory(scale).ticks(tickCount);
   // Adaptive label thinning for band (categorical) x-axes:
   // when available px-per-band < threshold, skip every Nth label so they never overlap.
   if (typeof scale.bandwidth === 'function') {
@@ -352,31 +360,52 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base) 
       axis = axis.tickValues(domain.filter((_, i) => i % step === 0));
     }
   }
-  const transform = `translate(${chart.margin.left},${chart.margin.top + chart.innerHeight})`;
+  const kind = axisKind(side, scale);
   const xAxis = chart.scene.xAxis.interrupt();
-  renderAxisWithGuard(xAxis, axis, transition, axisKind('bottom', scale));
+  const entersFromSide = axisNeedsEntry(xAxis, kind);
+  renderAxisWithGuard(xAxis, axis, transition, kind);
+  if (entersFromSide) {
+    xAxis.attr('transform', axisSideTransform(chart, side, true)).style('opacity', 0);
+  }
   xAxis.selectAll('.tick text').attr('dy', '0.8em');
   alignEdgeTickLabels(xAxis, scale, d3);
-  xAxis.transition(transition).attr('transform', transform).style('opacity', 1);
+  xAxis.transition(transition)
+    .attr('transform', axisSideTransform(chart, side, false))
+    .style('opacity', 1);
   if (title) {
-    transitionAxisLabel(chart.scene.xLabel, title, transition)
-      .attr('x', chart.innerWidth / 2).attr('y', chart.margin.top + chart.innerHeight + labelOffset)
+    const xLabel = chart.scene.xLabel.interrupt();
+    const xLabelTransition = transitionAxisLabel(xLabel, title, transition);
+    if (entersFromSide) {
+      xLabel
+        .attr('x', chart.innerWidth / 2)
+        .attr('y', xLabelSideY(chart, side, true, labelOffset))
+        .attr('text-anchor', 'middle')
+        .attr('transform', `translate(${chart.margin.left},0)`)
+        .style('opacity', 0);
+    }
+    xLabelTransition
+      .attr('x', chart.innerWidth / 2).attr('y', xLabelSideY(chart, side, false, labelOffset))
       .attr('text-anchor', 'middle').attr('transform', `translate(${chart.margin.left},0)`);
   } else {
     chart.scene.xLabel.transition(transition).style('opacity', 0);
   }
 }
 
-function drawYAxis(chart, scale, title, d3, transition = chart.transition.base) {
+function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, options = {}) {
+  const side = options.side === 'right' ? 'right' : 'left';
   if (!scale) {
+    const inactiveSide = activeAxisSide(chart.scene.yAxis, side);
     markAxisInactive(chart.scene.yAxis);
-    chart.scene.yAxis.transition(transition).style('opacity', 0);
+    chart.scene.yAxis.transition(transition)
+      .attr('transform', axisSideTransform(chart, inactiveSide, true))
+      .style('opacity', 0);
     chart.scene.yLabel.transition(transition).style('opacity', 0);
     return;
   }
-  const tickCount = themeValue('--sl-tick-count', 6);
+  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
   const labelOffset = themeValue('--sl-axis-label-offset', 48);
-  let axis = typeof scale.bandwidth === 'function' ? d3.axisLeft(scale) : d3.axisLeft(scale).ticks(tickCount);
+  const axisFactory = side === 'right' ? d3.axisRight : d3.axisLeft;
+  let axis = typeof scale.bandwidth === 'function' ? axisFactory(scale) : axisFactory(scale).ticks(tickCount);
   // Adaptive label thinning for band (categorical) y-axes (horizontal bar charts):
   if (typeof scale.bandwidth === 'function') {
     const domain = scale.domain();
@@ -387,33 +416,79 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base) 
       axis = axis.tickValues(domain.filter((_, i) => i % step === 0));
     }
   }
+  const kind = axisKind(side, scale);
   const yAxis = chart.scene.yAxis.interrupt();
-  renderAxisWithGuard(yAxis, axis, transition, axisKind('left', scale));
+  const entersFromSide = axisNeedsEntry(yAxis, kind);
+  renderAxisWithGuard(yAxis, axis, transition, kind);
+  if (entersFromSide) {
+    yAxis.attr('transform', axisSideTransform(chart, side, true)).style('opacity', 0);
+  }
   yAxis.transition(transition)
-    .attr('transform', `translate(${chart.margin.left},${chart.margin.top})`)
+    .attr('transform', axisSideTransform(chart, side, false))
     .style('opacity', 1);
   if (title) {
-    transitionAxisLabel(chart.scene.yLabel, title, transition)
-      .attr('x', -chart.innerHeight / 2).attr('y', chart.margin.left - labelOffset)
-      .attr('text-anchor', 'middle').attr('transform', `translate(0,${chart.margin.top}) rotate(-90)`);
+    const yLabel = chart.scene.yLabel.interrupt();
+    const yLabelTransition = transitionAxisLabel(yLabel, title, transition);
+    if (entersFromSide) placeYLabel(yLabel, chart, side, labelOffset, true).style('opacity', 0);
+    placeYLabel(yLabelTransition, chart, side, labelOffset, false);
   } else {
     chart.scene.yLabel.transition(transition).style('opacity', 0);
   }
 }
 
-function drawGrid(chart, y, d3, transition = chart.transition.base) {
-  updateGrid(chart, y, d3, transition);
+function drawGrid(chart, y, d3, transition = chart.transition.base, options = {}) {
+  updateGrid(chart, y, d3, transition, {
+    keepX: Boolean(options.x),
+    tickCount: options.yTickCount
+  });
+  updateXGrid(chart, options.x, d3, transition, options.xTickCount);
 }
 
-function updateGrid(chart, y, d3, transition = chart.transition.base) {
+function updateGrid(chart, y, d3, transition = chart.transition.base, options = {}) {
+  if (!options.keepX) updateXGrid(chart, null, d3, transition);
   if (!y) {
     markAxisInactive(chart.scene.grid);
     chart.scene.grid.transition(transition).style('opacity', 0);
     return;
   }
   const grid = chart.scene.grid.interrupt().attr('transform', null);
-  renderAxisWithGuard(grid, d3.axisLeft(y).ticks(themeValue('--sl-tick-count', 6)).tickSize(-chart.innerWidth).tickFormat(''), transition, axisKind('grid-left', y));
+  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
+  renderAxisWithGuard(grid, d3.axisLeft(y).ticks(tickCount).tickSize(-chart.innerWidth).tickFormat(''), transition, axisKind('grid-left', y));
   grid.transition(transition).style('opacity', 1);
+}
+
+function updateXGrid(chart, x, d3, transition, tickCount) {
+  const layer = chart.scene.grid.selectAll('g.sl-point-x-grid')
+    .data(x ? [null] : [])
+    .join(
+      (enter) => enter.append('g').attr('class', 'sl-point-x-grid'),
+      (update) => update,
+      (exit) => exit.transition(transition).style('opacity', 0).remove()
+    );
+  if (!x) return;
+
+  const count = tickCount ?? themeValue('--sl-tick-count', 6);
+  const values = typeof x.ticks === 'function' ? x.ticks(count) : x.domain();
+  layer.interrupt().style('opacity', 1)
+    .selectAll('line')
+    .data(values, (value) => String(value))
+    .join(
+      (enter) => enter.append('line')
+        .attr('x1', (value) => x(value))
+        .attr('x2', (value) => x(value))
+        .attr('y1', 0)
+        .attr('y2', chart.innerHeight)
+        .style('opacity', 0)
+        .transition(transition)
+        .style('opacity', 1),
+      (update) => update.transition(transition)
+        .attr('x1', (value) => x(value))
+        .attr('x2', (value) => x(value))
+        .attr('y1', 0)
+        .attr('y2', chart.innerHeight)
+        .style('opacity', 1),
+      (exit) => exit.transition(transition).style('opacity', 0).remove()
+    );
 }
 
 function drawLegend(chart, rows, channel, d3) {
@@ -513,6 +588,45 @@ function alignEdgeTickLabels(axisGroup, scale, d3) {
 
 function axisKind(placement, scale) {
   return `${placement}:${typeof scale.bandwidth === 'function' ? 'band' : 'continuous'}`;
+}
+
+function axisNeedsEntry(axisGroup, kind) {
+  const node = axisGroup.node();
+  return !node?.__visDeltaAxisActive || node.__visDeltaAxisKind !== kind;
+}
+
+function activeAxisSide(axisGroup, fallback) {
+  const side = String(axisGroup.node()?.__visDeltaAxisKind || '').split(':')[0];
+  return ['top', 'right', 'bottom', 'left'].includes(side) ? side : fallback;
+}
+
+function axisSideTransform(chart, side, outside) {
+  if (side === 'top') return `translate(${chart.margin.left},${outside ? 0 : chart.margin.top})`;
+  if (side === 'right') {
+    return `translate(${outside ? chart.width : chart.margin.left + chart.innerWidth},${chart.margin.top})`;
+  }
+  if (side === 'left') return `translate(${outside ? 0 : chart.margin.left},${chart.margin.top})`;
+  return `translate(${chart.margin.left},${outside ? chart.height : chart.margin.top + chart.innerHeight})`;
+}
+
+function xLabelSideY(chart, side, outside, offset) {
+  if (side === 'top') return outside ? 0 : chart.margin.top - offset;
+  return outside ? chart.height : chart.margin.top + chart.innerHeight + offset;
+}
+
+function placeYLabel(label, chart, side, offset, outside) {
+  if (side === 'right') {
+    return label
+      .attr('x', chart.innerHeight / 2)
+      .attr('y', outside ? -chart.margin.right : -offset)
+      .attr('text-anchor', 'middle')
+      .attr('transform', `translate(${chart.margin.left + chart.innerWidth},${chart.margin.top}) rotate(90)`);
+  }
+  return label
+    .attr('x', -chart.innerHeight / 2)
+    .attr('y', outside ? 0 : chart.margin.left - offset)
+    .attr('text-anchor', 'middle')
+    .attr('transform', `translate(0,${chart.margin.top}) rotate(-90)`);
 }
 
 function renderAxisWithGuard(axisGroup, axis, transition, kind) {

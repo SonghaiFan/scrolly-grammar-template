@@ -43,10 +43,10 @@ export const scenarios = [
   sample('filter', '04 · Filter units', 'Remove the South observations and reflow the surviving units.', base, 'base', 'base.where({ region: "North" })'),
   sample('highlight', '05 · Highlight units', 'Keep every unit and dim the category outside the selected region.', base, 'base', 'base.highlight({ region: "North" }, { opacity: 0.12 })'),
   sample('color', '06 · Map color', 'Use color to show team while position stays in one grid.', base, 'base', 'base.color("team")'),
-  sample('columns', '07 · Change grid columns', 'Reflow the grid by filling each open slot with the nearest unit.', base, 'base', 'base.layout("grid", { columns: 6, radius: 6 })'),
+  sample('columns', '07 · Change grid columns', 'Reflow the grid while every matching key keeps its identity.', base, 'base', 'base.layout("grid", { columns: 6, radius: 6 })'),
   sample('radius', '08 · Change unit size', 'Change the size of every equal unit without mapping size to data.', base, 'base', 'base.radius(9)'),
   sample('bar', '09 · Make unit bars', 'Group by team, then position equal units as categorical bars.', bars, 'base', 'byTeam'),
-  sample('regroup', '10 · Change the category', 'Set the region view, then regroup with the shortest total unit travel.', bars, 'byTeam', 'base.group("region").layout("bar", { columns: 3 }).color("region")'),
+  sample('regroup', '10 · Change the category', 'Set the region view, keep every matching key, then move the units.', bars, 'byTeam', 'base.group("region").layout("bar", { columns: 3 }).color("region")'),
   sample('timeline', '11 · Position on a timeline', 'Stack units at the ordered year positions.', base, 'base', 'base.x("year", { title: "Year", type: "ordinal" }).layout("timeline")'),
   sample('dodge', '12 · Dodge along a position', 'Use collision-free vertical placement around each year position.', base, 'base', 'base.x("year", { title: "Year" }).layout("dodge")'),
   sample('grid', '13 · Return to one grid', 'Move categorical unit bars back into one ungrouped grid.', bars, 'byTeam', 'base')

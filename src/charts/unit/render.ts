@@ -3,7 +3,7 @@ import { BaseChart } from '../base.js';
 import { unitKey } from './keys.js';
 import {
   expandUnits,
-  matchUnitSlotsByTravel,
+  matchUnitSlotsByIdentityAndTravel,
   unitLayout,
   unitSelectionOpacity,
   unitStageTiming
@@ -49,7 +49,7 @@ class UnitChart extends BaseChart {
     drawLegend(chart, rows, enc.color, d3);
     chart.transition.base = originalTransition;
 
-    const match = matchUnitSlotsByTravel(chart, units, layout);
+    const match = matchUnitSlotsByIdentityAndTravel(chart, units, layout);
     units = match.units;
     const markTransition = stage
       ? transitionFor(chart, d3, stage.markDuration)
@@ -70,6 +70,7 @@ class UnitChart extends BaseChart {
           .attr('data-key', semanticUnitKey)
           .attr('data-source-key', (d) => d.__sourceUnitKey)
           .attr('data-travel-distance', (d) => d.__travelDistance || 0)
+          .attr('data-matched-by', (d) => d.__matchedBy)
           .attr('data-parent-key', (d) => d.__parentKey)
           .attr('data-unit-index', (d) => d.__unitIndex)
           .attr('data-group-key', (d) => layout.groupField ? d.__row[layout.groupField] : null)
@@ -88,6 +89,7 @@ class UnitChart extends BaseChart {
           .attr('data-key', semanticUnitKey)
           .attr('data-source-key', (d) => d.__sourceUnitKey)
           .attr('data-travel-distance', (d) => d.__travelDistance || 0)
+          .attr('data-matched-by', (d) => d.__matchedBy)
           .attr('data-parent-key', (d) => d.__parentKey)
           .attr('data-unit-index', (d) => d.__unitIndex)
           .attr('data-group-key', (d) => layout.groupField ? d.__row[layout.groupField] : null)

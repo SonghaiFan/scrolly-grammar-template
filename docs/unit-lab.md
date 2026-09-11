@@ -34,17 +34,16 @@ with one summary mark, so there is no split/merge mechanic. Count changes use
 ordinary unit Enter/Stay/Exit: surviving unit keys move, added units grow from
 radius zero, and removed units shrink to radius zero.
 
-Layout changes follow one reversible path: **Set view → move nearest units**.
-VisDelta measures the travel distance from every visible unit to every target
-slot, then chooses the matching with the shortest total travel. A hole at the
-end of a row is therefore filled from the nearest end of the next row, rather
-than by a unit crossing the whole row. Short trips start before long trips to
-reduce visual overlap. The opposite transition evaluates these exact frames
-backward: units move first, then the old view returns.
+Layout changes follow one reversible path: **Set view → move units**. Matching
+always keeps the same key first, however far that unit needs to travel. Only
+source and target units that cannot be paired by key are matched to open slots
+using the shortest total travel. Short trips start before long trips to reduce
+visual overlap. The opposite transition evaluates these exact frames backward:
+units move first, then the old view returns.
 
 <SyntaxPlayground mode="unit-lab" initial="bar" />
 
 Every example imports only `visdelta/unit` and the generic transition entry.
-The Unit builder, compiler, layouts, shortest-travel matching, renderer,
+The Unit builder, compiler, layouts, key-first matching, renderer,
 identity, and transition rules
 remain inside `src/charts/unit/`; Core does not know any Unit layout name.

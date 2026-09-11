@@ -128,10 +128,7 @@ export function unitSelectionOpacity(unit, spec, dimOpacity = 0.22) {
     : Number(selection.opacity ?? dimOpacity);
 }
 
-/**
- * Unit marks are fungible. Match source marks to target slots by the smallest
- * total Euclidean travel distance instead of preserving row order blindly.
- */
+/** Match the remaining identity-free units by the smallest total travel. */
 export function minimumTravelMatching(sources, targets) {
   if (!sources.length || !targets.length) return [];
   const sourceIsRows = sources.length <= targets.length;
@@ -151,36 +148,86 @@ export function minimumTravelMatching(sources, targets) {
   });
 }
 
-export function matchUnitSlotsByTravel(chart, units, layout) {
-  if (chart.transitionPlan?.match?.mode !== 'minimum-travel') {
+/**
+ * Identity is the first constraint; distance is only the fallback. A source
+ * and target with the same key stay paired even when another unit is closer.
+ */
+export function keyFirstTravelMatching(sources, targets) {
+  const pairs = [];
+  const usedSources = new Set();
+  const usedTargets = new Set();
+  const sourceByKey = new Map();
+
+  sources.forEach((source, sourceIndex) => {
+    if (source.key != null && !sourceByKey.has(String(source.key))) {
+      sourceByKey.set(String(source.key), sourceIndex);
+    }
+  });
+  targets.forEach((target, targetIndex) => {
+    if (target.key == null) return;
+    const sourceIndex = sourceByKey.get(String(target.key));
+    if (sourceIndex == null || usedSources.has(sourceIndex)) return;
+    usedSources.add(sourceIndex);
+    usedTargets.add(targetIndex);
+    pairs.push({
+      sourceIndex,
+      targetIndex,
+      distance: travelDistance(sources[sourceIndex], target),
+      matchedBy: 'key'
+    });
+  });
+
+  const remainingSources = sources
+    .map((source, sourceIndex) => ({ ...source, __sourceIndex: sourceIndex }))
+    .filter((source) => !usedSources.has(source.__sourceIndex));
+  const remainingTargets = targets
+    .map((target, targetIndex) => ({ ...target, __targetIndex: targetIndex }))
+    .filter((target) => !usedTargets.has(target.__targetIndex));
+  minimumTravelMatching(remainingSources, remainingTargets).forEach((pair) => {
+    pairs.push({
+      sourceIndex: remainingSources[pair.sourceIndex].__sourceIndex,
+      targetIndex: remainingTargets[pair.targetIndex].__targetIndex,
+      distance: pair.distance,
+      matchedBy: 'travel'
+    });
+  });
+  return pairs.sort((a, b) => a.targetIndex - b.targetIndex);
+}
+
+export function matchUnitSlotsByIdentityAndTravel(chart, units, layout) {
+  if (chart.transitionPlan?.match?.mode !== 'key-first-travel') {
     return { units, maxDistance: 0, totalDistance: 0 };
   }
   const sourceNodes = chart.g.selectAll('circle.sl-unit').nodes();
   const sources = sourceNodes.map((node, index) => ({
     index,
-    key: String(unitJoinKey(node.__data__) ?? node.dataset.sourceKey ?? node.dataset.key ?? index),
+    key: String(node.dataset.key ?? node.__data__?.__semanticUnitKey ?? node.__data__?.__unitKey ?? index),
+    joinKey: String(unitJoinKey(node.__data__) ?? node.dataset.sourceKey ?? node.dataset.key ?? index),
     x: finiteNumber(node.getAttribute('cx')),
     y: finiteNumber(node.getAttribute('cy'))
   })).filter((item) => Number.isFinite(item.x) && Number.isFinite(item.y));
   const targets = units.map((unit, index) => ({
     index,
+    key: String(unit.__semanticUnitKey ?? unit.__unitKey),
     x: finiteNumber(layout.x(unit, index)),
     y: finiteNumber(layout.y(unit, index))
   }));
-  const pairs = minimumTravelMatching(sources, targets);
+  const pairs = keyFirstTravelMatching(sources, targets);
   const pairByTarget = new Map(pairs.map((pair) => [pair.targetIndex, pair]));
-  const matchedSourceKeys = new Set(pairs.map((pair) => sources[pair.sourceIndex].key));
+  const matchedSourceKeys = new Set(pairs.map((pair) => sources[pair.sourceIndex].joinKey));
   const rematched = units.map((unit, targetIndex) => {
     const pair = pairByTarget.get(targetIndex);
+    const source = pair ? sources[pair.sourceIndex] : null;
     const semanticKey = String(unit.__semanticUnitKey ?? unit.__unitKey);
     return {
       ...unit,
       __semanticUnitKey: semanticKey,
-      __joinKey: pair
-        ? sources[pair.sourceIndex].key
+      __joinKey: source
+        ? source.joinKey
         : uniqueEnterKey(semanticKey, targetIndex, matchedSourceKeys),
-      __sourceUnitKey: pair ? sources[pair.sourceIndex].key : null,
-      __travelDistance: pair?.distance ?? 0
+      __sourceUnitKey: source?.key ?? null,
+      __travelDistance: pair?.distance ?? 0,
+      __matchedBy: pair?.matchedBy ?? 'enter'
     };
   });
   return {
@@ -201,14 +248,14 @@ export function resolveUnitTransitionPlan(previousSpec, nextSpec) {
   });
   const plan = {
     diff: diff.deltas.map(({ type, action, previous, next }) => ({ type, action, previous, next })),
-    reason: positionChanged ? 'unit-minimum-travel-layout' : 'unit-default-plan',
+    reason: positionChanged ? 'unit-key-first-layout' : 'unit-default-plan',
     timing,
     totalDuration: timing.duration
   };
   if (!positionChanged) return plan;
   return {
     ...plan,
-    match: { mode: 'minimum-travel', reason: 'closest-unit-fills-target-slot' },
+    match: { mode: 'key-first-travel', reason: 'same-key-first-then-closest-unmatched-unit' },
     steps: [
       { part: 'view', changes: ['scale', 'axis'] },
       { part: 'marks', changes: ['marks', 'exit', 'enter'] }
@@ -225,7 +272,7 @@ export function canonicalUnitTransitionPair(previousSpec, nextSpec) {
 }
 
 export function unitStageTiming(chart) {
-  if (chart.transitionPlan?.match?.mode !== 'minimum-travel') return null;
+  if (chart.transitionPlan?.match?.mode !== 'key-first-travel') return null;
   const total = Math.max(1, Number(chart.transition.duration) || 900);
   return {
     viewDuration: total * VIEW_STAGE_RATIO,

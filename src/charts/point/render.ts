@@ -4,6 +4,7 @@ import { focusedScale, viewSelection } from '../focus.js';
 import { matchesFilter } from '../../data/filter.js';
 import { applyTransforms } from '../../data/transforms.js';
 import { specState } from '../../spec-meta.js';
+import { drawPointAxes } from './axes.js';
 import { applyPointIdentity, pointKeyAccessor, pointStoredKey } from './keys.js';
 import { defaultPointRadius, parentAnchors, parentKey, pointState, radiusScale } from './state.js';
 
@@ -16,7 +17,10 @@ class PointChart extends BaseChart {
     const {
       bindTooltip,
       colorScale,
+      drawGrid,
       drawLegend,
+      drawXAxis,
+      drawYAxis,
       fadeNonPointShapes,
       bandOrLinear,
       niceExtent,
@@ -76,6 +80,14 @@ class PointChart extends BaseChart {
       return previousAnchors.byParent?.get(parent) || chartPosition(row);
     }
 
+    function pointEnterPosition(row) {
+      // An added observation has no meaningful journey from another datum:
+      // it is born at its target and grows there. A summary/detail change is
+      // different—the parent centroid is meaningful data, so children may
+      // spread from it.
+      return movesPoints ? enterAnchor(row) : chartPosition(row);
+    }
+
     function exitAnchor(row) {
       const parent = parentKey(row, state.parentField);
       return nextParentAnchors.get(parent) || chartPosition(row);
@@ -86,7 +98,7 @@ class PointChart extends BaseChart {
       x: (d) => position(x, d[enc.x?.field]),
       y: (d) => position(y, d[enc.y?.field])
     });
-    this.drawCartesianAxes(chart, x, y, viewEnc, d3);
+    drawPointAxes(chart, x, y, viewEnc, d3, { drawGrid, drawXAxis, drawYAxis });
     drawLegend(chart, rows, enc.color, d3);
 
     const crispLayer = chart.g.selectAll('g.sl-point-crisp-layer')
@@ -108,8 +120,8 @@ class PointChart extends BaseChart {
           .append('circle')
           .attr('class', 'sl-point')
           .call(applyPointIdentity, key)
-          .attr('cx', (d) => enterAnchor(d).x)
-          .attr('cy', (d) => enterAnchor(d).y)
+          .attr('cx', (d) => pointEnterPosition(d).x)
+          .attr('cy', (d) => pointEnterPosition(d).y)
           .attr('r', 0)
           .attr('fill', (d) => color(d))
           .attr('stroke', themeValue('--sl-mark-stroke', 'white'))

@@ -146,9 +146,10 @@ Point, line, and unit have chart-local authoring, compilation, rendering, and
 change rules. Line now owns its cut → move → connect total/series plan and uses
 that same plan backward for merge. Point owns its cached summary/detail path.
 That Point path is `set view → move points`; combine reuses it backward.
-Unit owns a reversible `set view → move nearest units` plan. Its global
-minimum-travel matcher assigns equal units to target slots and stages shorter
-trips before longer ones. None of these rules live in the core.
+Unit owns a reversible `set view → move units` plan. It preserves matching keys
+first, then uses global minimum-travel matching only for unmatched units and
+open slots. Shorter trips start before longer trips. None of these rules live
+in the core.
 Future chart types should use the bar folder as the reference shape when they
 need custom multi-step plans, intermediate specs, or inspector metadata.
 

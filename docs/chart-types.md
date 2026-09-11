@@ -639,8 +639,9 @@ const states = [
 
 ## Point — `point(dataset)`
 
-A scatterplot. Defaults: `mark: "point"`, `.x()`/`.y()` type
-`"quantitative"`.
+A scatterplot for reading correlation. Defaults: `mark: "point"`, `.x()`/`.y()`
+type `"quantitative"`, a light two-direction grid, open axes, and edge-aligned
+axis titles that show increasing direction.
 
 ```js
 const base = point("weather").x("tmin").y("tmax").key("decade");
@@ -651,6 +652,9 @@ const base = point("weather").x("tmin").y("tmax").key("decade");
 Try the complete editable [Point transition lab](/point-lab), which covers
 position, filtering, highlighting, color, size, data, flip, and summary/detail
 transitions.
+
+An added observation appears at its target position with radius zero, then
+grows in place. It does not fly in from an unrelated point or group centroid.
 
 ### `.pointSize(value)` / `.radius(value)`
 
@@ -809,11 +813,12 @@ Unit intentionally has no `.rollup()` or `.breakdown()`. Added units enter from
 radius zero; removed units shrink to zero; surviving keys move between layouts.
 There is no summary mark and therefore no split/merge mechanic.
 
-When positions or layouts change, equal units are matched to target slots by
-the shortest total travel. The transition first sets the target view, then
-moves the nearest available units into the open positions. Short trips begin
-before long trips. Reversing the transition plays the same staged frames
-backward instead of computing a second motion rule.
+When positions or layouts change, matching keys always preserve identity,
+regardless of travel distance. Only units without a matching key are assigned
+to the remaining open slots by the shortest total travel. The transition first
+sets the target view, then moves units; short trips begin before long trips.
+Reversing the transition plays the same staged frames backward instead of
+computing a second motion rule.
 
 ---
 

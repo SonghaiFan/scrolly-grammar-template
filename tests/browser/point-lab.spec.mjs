@@ -70,6 +70,68 @@ test('point radius, highlight, and cached node identity are real renderer behavi
   expect(new Set(radii.map(value => value.toFixed(3))).size).toBeGreaterThan(1);
 });
 
+test('point defaults use compact, open correlation axes', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#x');
+  await ready(page);
+  const style = await page.locator('#chart svg').evaluate(svg => ({
+    verticalGridLines: svg.querySelectorAll('.sl-point-x-grid line').length,
+    horizontalGridLines: svg.querySelectorAll('.sl-grid > .tick line').length,
+    xDomainOpacity: getComputedStyle(svg.querySelector('.sl-x-axis .domain')).opacity,
+    yDomainOpacity: getComputedStyle(svg.querySelector('.sl-y-axis .domain')).opacity,
+    xTitle: svg.querySelector('.sl-x-label')?.textContent,
+    yTitle: svg.querySelector('.sl-y-label')?.textContent,
+    xTitleAnchor: svg.querySelector('.sl-x-label')?.getAttribute('text-anchor'),
+    yTitleAnchor: svg.querySelector('.sl-y-label')?.getAttribute('text-anchor'),
+    xAxisTransform: svg.querySelector('.sl-x-axis')?.getAttribute('transform'),
+    yAxisTransform: svg.querySelector('.sl-y-axis')?.getAttribute('transform')
+  }));
+
+  expect(style.verticalGridLines).toBeGreaterThan(1);
+  expect(style.horizontalGridLines).toBeGreaterThan(1);
+  expect(style.xDomainOpacity).toBe('0');
+  expect(style.yDomainOpacity).toBe('0');
+  expect(style.xTitle).toBe('Income →');
+  expect(style.yTitle).toBe('↑ Health');
+  expect(style.xTitleAnchor).toBe('end');
+  expect(style.yTitleAnchor).toBe('start');
+  expect(style.xAxisTransform).toMatch(/^translate\(44,/);
+  expect(style.yAxisTransform).toMatch(/^translate\(44,\s*56\)$/);
+
+  await page.locator('#scenario').selectOption('color');
+  await ready(page);
+  await page.locator('#end').click();
+  const header = await page.locator('#chart svg').evaluate(svg => {
+    const box = selector => {
+      const rect = svg.querySelector(selector)?.getBoundingClientRect();
+      return rect && { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left };
+    };
+    return { legend: box('.sl-legend'), yTitle: box('.sl-y-label') };
+  });
+  expect(header.legend.bottom <= header.yTitle.top || header.legend.right <= header.yTitle.left).toBe(true);
+});
+
+test('an added point grows at its target instead of flying from an unrelated anchor', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#add');
+  await ready(page);
+  const pointAt = async (progress) => {
+    await page.locator('#progress').fill(String(progress));
+    return page.locator('#chart circle.sl-point[data-key="G"]').evaluate(node => ({
+      x: Number(node.getAttribute('cx')),
+      y: Number(node.getAttribute('cy')),
+      radius: Number(node.getAttribute('r'))
+    }));
+  };
+  const firstVisible = await pointAt(0.05);
+  const middle = await pointAt(0.5);
+  const end = await pointAt(1);
+  expect([firstVisible.x, firstVisible.y]).toEqual([end.x, end.y]);
+  expect([middle.x, middle.y]).toEqual([end.x, end.y]);
+  expect(firstVisible.radius).toBe(0);
+  expect(middle.radius).toBeGreaterThan(0);
+  expect(firstVisible.radius).toBeLessThan(middle.radius);
+  expect(middle.radius).toBeLessThan(end.radius);
+});
+
 test('point focus moves the view without filtering points', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/point-lab.html#focus');
   await ready(page);

@@ -84,6 +84,9 @@ y step = y scale + y axis + marks
 Therefore `flip({ order: ["x", "y"] })` reads as “change x first, then y.” If
 an old and new axis cannot be smoothly interpolated, VisDelta fades between them
 inside the same step instead of replacing the axis at the first frame.
+An entering or exiting axis moves from its own side of the chart: a bottom axis
+uses the bottom edge, a left axis uses the left edge, and top/right axes use
+their matching edges. An axis never enters from the chart's top-left origin.
 
 Current and intended default policies are:
 
@@ -254,7 +257,7 @@ closes these differences while new chart modules expose gaps in the ontology.
 | `.focus()` view fitting | Available on x | Available | Available on x | Available on x and y | Developing |
 | Selective `.highlight()` rendering | Available by layer | Available | Available | Available | Available |
 | Detail changes | Total/stacked exact reverse | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
-| Axis/layout changes | Axis and D3 curves | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Set view, then shortest-travel move; exact reverse |
+| Axis/layout changes | Axis and D3 curves | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Set view, keep keys, then minimize unmatched travel; exact reverse |
 | Focused package entry | Available | Available | Available | Available | Available |
 
 ## Development plan
