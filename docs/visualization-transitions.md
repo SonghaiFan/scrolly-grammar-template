@@ -139,9 +139,9 @@ expect individual mark nodes or listeners to survive a recompile. The built-in
 tooltip handlers are restored per phase; externally attached native listeners and
 D3 handlers with a separate namespace survive ordinary seeks.
 
-Line, unit, and custom renderers without an explicit cache capability use the
+Line and custom renderers without an explicit cache capability use the
 deterministic reconstruction bridge: each seek rebuilds their SVG scene and
-repeats layout/transforms. The cached bar and point compiler extracts interpolation functions from D3 schedules
+repeats layout/transforms. The cached Area, Bar, Point, and Unit compiler extracts interpolation functions from D3 schedules
 at initialization; it is not yet independent of D3 internals. The resulting frame
 evaluator has no live D3 timers. Existing renderer limitations still apply. The
 delta is diagnostic and is not a serialized animation or a guarantee that every

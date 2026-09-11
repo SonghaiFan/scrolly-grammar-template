@@ -34,8 +34,8 @@ function compileUnitLayout(spec: ViewSpec, axisSpec: AnyRecord = {}, _context: A
   const unit = {
     ...(specUnit(spec) || {}),
     ...copyDefined(axisSpec, [
-      'layout', 'columns', 'groupColumns', 'radius', 'x', 'y',
-      'group', 'value', 'label', 'maxUnits'
+      'layout', 'columns', 'radius', 'x', 'y',
+      'group', 'value', 'maxUnits'
     ])
   };
   const encoding = cloneEncoding(spec.encoding);

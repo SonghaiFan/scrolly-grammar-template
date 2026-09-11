@@ -11,6 +11,13 @@ and no migration guide yet.
   Transition, Frame, Control, Runtime, and Plugin.
 - Added `area`, `bar`, `line`, `point`, and `unit` chart types with shared chainable
   methods and explicit chart-specific methods.
+- Completed Unit as an independent chart module with `grid`, categorical `bar`,
+  `timeline`, and `dodge` layouts; explicit `.group()` meaning; cached seekable
+  frames; highlight rendering; a focused `visdelta/unit` entry; and a thirteen-
+  scenario editable Unit Lab. Unit intentionally has no split/merge mechanic.
+- Added reversible staged Unit layout motion: set the target view, globally
+  match equal units to slots by shortest total travel, then start short trips
+  before long trips. The opposite direction reuses the same cached frames.
 - Added `delta(from, to)` and `transition(from, to, options)` for two states of
   the same chart type.
 - Made transitions playable, reversible, resizable, and directly controllable
@@ -62,15 +69,18 @@ and no migration guide yet.
 - Added self-contained lazy chart modules. A chainable state now carries its
   chart implementation, so the generic transition runtime has no built-in chart
   names and an independently imported chart works without global registration.
-- Made Area, Bar, Point, and Line Lab scenarios discoverable modules instead of hard-coded
+- Moved Bar-only semantic differences back into the Bar module. Shared Core no
+  longer imports a built-in chart implementation, and an executed Unit
+  transition loads no Area, Bar, Line, or Point module.
+- Made Area, Bar, Point, Line, and Unit Lab scenarios discoverable modules instead of hard-coded
   branches in the shared documentation editor.
-- Added focused package entries for core difference calculation, area, bar, point, and line
+- Added focused package entries for core difference calculation, area, bar, point, line, and unit
   authoring, transitions, plugins, browser use, and composition adapters.
 - Added strict transform validation. Arquero is needed only when a chart uses a
   data transform; D3 remains the rendering dependency.
 - Added one VitePress documentation site with live editors, fourteen-scenario
-  Area Lab, thirteen-scenario Bar and Point Labs, a sixteen-scenario Line Lab, a language roadmap,
-  and automated terminology checks.
+  Area Lab, thirteen-scenario Bar, Point, and Unit Labs, a sixteen-scenario Line
+  Lab, a language roadmap, and automated terminology checks.
 - Added Node, browser, package, documentation, and bundle-size checks.
 
 The current limits are documented in the [language framework](docs/language-framework.md).

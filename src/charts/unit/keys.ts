@@ -1,3 +1,3 @@
 export function unitKey(datum: Record<string, unknown>): unknown {
-  return datum['__unitKey'];
+  return datum['__joinKey'] ?? datum['__unitKey'];
 }

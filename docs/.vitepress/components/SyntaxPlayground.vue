@@ -134,13 +134,13 @@ return { from: sales, to: profit };`
     label: 'Unit chart',
     code: `const grid = unit(units)
   .value("count", { maxUnits: 80 })
-  .label("team")
-  .columns(10)
-  .radius(4);
+  .key("team")
+  .layout("grid", { columns: 10, radius: 4 });
 
-const grouped = grid.group("team", {
-  color: "team"
-});
+const grouped = grid
+  .group("team")
+  .layout("bar", { columns: 3 })
+  .color("team");
 
 return { from: grid, to: grouped };`
   }

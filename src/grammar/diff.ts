@@ -11,7 +11,6 @@ import type {
   SemanticViewState,
   ViewSpec
 } from '../types/index.js';
-import { appendBarSemanticDeltas, semanticBarState } from '../charts/bar/diff.js';
 
 export function diffViewStates(
   previous: ViewSpec | { toSpec(): ViewSpec } | null | undefined,
@@ -95,10 +94,6 @@ export function diffSemanticViewStates(
   pushStateDelta(deltas, 'axis', prev.axis, curr.axis);
   pushStateDelta(deltas, 'detail', prev.detail, curr.detail);
 
-  if (prev.mark === 'bar' || curr.mark === 'bar') {
-    appendBarSemanticDeltas(deltas, prev, curr, { pushDelta, pushStateDelta });
-  }
-
   return {
     previous: prev,
     next: curr,
@@ -129,10 +124,6 @@ function toSemanticState(spec: ViewSpec): SemanticViewState {
     axis: sceneState.axis ?? stateFields.axis ?? null,
     detail: (sceneState.detail ?? stateFields.detail ?? null) as DetailSpec | null
   };
-
-  if (String(spec.mark ?? '').toLowerCase() === 'bar') {
-    state.bar = semanticBarState(spec, stateFields);
-  }
 
   return state;
 }

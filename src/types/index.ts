@@ -361,7 +361,6 @@ export interface SemanticViewState {
   selection: SelectionSpec | null;
   axis: AxisSpec | null;
   detail: DetailSpec | null;
-  bar?: BarSemanticState;
 }
 
 export interface SemanticDiffResult {
@@ -385,7 +384,7 @@ export interface DiffResult {
 
 // ─── Transition planning ──────────────────────────────────────────────────────
 
-export type ChartPart = 'x' | 'y';
+export type ChartPart = 'x' | 'y' | 'view' | 'marks';
 export type TransitionChange = 'scale' | 'axis' | 'marks' | 'enter' | 'exit';
 
 export interface TransitionMatch {

@@ -259,7 +259,7 @@ for (const chartType of ['line', 'point', 'unit']) {
       let to = from.y('other');
       if (chartType === 'unit') {
         from = from.value('count').columns(6);
-        to = from.group('group');
+        to = from.group('group').layout('bar', { columns: 2 });
       }
       const a = await sl.transition(from, to, opts('#a'));
       const b = await sl.transition(from, to, opts('#b'));

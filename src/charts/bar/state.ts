@@ -1,5 +1,5 @@
 import { specTransition } from '../../spec-meta.js';
-import { diffViewStates } from '../../grammar/diff.js';
+import { diffBarViewStates } from './diff.js';
 import { defaultTransition, stepDuration } from '../../timing.js';
 import { normalizeMarkRendererKey } from '../index.js';
 import type {
@@ -26,11 +26,12 @@ export function resolveBarTransitionPlan(
   previousSpec: ViewSpec | null,
   nextSpec: ViewSpec | null
 ): TransitionPlan {
+  if (!previousSpec || !nextSpec) return {};
   const previous = barState(previousSpec);
   const next = barState(nextSpec);
   if (!previous || !next) return {};
 
-  const diff = diffViewStates(previousSpec, nextSpec);
+  const diff = diffBarViewStates(previousSpec, nextSpec);
   const plan: TransitionPlan = {
     diff: diff.deltas.map(({ type, action, previous: p, next: n }) => ({
       type, action, previous: p, next: n
@@ -309,7 +310,7 @@ function segmentLayoutStepOrder(options: Record<string, unknown>, layout: BarLay
   return layout === 'stacked' ? ['y', 'x'] : ['x', 'y'];
 }
 
-function changedBarDimensions(diff: ReturnType<typeof diffViewStates>): Array<'x' | 'y'> {
+function changedBarDimensions(diff: ReturnType<typeof diffBarViewStates>): Array<'x' | 'y'> {
   return (
     [
       diff.hasDelta('bar.x-geometry') ? 'x' : null,

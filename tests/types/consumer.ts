@@ -5,6 +5,7 @@ import { bar as selectedBar, barModule } from 'visdelta/bar';
 import { area as selectedArea, areaModule } from 'visdelta/area';
 import { point as selectedPoint, pointModule } from 'visdelta/point';
 import { line as selectedLine, lineModule } from 'visdelta/line';
+import { unit as selectedUnit, unitModule } from 'visdelta/unit';
 import {
   ChartState,
   defineChartModule,
@@ -25,6 +26,7 @@ selectedBar().data([]).x('key');
 selectedPoint().data([]).x('x').y('y').radius(6);
 selectedLine().data([]).x('x').y('y').curve('curveMonotoneX').strokeWidth(3).pointSize(4);
 selectedArea().data([]).x('x').y('y').curve('curveMonotoneX');
+selectedUnit().data([]).value('count').group('category').layout('bar', { columns: 2 }).radius(4);
 // @ts-expect-error VisDelta uses exact D3 curve names rather than aliases.
 selectedLine().curve('smooth');
 // @ts-expect-error D3 curveBundle is for Line and does not implement the Area interface.
@@ -33,6 +35,7 @@ registerChartModule(areaModule);
 registerChartModule(barModule);
 registerChartModule(pointModule);
 registerChartModule(lineModule);
+registerChartModule(unitModule);
 // @ts-expect-error Pair progress accepts only a number.
 pair.progress('0.5');
 // @ts-expect-error ESM dependencies are explicit.

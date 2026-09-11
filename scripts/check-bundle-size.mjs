@@ -29,6 +29,11 @@ const cases = [
     name: 'line authoring',
     source: 'import { line } from "./src/line.ts"; globalThis.__slBundle = { line };',
     gzipBudget: 8_000
+  },
+  {
+    name: 'unit authoring',
+    source: 'import { unit } from "./src/unit.ts"; globalThis.__slBundle = { unit };',
+    gzipBudget: 8_000
   }
 ];
 

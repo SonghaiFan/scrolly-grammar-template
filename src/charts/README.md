@@ -146,7 +146,9 @@ Point, line, and unit have chart-local authoring, compilation, rendering, and
 change rules. Line now owns its cut → move → connect total/series plan and uses
 that same plan backward for merge. Point owns its cached summary/detail path.
 That Point path is `set view → move points`; combine reuses it backward.
-Unit still has a minimal plan. None of these rules live in the core.
+Unit owns a reversible `set view → move nearest units` plan. Its global
+minimum-travel matcher assigns equal units to target slots and stages shorter
+trips before longer ones. None of these rules live in the core.
 Future chart types should use the bar folder as the reference shape when they
 need custom multi-step plans, intermediate specs, or inspector metadata.
 
@@ -165,7 +167,9 @@ Keep the public chaining surface chart-first:
   `where`, `highlight`, `axis`, and `transition`
 - point: `flip`, `breakdown`, and `rollup`
 - line: `flip`, `breakdown`, and `rollup`
-- unit: `value`, `label`, `columns`, `radius`, `group`, `timeline`, and `dodge`
+- unit: `value`, `columns`, `radius`, `group`, and `layout`; supported layouts
+  are `grid`, `bar`, `timeline`, and `dodge`. Grouping never silently chooses
+  layout or color, and Unit has no summary/detail split or merge.
 
 Compiled authoring specs should be Vega-ish first: `data`, `mark`,
 `encoding`, and `transform` stay in the root spec, while VisDelta-only

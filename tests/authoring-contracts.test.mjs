@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { area, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, point, unit } from '../dist/index.js';
+import { area, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, point, unit, UNIT_LAYOUTS } from '../dist/index.js';
 import { areaCells, areaLayers } from '../dist/charts/area/state.js';
 import { matchAreaFramePoints } from '../dist/charts/area/render.js';
 import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
 import { pointIntermediateSpecs } from '../dist/charts/point/state.js';
+import { expandUnits, minimumTravelMatching } from '../dist/charts/unit/state.js';
 
 test('documented filtering uses where, not a nonexistent filter method', () => {
   for (const factory of [area, bar, line, point, unit]) {
@@ -37,6 +38,58 @@ test('where changes rows while focus keeps rows and changes the view', () => {
   const filteredBar = charts[0].where({ type: 'Hot days' }).toSpec();
   assert.equal(filteredBar.meta.object.key, 'id');
   assert.equal(filteredBar.encoding.y.title, 'Y');
+});
+
+test('unit separates group meaning from layout and preserves count identity', () => {
+  const rows = [
+    { id: 'A', category: 'one', count: 0 },
+    { id: 'B', category: 'two', count: 3 }
+  ];
+  const base = unit(rows).value('count', { maxUnits: 20 }).key('id');
+  const grouped = base.group('category');
+  const bars = grouped.layout('bar', { columns: 2, radius: 5 });
+  const groupedSpec = grouped.toSpec();
+  const barSpec = bars.toSpec();
+
+  assert.deepEqual(UNIT_LAYOUTS, ['grid', 'bar', 'timeline', 'dodge']);
+  assert.equal(groupedSpec.meta.state.sceneState.axis.group, 'category');
+  assert.equal(groupedSpec.meta.state.sceneState.axis.layout, 'grid');
+  assert.equal(groupedSpec.encoding?.color, undefined);
+  assert.equal(barSpec.meta.state.sceneState.axis.layout, 'bar');
+  assert.equal(barSpec.meta.unit.columns, 2);
+  assert.equal(barSpec.meta.unit.radius, 5);
+  assert.equal(typeof bars.rollup, 'undefined');
+  assert.equal(typeof bars.breakdown, 'undefined');
+
+  const units = expandUnits(barSpec.data, barSpec, {});
+  assert.equal(units.length, 3);
+  assert.deepEqual(units.map(value => value.__unitKey), ['B\u00000', 'B\u00001', 'B\u00002']);
+  assert.throws(() => base.layout('cluster'), /grid, bar, timeline, dodge/);
+  assert.throws(() => base.columns(0), /positive integer/);
+  assert.throws(() => base.radius(0), /positive finite/);
+  assert.throws(() => base.value('count', { maxUnits: 0 }), /positive integer/);
+});
+
+test('unit matching fills each target slot with the closest available unit globally', () => {
+  const sources = [
+    { x: 0, y: 0 },
+    { x: 10, y: 0 },
+    { x: 0, y: 10 },
+    { x: 10, y: 10 }
+  ];
+  const targets = [
+    { x: 0, y: 0 },
+    { x: 10, y: 0 },
+    { x: 10, y: 10 }
+  ];
+  const matches = minimumTravelMatching(sources, targets);
+
+  assert.deepEqual(matches.map(({ sourceIndex, targetIndex }) => [sourceIndex, targetIndex]), [
+    [0, 0],
+    [1, 1],
+    [3, 2]
+  ]);
+  assert.equal(matches.reduce((sum, match) => sum + match.distance, 0), 0);
 });
 
 test('area owns explicit baseline and diverging stacked boundaries', () => {

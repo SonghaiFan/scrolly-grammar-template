@@ -3,7 +3,7 @@ import type { Visualization, TransitionOptions } from './transition.js';
 
 export { area, availableChartTypes, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, delta, diffViewStates, defineChartType,
   line, point, registerChartType, registerChartModule, unit,
-  visualizationSpec } from './index.js';
+  UNIT_LAYOUTS, visualizationSpec } from './index.js';
 
 type BrowserOptions = Record<string, unknown>;
 function dependencies(options: BrowserOptions): BrowserOptions {

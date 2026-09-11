@@ -15,9 +15,10 @@ export {
   D3_CURVE_NAMES,
   line,
   point,
-  unit
+  unit,
+  UNIT_LAYOUTS
 } from "./grammar/index.js";
-export type { D3AreaCurveName, D3CurveName } from "./grammar/index.js";
+export type { D3AreaCurveName, D3CurveName, UnitLayout, UnitLayoutOptions, UnitViewState } from "./grammar/index.js";
 export { defineChartType } from "./charts/plugin.js";
 export { transition } from "./transition.js";
 export { delta, diffViewStates, visualizationSpec } from "./core.js";

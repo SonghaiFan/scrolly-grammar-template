@@ -10,6 +10,7 @@ import * as distApi from '../dist/visdelta.esm.js';
 const publicApi = [
   'D3_AREA_CURVE_NAMES',
   'D3_CURVE_NAMES',
+  'UNIT_LAYOUTS',
   'area',
   'availableChartTypes',
   'bar',

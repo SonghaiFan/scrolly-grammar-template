@@ -182,7 +182,7 @@ by the shape drawn in SVG.
 | `bar()` | Available | Categorical comparison, filtering, reversible split/merge, grouped/stacked layout | Cached frame data |
 | `line()` | Available | Ordered trends, keyed point/path changes, sliding windows, and staged reversible total/series changes | Reconstructs frames |
 | `point()` | Available | Quantitative relationships and reversible summary/detail changes | Cached frame data |
-| `unit()` | Available | Countable units, grids, groups, timelines, dodge | Reconstructs frames |
+| `unit()` | Available | Countable units, grids, categorical unit bars, timelines, dodge | Cached frame data |
 | `area()` | Available | Ordered magnitude, explicit baseline, and reversible total/stacked composition | Cached frame data |
 | `rect()` / heatmap | Research | Candidate matrix and density chart type | Not implemented |
 | `arc()` | Research | Candidate part-to-whole chart type | Not implemented |
@@ -208,7 +208,7 @@ The research rows are a taxonomy of likely language space, not release promises.
 | `.play({ duration, from, to })` | Available | Time-drive progress in either direction |
 | `.pause()`, `.resize()`, `.destroy()` | Available | Runtime lifecycle control |
 | `.transition({ duration, ease, stagger })` | Available | Endpoint transition metadata |
-| Cached frame data for line and unit | Developing | Bar and point already use cached evaluation |
+| Cached frame data for line | Developing | Area, Bar, Point, and Unit use cached evaluation |
 | Transition such as bar → line | Unsupported | Both endpoints must currently use the same chart type |
 | Cross-type transition compiler | Research | Requires matching and geometry rules beyond the current contract |
 
@@ -237,7 +237,7 @@ and a slider tomorrow without changing its two chart states.
 | Focused `visdelta/area` entry | Available | Lightweight area authoring |
 | Focused `visdelta/point` entry | Available | Lightweight point authoring |
 | Focused `visdelta/line` entry | Available | Lightweight line authoring |
-| Focused `visdelta/unit` entry | Developing | Available through the complete entry; a dedicated public subpath is not shipped |
+| Focused `visdelta/unit` entry | Available | Lightweight unit authoring |
 | Automatic builder generation | Not planned | Each chart owns meaningful chart-specific chain methods; the core does not guess them |
 
 ## What “partial” means for current chart types
@@ -249,13 +249,13 @@ closes these differences while new chart modules expose gaps in the ontology.
 | --- | --- | --- | --- | --- | --- |
 | Immutable builder | Available | Available | Available | Available | Available |
 | Same-type transition | Available | Available | Available | Available | Available |
-| Cached arbitrary-frame evaluation | Available | Available | Developing | Available | Developing |
+| Cached arbitrary-frame evaluation | Available | Available | Developing | Available | Available |
 | `.where()` row filtering | Available | Available | Available; internal gaps stay disconnected by default | Available | Available |
 | `.focus()` view fitting | Available on x | Available | Available on x | Available on x and y | Developing |
-| Selective `.highlight()` rendering | Available by layer | Available | Available | Available | Developing |
+| Selective `.highlight()` rendering | Available by layer | Available | Available | Available | Available |
 | Detail changes | Total/stacked exact reverse | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
-| Axis/layout changes | Axis; curves developing | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Grid, group, timeline, dodge |
-| Focused package entry | Available | Available | Available | Available | Developing |
+| Axis/layout changes | Axis and D3 curves | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Set view, then shortest-travel move; exact reverse |
+| Focused package entry | Available | Available | Available | Available | Available |
 
 ## Development plan
 
@@ -290,10 +290,9 @@ The target is one colocated side-by-side editor for every public syntax section.
 
 <span class="language-status is-developing">Developing</span>
 
-1. Add a focused entry for unit.
-2. Extend cached seek evaluation to line and unit.
-3. Add selective highlight rendering to unit.
-4. Document and test every chart-specific detail, layout, and axis change.
+1. Extend cached seek evaluation to Line.
+2. Document and test every chart-specific detail, layout, and axis change.
+3. Keep Unit grouping separate from Unit layout and color.
 
 ### Milestone C — control abstraction
 

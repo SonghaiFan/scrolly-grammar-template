@@ -168,8 +168,12 @@ Chart-specific methods are `.pointSize()`, `.radius()`, `.flip()`,
 
 ### `unit()`
 
-One mark per unit or count. Chart-specific methods are `.value()`, `.label()`,
-`.columns()`, `.radius()`, `.group()`, `.timeline()`, and `.dodge()`.
+One mark per unit or count. Chart-specific methods are `.value()`, `.columns()`,
+`.radius()`, `.group()`, and `.layout()`.
+
+Supported layouts are `grid`, `bar`, `timeline`, and `dodge`. Group and layout
+are separate: `.group("category").layout("bar")` creates categorical unit bars.
+Unit does not expose `.rollup()` or `.breakdown()`.
 
 See [Chart types](/chart-types) for every overload and option.
 
@@ -314,8 +318,8 @@ VisDelta target not found: selector
 ## Current boundaries
 
 - Transitions between different chart types are not supported. Bar-to-line is outside the current contract.
-- Bar and point use cached frame evaluation. Line, unit, and unspecified plugins reconstruct when seeking.
-- A focused entry does not yet exist for unit authoring.
+- Area, Bar, Point, and Unit use cached frame evaluation. Line and unspecified plugins reconstruct when seeking.
+- Every built-in chart type has a focused authoring entry, including `visdelta/unit`.
 - Arquero is optional only when no transform pipeline is declared.
 - The composition adapter is deliberately lower level and is not a beginner API.
 - CSS selectors are not isolated through Shadow DOM.

@@ -1,5 +1,5 @@
-import type { ChannelSpec, ViewSpec } from '../../types/index.js';
-import { ChartState, colorFrom, normalizeDataSource } from '../authoring.js';
+import type { ViewSpec } from '../../types/index.js';
+import { ChartState, normalizeDataSource } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createUnitSpecCompiler } from './compile.js';
 import { chartModule as unitModule } from './module.js';
@@ -9,6 +9,14 @@ const UNIT_SPEC_COMPILER = createUnitSpecCompiler();
 export interface UnitViewState extends ViewSpec {
   mark: 'unit';
   unit?: Record<string, unknown>;
+}
+
+export const UNIT_LAYOUTS = ['grid', 'bar', 'timeline', 'dodge'] as const;
+export type UnitLayout = typeof UNIT_LAYOUTS[number];
+
+export interface UnitLayoutOptions {
+  columns?: number;
+  radius?: number;
 }
 
 export function unit(data?: unknown): UnitState {
@@ -25,54 +33,50 @@ export class UnitState extends ChartState<UnitViewState> {
   }
 
   value(field: string, options: { maxUnits?: number } = {}): this {
+    if (!field) throw new Error('Unit value requires a field name.');
+    if (options.maxUnits != null && (!Number.isInteger(options.maxUnits) || options.maxUnits <= 0)) {
+      throw new Error('Unit maxUnits must be a positive integer.');
+    }
     return this.with({
       unit: {
         ...(this.state['unit'] as Record<string, unknown> || {}),
         value: field,
-        ...(options.maxUnits ? { maxUnits: options.maxUnits } : {})
+        ...(options.maxUnits != null ? { maxUnits: options.maxUnits } : {})
       }
     });
   }
 
-  label(field: string): this {
-    return this.with({
-      unit: { ...(this.state['unit'] as Record<string, unknown> || {}), label: field }
-    });
-  }
-
   columns(value: number): this {
-    return this.with({
-      unit: { ...(this.state['unit'] as Record<string, unknown> || {}), columns: value }
-    });
+    assertPositiveInteger(value, 'Unit columns');
+    return withUnitAxis(this, { columns: value }) as unknown as this;
   }
 
   radius(value: number): this {
-    return this.with({
-      unit: { ...(this.state['unit'] as Record<string, unknown> || {}), radius: value }
-    });
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error('Unit radius must be a positive finite number.');
+    }
+    return withUnitAxis(this, { radius: value }) as unknown as this;
   }
 
-  group(field: string, options: Record<string, unknown> = {}): this {
-    const { color, ...layoutOptions } = options;
-    return withUnitAxis(this, {
-      layout: 'groupedGrid',
-      group: field,
-      ...layoutOptions,
-      ...(color ? { color: colorFrom(color as string) } : {})
-    }) as unknown as this;
+  /** Declare categorical membership without silently choosing a layout or color. */
+  group(field: string): this {
+    if (!field) throw new Error('Unit group requires a field name.');
+    return withUnitAxis(this, { group: field }) as unknown as this;
   }
 
-  timeline(field: string, options: Record<string, unknown> = {}): this {
+  /** Choose how the same keyed units are arranged. */
+  layout(name: UnitLayout, options: UnitLayoutOptions = {}): this {
+    if (!UNIT_LAYOUTS.includes(name)) {
+      throw new Error(`Unit layout must be one of: ${UNIT_LAYOUTS.join(', ')}.`);
+    }
+    if (options.columns != null) assertPositiveInteger(options.columns, 'Unit columns');
+    if (options.radius != null && (!Number.isFinite(options.radius) || options.radius <= 0)) {
+      throw new Error('Unit radius must be a positive finite number.');
+    }
     return withUnitAxis(this, {
-      layout: 'timeline',
-      ...unitAxisChannel(this, 'x', field, options)
-    }) as unknown as this;
-  }
-
-  dodge(field: string, options: Record<string, unknown> = {}): this {
-    return withUnitAxis(this, {
-      layout: 'dodge',
-      ...unitAxisChannel(this, 'x', field, options)
+      layout: name,
+      ...(options.columns != null ? { columns: options.columns } : {}),
+      ...(options.radius != null ? { radius: options.radius } : {})
     }) as unknown as this;
   }
 }
@@ -81,23 +85,8 @@ function withUnitAxis(state: UnitState, axis: Record<string, unknown>): UnitStat
   return state.axis(axis) as unknown as UnitState;
 }
 
-function unitAxisChannel(
-  state: UnitState,
-  channel: string,
-  field: string,
-  options: Record<string, unknown> = {}
-): Record<string, unknown> {
-  const { title, type, ...rest } = options;
-  const current = (state.state['encoding'] as Record<string, ChannelSpec>)?.[channel];
-  if ((field == null || field === current?.field) && title == null && type == null) {
-    return rest;
+function assertPositiveInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive integer.`);
   }
-  return {
-    [channel]: {
-      field,
-      type: (type as string) || 'quantitative',
-      ...(title ? { title } : {})
-    },
-    ...rest
-  };
 }

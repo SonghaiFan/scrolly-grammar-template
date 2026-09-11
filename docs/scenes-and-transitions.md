@@ -83,13 +83,17 @@ first frame.
   size, data, and reversible summary/detail changes. Summary → detail first
   sets the view with the summary marks, then moves the points; detail →
   summary uses those exact frames backward.
-- **Unit:** filtering and grid, grouped, timeline, and dodge layouts.
+- **Unit:** cached, seekable frames; count, filter, highlight, color, grid,
+  categorical unit bar, timeline, and dodge changes. Layout changes set the
+  view, then use shortest-total-travel matching so nearby equal units fill
+  target slots before distant ones. The reverse uses the same frames backward.
+  Group meaning and layout remain separate, and Unit has no summary/detail
+  split or merge.
 
-Bar, line, and point draw selective highlight opacity. Unit can store the same
-state but does not yet render that effect.
+All five built-in chart types draw selective highlight opacity.
 
-Bar and point prepare reusable frame data when the transition starts. Line,
-unit, and custom plugins currently rebuild a frame on each seek. See [Visualization
+Area, Bar, Point, and Unit prepare reusable frame data when the transition starts.
+Line and custom plugins currently rebuild a frame on each seek. See [Visualization
 transitions](./visualization-transitions.md) for timing, lifecycle, and
 performance limits.
 

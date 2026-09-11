@@ -8,13 +8,13 @@ export function inferTransition(previous: SpecLike, next: SpecLike): string[] {
   if (!previous || !next) return [];
   const diff = diffViewStates(previous, next);
   const scenes: string[] = [];
-  const layoutOnly = onlyDetailLayoutChanged(diff.delta('bar.detail') ?? diff.delta('detail'));
+  const layoutOnly = onlyDetailLayoutChanged(diff.delta('detail'));
   const aggregateChanged = !sameValue(
     diff.previous.nonFilterTransforms.filter(t => 'aggregate' in t || 'bin' in t),
     diff.next.nonFilterTransforms.filter(t => 'aggregate' in t || 'bin' in t)
   );
   const detail = !layoutOnly && (
-    diff.hasDelta('detail') || diff.hasDelta('bar.detail') || aggregateChanged
+    diff.hasDelta('detail') || aggregateChanged
   );
   const prev = diff.previous.encoding;
   const curr = diff.next.encoding;
@@ -26,13 +26,16 @@ export function inferTransition(previous: SpecLike, next: SpecLike): string[] {
   const coordinatesChanged = (['x', 'y'] as const).some(channel =>
     !sameValue(coordinates(prev[channel]), coordinates(curr[channel]))
   );
+  const offsetChanged = (['xOffset', 'yOffset'] as const).some(channel =>
+    !sameValue(prev[channel], curr[channel])
+  );
 
   if (diff.hasDelta('filter') || diff.hasDelta('selection')) scenes.push('selection');
   // A pure axis swap changes reading direction, not the selected variables.
   // Generated aggregate fields belong to detail rather than mapping.
   if (fieldChanged && !swapped && !detail) scenes.push('mapping');
   if (detail) scenes.push('detail');
-  if (swapped || coordinatesChanged || layoutOnly || diff.hasDelta('axis') || diff.hasDelta('bar.axis')) scenes.push('axis');
+  if (swapped || coordinatesChanged || offsetChanged || layoutOnly || diff.hasDelta('axis')) scenes.push('axis');
   return scenes;
 }
 

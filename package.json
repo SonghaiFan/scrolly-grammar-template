@@ -54,6 +54,10 @@
       "types": "./dist/line.d.ts",
       "import": "./dist/line.js"
     },
+    "./unit": {
+      "types": "./dist/unit.d.ts",
+      "import": "./dist/unit.js"
+    },
     "./transition": {
       "types": "./dist/transition-entry.d.ts",
       "import": "./dist/transition-entry.js"

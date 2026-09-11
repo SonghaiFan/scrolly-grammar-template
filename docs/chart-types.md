@@ -725,92 +725,95 @@ const states = [
 
 ## Unit — `unit(dataset)`
 
-A unit/isotype chart: each row (or count) is drawn as a small repeated mark
-(typically a circle) — useful for "32 circles = 32 hot days" style pictograms.
-Defaults: `mark: "unit"`.
+A Unit chart represents quantity with countable, equal marks. Each data row is
+one unit by default; `.value("count")` expands a row into repeated units. Unit is
+appropriate when the reader should see “how many things,” not only compare an
+abstract measure.
 
 ```js
-const base = unit("weather").x("year").y("hot_days").key("decade")
-  .value("hot_days").label("decade");
+const base = unit(rows)
+  .value("count")
+  .key("id")
+  .layout("grid", { columns: 10, radius: 5 });
 ```
 
 <SyntaxPlayground initial="unit" compact />
 
+<SyntaxPlayground mode="unit-lab" initial="bar" />
+
 ### `.value(field, options?)`
 
-The field whose **count** determines how many unit marks are drawn for each
-row/group.
+Use a numeric field as the number of units created for each row. Counts are
+rounded to whole units; zero creates no unit. `maxUnits` is a total rendering
+safety cap.
 
 ```js
-.value("hot_days")
-.value("hot_days", { maxUnits: 50 })   // cap rendered units per group (perf / readability)
+.value("count")
+.value("count", { maxUnits: 100 })
 ```
 
-### `.label(field)`
+### `.group(field)`
 
-Field whose value is shown as a text label alongside each group of units.
+Declare the category that owns each unit. This changes meaning only: it does
+not silently change layout or color.
 
 ```js
-.label("decade")
+.group("team")
+.group("team").color("team")
 ```
+
+### `.layout(name, options?)`
+
+Choose how the same keyed units are arranged.
+
+```js
+.layout("grid", { columns: 10, radius: 5 })
+.group("team").layout("bar", { columns: 3 })
+.x("year").layout("timeline")
+.x("year").layout("dodge")
+```
+
+| Layout | Meaning |
+| --- | --- |
+| `grid` | One ungrouped grid; `columns` controls row wrapping |
+| `bar` | One unit bar per `.group()` category |
+| `timeline` | Stack units at their mapped `.x()` positions |
+| `dodge` | Avoid collisions around mapped `.x()` positions |
+
+`bar` requires `.group()`. `timeline` and `dodge` require `.x()`.
 
 ### `.columns(value)` / `.radius(value)`
 
-Grid layout column count, and unit circle radius in pixels.
+Convenience methods for layout columns and the constant unit radius. They do
+not map size to data: every unit remains equal.
 
 ```js
-.columns(10).radius(4)
+.columns(10).radius(5)
 ```
-
-### `.group(field, options?)`
-
-Arranges units into a **grouped grid** — one cluster per unique value of
-`field`.
-
-```js
-base.group("period")
-base.group("period", { color: PERIOD_LUMINANCE_COLOR })
-```
-
-### `.timeline(field, options?)`
-
-Arranges units along a horizontal **timeline axis** bound to a quantitative
-field.
-
-```js
-base.timeline("year")
-base.timeline("year", { title: "Year" })
-```
-
-### `.dodge(field, options?)`
-
-Like `.timeline()`, but units **collision-avoid** (dodge) along the axis
-instead of overlapping.
-
-```js
-base.dodge("year")
-```
-
-> `.timeline()`/`.dodge()`/`.group()` are mutually exclusive *layouts* — each
-> call replaces the unit chart's current layout.
 
 ### Unit state family
 
 ```js
-const base = unit("weather").x("year").y("hot_days").key("decade")
-  .value("hot_days").label("decade");
+const base = unit(rows).value("count").key("id");
 
 const states = [
-  base,
+  base.layout("grid"),
   base.where({ period: "recent" }),
-  base.group("period"),
-  base.timeline("year"),
-  base.dodge("year")
+  base.group("team").layout("bar"),
+  base.x("year").layout("timeline"),
+  base.x("year").layout("dodge")
 ];
 ```
 
-> **Note:** unit charts currently animate filtering and layout changes. Value
-> remapping and summary/detail transitions are still developing.
+Unit intentionally has no `.rollup()` or `.breakdown()`. Added units enter from
+radius zero; removed units shrink to zero; surviving keys move between layouts.
+There is no summary mark and therefore no split/merge mechanic.
+
+When positions or layouts change, equal units are matched to target slots by
+the shortest total travel. The transition first sets the target view, then
+moves the nearest available units into the open positions. Short trips begin
+before long trips. Reversing the transition plays the same staged frames
+backward instead of computing a second motion rule.
 
 ---
 

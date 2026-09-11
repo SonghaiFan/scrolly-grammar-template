@@ -71,7 +71,7 @@ when a chart uses a data transform.
 ## Current boundaries
 
 - The two endpoint states must use the same chart type.
-- Area, Bar, and Point have cached frame data; Line, Unit, and custom chart types
+- Area, Bar, Point, and Unit have cached frame data; Line and custom chart types
   currently rebuild a frame when progress changes.
 - `visdelta/composition` is an advanced integration entry, not the beginner API.
 - A chart package owns its builder. VisDelta does not invent chain methods from
