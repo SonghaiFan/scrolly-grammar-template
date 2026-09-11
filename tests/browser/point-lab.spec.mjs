@@ -169,6 +169,28 @@ test('point rollup and breakdown are the same transition in reverse', async ({ p
   for (const frame of frames) expect(frame.merge).toEqual(frame.split);
 });
 
+test('point combine starts slowly and accelerates into the summary', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#rollup');
+  await ready(page);
+  const positionAt = async (progress) => {
+    await page.locator('#progress').fill(String(progress));
+    return page.locator('#chart circle.sl-point[data-key="detail:A"]').evaluate(node => ({
+      x: Number(node.getAttribute('cx')),
+      y: Number(node.getAttribute('cy'))
+    }));
+  };
+  const start = await positionAt(0);
+  const early = await positionAt(0.12);
+  const later = await positionAt(0.38);
+  const gathered = await positionAt(0.49);
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const wholeMove = distance(start, gathered);
+  const earlyShare = distance(start, early) / wholeMove;
+  const laterShare = distance(start, later) / wholeMove;
+  expect(earlyShare).toBeLessThan(0.08);
+  expect(laterShare).toBeGreaterThan(0.75);
+});
+
 test('point detail sets the view before summary points spread', async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
   const frames = await page.evaluate(async () => {
