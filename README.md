@@ -56,7 +56,7 @@ library.
 | `visdelta/bar` | Categorical comparison |
 | `visdelta/line` | Ordered trends |
 | `visdelta/point` | Relationships between quantities |
-| `visdelta/unit` | Countable items in `grid`, `bar`, or `beeswarm` layouts |
+| `visdelta/unit` | Countable items in `grid`, `force`, `bar`, or `beeswarm` layouts |
 
 The chart modules are peers. Each owns its builder, compiler, marks, axes,
 matching, and transition rules. Core has no branches for built-in chart types.

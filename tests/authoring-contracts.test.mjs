@@ -204,7 +204,7 @@ test('unit separates group meaning from layout and preserves count identity', ()
   const groupedSpec = grouped.toSpec();
   const barSpec = bars.toSpec();
 
-  assert.deepEqual(UNIT_LAYOUTS, ['grid', 'bar', 'beeswarm']);
+  assert.deepEqual(UNIT_LAYOUTS, ['grid', 'force', 'bar', 'beeswarm']);
   assert.equal(groupedSpec.meta.state.sceneState.axis.group, 'category');
   assert.equal(groupedSpec.meta.state.sceneState.axis.layout, 'grid');
   assert.equal(groupedSpec.encoding?.color, undefined);
@@ -212,15 +212,16 @@ test('unit separates group meaning from layout and preserves count identity', ()
   assert.equal(barSpec.meta.unit.columns, 2);
   assert.equal(barSpec.meta.unit.radius, 5);
   assert.equal(base.x('id').layout('beeswarm').toSpec().meta.unit.layout, 'beeswarm');
+  assert.equal(base.layout('force').toSpec().meta.unit.layout, 'force');
   assert.equal(typeof bars.rollup, 'undefined');
   assert.equal(typeof bars.breakdown, 'undefined');
 
   const units = expandUnits(barSpec.data, barSpec, {});
   assert.equal(units.length, 3);
   assert.deepEqual(units.map(value => value.__unitKey), ['B\u00000', 'B\u00001', 'B\u00002']);
-  assert.throws(() => base.layout('cluster'), /grid, bar, beeswarm/);
-  assert.throws(() => base.layout('dodge'), /grid, bar, beeswarm/);
-  assert.throws(() => base.layout('timeline'), /grid, bar, beeswarm/);
+  assert.throws(() => base.layout('cluster'), /grid, force, bar, beeswarm/);
+  assert.throws(() => base.layout('dodge'), /grid, force, bar, beeswarm/);
+  assert.throws(() => base.layout('timeline'), /grid, force, bar, beeswarm/);
   assert.throws(() => base.columns(0), /positive integer/);
   assert.throws(() => base.radius(0), /positive finite/);
   assert.throws(() => base.value('count', { maxUnits: 0 }), /positive integer/);

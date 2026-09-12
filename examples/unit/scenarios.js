@@ -33,6 +33,14 @@ const byPetalLength = colored
   .x("petalLength", { title: "Petal length (cm)" })
   .layout("beeswarm");`;
 
+const forced = `${base}
+
+const colored = flowers.color("species", {
+  title: "Species",
+  range: ${speciesColors}
+});
+const centered = colored.layout("force");`;
+
 function sample(id, label, description, setup, from, to) {
   return { id, label, description, code: `${setup}\n\nconst from = ${from};\nconst to = ${to};\n\nreturn { from, to };` };
 }
@@ -54,6 +62,7 @@ export const scenarios = [
   sample('bar', '09 · Group flowers by species', 'Arrange the same 150 flowers as three explicitly colored unit bars.', bars, 'colored', 'bySpecies'),
   sample('measure', '10 · Change the measured position', 'Move every flower from its petal-length position to its sepal-length position.', positioned, 'byPetalLength', 'colored.x("sepalLength", { title: "Sepal length (cm)" }).layout("beeswarm")'),
   sample('beeswarm', '11 · Beeswarm by petal length', 'Move flowers across to their measured petal lengths, then use dodge placement to form a non-overlapping swarm.', positioned, 'colored', 'byPetalLength'),
-  sample('grid', '12 · Return to one grid', 'Move the three species bars back into one grid while every flower keeps its identity.', bars, 'bySpecies', 'colored.layout("grid", { columns: 15, radius: 6 })'),
-  sample('focus', '13 · Focus one flower', 'Keep all 150 flowers and use the shared 2D camera to fit one selected unit to the plot.', base, 'flowers', 'flowers.focus({ flowerId: "iris-001" })')
+  sample('force', '12 · Gather into a force layout', 'Use a deterministic D3 force simulation to gather all flowers into one centered, non-overlapping cluster.', forced, 'colored', 'centered'),
+  sample('grid', '13 · Return to one grid', 'Move the three species bars back into one grid while every flower keeps its identity.', bars, 'bySpecies', 'colored.layout("grid", { columns: 15, radius: 6 })'),
+  sample('focus', '14 · Focus one flower', 'Keep all 150 flowers and use the shared 2D camera to fit one selected unit to the plot.', base, 'flowers', 'flowers.focus({ flowerId: "iris-001" })')
 ];

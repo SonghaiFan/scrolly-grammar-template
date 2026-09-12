@@ -4,7 +4,7 @@ import { diffViewStates } from '../../grammar/diff.js';
 import { specObjectKey, specState, specTransition, specUnit } from '../../spec-meta.js';
 import { defaultTransition } from '../../timing.js';
 
-const UNIT_LAYOUT_ORDER = ['grid', 'bar', 'beeswarm'];
+const UNIT_LAYOUT_ORDER = ['grid', 'force', 'bar', 'beeswarm'];
 const VIEW_STAGE_RATIO = 0.28;
 const TRAVEL_STAGE_RATIO = 0.18;
 const MOVE_ACROSS_STAGE_RATIO = 0.24;
@@ -45,6 +45,10 @@ export function unitLayout(units, chart, spec, deps) {
   const xChannel = spec.encoding?.x || null;
   const groupKey = unit.group || null;
   const xKey = xChannel?.field;
+
+  if (layout === 'force') {
+    return centeredForceLayout(units, chart, requestedRadius, d3);
+  }
 
   if (layout === 'beeswarm') {
     if (!xKey) throw new Error('Unit beeswarm layout requires an x field.');
@@ -291,6 +295,68 @@ function fitRadius(chart, requestedRadius, { columns = 1, rows = 1 } = {}) {
     chart.innerWidth / Math.max(columns * 2.45, 1),
     chart.innerHeight / Math.max(rows * 2.45, 1)
   ));
+}
+
+/**
+ * Resolve a D3 force simulation to a stable endpoint before rendering. The
+ * simulation is intentionally stopped and ticked synchronously: Unit motion
+ * remains controlled by VisDelta's seekable transition rather than wall time.
+ */
+function centeredForceLayout(units, chart, requestedRadius, d3) {
+  if (!units.length) {
+    return {
+      name: 'force', axes: false, axis: null, r: requestedRadius,
+      x: () => chart.innerWidth / 2,
+      y: () => chart.innerHeight / 2
+    };
+  }
+
+  const radius = fitForceRadius(chart, requestedRadius, units.length);
+  const centerX = chart.innerWidth / 2;
+  const centerY = chart.innerHeight / 2;
+  const nodes = [...units]
+    .sort((a, b) => String(a.__unitKey).localeCompare(String(b.__unitKey)))
+    .map((unit) => ({ unit }));
+  const simulation = d3.forceSimulation(nodes)
+    .force('center', d3.forceCenter(centerX, centerY))
+    .force('x', d3.forceX(centerX).strength(0.08))
+    .force('y', d3.forceY(centerY).strength(0.08))
+    .force('collide', d3.forceCollide(radius * 1.12).strength(1).iterations(2))
+    .stop();
+
+  const ticks = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()));
+  simulation.tick(ticks);
+
+  const x0 = d3.min(nodes, (node) => node.x - radius);
+  const x1 = d3.max(nodes, (node) => node.x + radius);
+  const y0 = d3.min(nodes, (node) => node.y - radius);
+  const y1 = d3.max(nodes, (node) => node.y + radius);
+  const packedWidth = Math.max(radius * 2, x1 - x0);
+  const packedHeight = Math.max(radius * 2, y1 - y0);
+  const scale = Math.min(1, chart.innerWidth / packedWidth, chart.innerHeight / packedHeight);
+  const fittedRadius = radius * scale;
+  const packedCenterX = (x0 + x1) / 2;
+  const packedCenterY = (y0 + y1) / 2;
+  const positions = new Map(nodes.map((node) => [
+    node.unit.__unitKey,
+    {
+      x: centerX + (node.x - packedCenterX) * scale,
+      y: centerY + (node.y - packedCenterY) * scale
+    }
+  ]));
+
+  return {
+    name: 'force', axes: false, axis: null, r: fittedRadius,
+    x: (unit) => positions.get(unit.__unitKey).x,
+    y: (unit) => positions.get(unit.__unitKey).y
+  };
+}
+
+function fitForceRadius(chart, requestedRadius, count) {
+  const areaRadius = Math.sqrt(
+    (chart.innerWidth * chart.innerHeight * 0.62) / Math.max(count * Math.PI, 1)
+  );
+  return Math.max(2, Math.min(requestedRadius, areaRadius));
 }
 
 function fitGroupedRadius(chart, requestedRadius, groupWidth, maxGroupCount, columns) {

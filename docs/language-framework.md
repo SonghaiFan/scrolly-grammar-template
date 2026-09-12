@@ -118,7 +118,7 @@ built into Core.
 | `point()` | How do two quantities relate? | Compact Cartesian axes; ordinary enters grow at the target |
 | `line()` | How does a value change in order? | Keys control points inside paths; gaps stay honest by default |
 | `area()` | How does magnitude or composition change in order? | Explicit baseline and stacked boundaries |
-| `unit()` | How many countable items are there? | `grid`, `bar`, and `beeswarm` layouts; key-first shortest travel |
+| `unit()` | How many countable items are there? | `grid`, centered `force`, `bar`, and `beeswarm` layouts; key-first shortest travel |
 
 ### Keep the language small
 

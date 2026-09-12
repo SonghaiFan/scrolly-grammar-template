@@ -1,6 +1,6 @@
 # Unit transition lab
 
-These thirteen editable scenarios use the 150-observation Iris dataset to define
+These fourteen editable scenarios use the 150-observation Iris dataset to define
 the first complete transition matrix for VisDelta's Unit module. Each flower is
 one row and one unit. The added `flowerId` field gives every observation a stable
 identity, including the two flowers whose measurements are otherwise identical.
@@ -15,6 +15,7 @@ The public grammar separates meaning from arrangement:
 - `.group("team")` declares which categorical group owns each unit;
 - `.layout("bar")` arranges those groups as unit bars;
 - `.layout("grid")` makes one overall grid;
+- `.layout("force")` packs units into one centered, non-overlapping cluster;
 - `.x("year").layout("beeswarm")` places units around mapped positions without
   overlaps.
 
@@ -59,6 +60,10 @@ Downward travel uses a short bounce; upward travel settles without pretending
 that gravity points upward. Reverse playback preserves the same keyed route and
 reverses the phase order, but chooses easing from the actual screen direction:
 down can bounce; up never does.
+
+The `force` layout resolves a deterministic D3 force simulation before drawing.
+It uses centering forces and collision detection, but does not run a live
+simulation: the resulting positions become ordinary, seekable Unit endpoints.
 
 Unit transitions use a light per-mark delay by default. Layout changes order
 marks by travel distance, so short moves start first; other Unit changes use

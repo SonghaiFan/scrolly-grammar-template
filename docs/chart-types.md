@@ -110,12 +110,13 @@ may use a declared parent position because that movement carries meaning.
 | --- | --- |
 | `.value(field, { maxUnits? })` | Expand a count field into units |
 | `.group(field)` | Declare categorical membership without choosing color |
-| `.layout("grid" | "bar" | "beeswarm", options?)` | Arrange the same units |
+| `.layout("grid" | "force" | "bar" | "beeswarm", options?)` | Arrange the same units |
 | `.columns(number)` | Set grid or unit-bar columns |
 | `.radius(number)` | Set requested unit radius |
 
-`bar` centers each unit stack on its category tick. `beeswarm` uses a
-non-overlapping placement along x. Layout changes preserve matching keys;
+`force` creates one centered, non-overlapping cluster from a deterministic D3
+force simulation. `bar` centers each unit stack on its category tick.
+`beeswarm` uses a non-overlapping placement along x. Layout changes preserve matching keys;
 remaining unmatched units use a global minimum-travel assignment. Unit layout
 changes use a short bounded per-mark stagger unless the author overrides it.
 

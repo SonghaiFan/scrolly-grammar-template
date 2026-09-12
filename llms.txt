@@ -29,7 +29,7 @@ Rules:
 - Every frame keeps marks, scale, axes, ticks, labels, and grid lines coherent.
 - Exit marks before scale change; scale before enter. Reverse reuses the frames.
 - Core is chart-agnostic. Area, Bar, Line, Point, and Unit own their behavior.
-- Unit layouts are `grid`, `bar`, and `beeswarm`; matching minimizes travel after
+- Unit layouts are `grid`, centered `force`, `bar`, and `beeswarm`; matching minimizes travel after
   preserving explicit keys.
 
 Public package entries:

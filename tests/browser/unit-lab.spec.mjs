@@ -85,6 +85,55 @@ test('unit bar uses category position while every unit keeps equal size', async 
   });
 });
 
+test('Unit force layout is centered, deterministic, non-overlapping, and axis-free', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#force');
+  await ready(page);
+  await page.locator('#end').click();
+
+  const readLayout = () => page.locator('#chart svg').evaluate(svg => {
+    const plot = svg.querySelector('clipPath[id^="vd-mark-clip-"] rect');
+    const marks = [...svg.querySelectorAll('circle.vd-unit')].map(node => ({
+      key: node.dataset.key,
+      x: Number(node.getAttribute('cx')),
+      y: Number(node.getAttribute('cy')),
+      r: Number(node.getAttribute('r'))
+    })).sort((a, b) => a.key.localeCompare(b.key));
+    const x0 = Math.min(...marks.map(mark => mark.x - mark.r));
+    const x1 = Math.max(...marks.map(mark => mark.x + mark.r));
+    const y0 = Math.min(...marks.map(mark => mark.y - mark.r));
+    const y1 = Math.max(...marks.map(mark => mark.y + mark.r));
+    let minimumGap = Infinity;
+    for (let i = 0; i < marks.length; i++) {
+      for (let j = i + 1; j < marks.length; j++) {
+        minimumGap = Math.min(minimumGap,
+          Math.hypot(marks[i].x - marks[j].x, marks[i].y - marks[j].y)
+            - marks[i].r - marks[j].r);
+      }
+    }
+    return {
+      marks,
+      plotWidth: Number(plot?.getAttribute('width')),
+      plotHeight: Number(plot?.getAttribute('height')),
+      boundsCenterX: (x0 + x1) / 2,
+      boundsCenterY: (y0 + y1) / 2,
+      minimumGap,
+      ticks: svg.querySelectorAll('.vd-x-axis .tick, .vd-y-axis .tick').length
+    };
+  });
+
+  const first = await readLayout();
+  await page.locator('#start').click();
+  await page.locator('#end').click();
+  const second = await readLayout();
+
+  expect(first.marks).toHaveLength(150);
+  expect(first.boundsCenterX).toBeCloseTo(first.plotWidth / 2, 5);
+  expect(first.boundsCenterY).toBeCloseTo(first.plotHeight / 2, 5);
+  expect(first.minimumGap).toBeGreaterThan(-0.05);
+  expect(first.ticks).toBe(0);
+  expect(second.marks).toEqual(first.marks);
+});
+
 test('Unit bar sets horizontal positions before units fall', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/unit-lab.html#bar');
   await ready(page);

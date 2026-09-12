@@ -32,7 +32,7 @@ API in this release.
 - Added key-aware Line and Area path transitions, honest gaps, staged
   add/remove, and reversible split/merge.
 - Added Point detail/summary motion and optional transition-only gooey blending.
-- Added Unit `grid`, categorical `bar`, and `beeswarm` layouts. Unit matching
+- Added Unit `grid`, centered `force`, categorical `bar`, and `beeswarm` layouts. Unit matching
   preserves explicit keys first, then globally minimizes unmatched travel.
 - Centered Unit bar stacks on their category ticks.
 

@@ -125,7 +125,7 @@ Curve names are exact D3 exports such as `curveLinear`, `curveStep`, and
 ```ts
 .value(field, { maxUnits? })
 .group(field)
-.layout("grid" | "bar" | "beeswarm", { columns?, radius? })
+.layout("grid" | "force" | "bar" | "beeswarm", { columns?, radius? })
 .columns(number)
 .radius(number)
 ```
