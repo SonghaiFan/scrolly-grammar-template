@@ -6,13 +6,13 @@ import { inferTransition } from '../grammar/infer-transition.js';
 import { captureDomFrame } from './dom-frame.js';
 import { hideTooltip } from './marks.js';
 import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress } from '../transition-progress.js';
-import type { AnyRecord } from '../types.js';
+import type { AnyRecord } from '../types/index.js';
 import type { ChartTypeRegistry } from '../charts/index.js';
 
 export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options: AnyRecord, chartTypes: ChartTypeRegistry) {
   const { d3, aq } = options;
-  const { drawView, prepareScrollSourceState, compileTransitionSource,
-    renderVirtualScrollPhase, applyVirtualScrollSequence } = createViewRenderer(chartTypes);
+  const { drawView, prepareSeekSourceState, compileTransitionSource,
+    renderSeekPhase, applySeekSequence } = createViewRenderer(chartTypes);
   const chartType = chartTypes.get(from);
   if (!chartType) throw new Error(`Unsupported chart type: ${from.mark}`);
   const canonical = chartType.canonicalTransitionPair?.(from, to) ?? { from, to, reverse: false };
@@ -22,7 +22,7 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
   const host = resolveTarget(options.target || '#app');
   const root = document.createElement('div');
   const styleKey = String(options.chartStyle?.key || 'd3').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
-  root.className = `sl-transition-root sl-style-${styleKey}`;
+  root.className = `vd-transition-root vd-style-${styleKey}`;
   root.dataset.chartStyle = styleKey;
   const shell = renderChartShell(root, {}, 'main');
   const node = shell.views.main as any;
@@ -50,20 +50,20 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
 
   function compileFrames() {
     disposeScene();
-    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(source));
+    prepareSeekSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(source));
     const startFrame = captureDomFrame(node);
-    drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], { previousViewSpec: source });
+    drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, { previousViewSpec: source, seekable: true });
     const scene = node.__visDeltaScene;
-    const phases = scene.virtualScrollSequence?.phases ?? [{ start: 0, end: 1 }];
+    const phases = scene.seekSequence?.phases ?? [{ start: 0, end: 1 }];
     const frames = phases.map((phase, index) => {
-      if (index > 0) renderVirtualScrollPhase(scene, index);
+      if (index > 0) renderSeekPhase(scene, index);
       const evaluator = scene.transitionProgress.compile();
       return { start: phase.start, end: phase.end, evaluator, dom: captureDomFrame(node) };
     });
     // Save the clean endpoint (no zero-opacity exit marks/ticks), while keeping
     // detached nodes alive in the phase snapshots for later reverse seeks.
     clearSceneTransitionProgress(scene, { finish: true });
-    prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(target));
+    prepareSeekSourceState(node, config, {}, shell.tooltip, d3, aq, compileTransitionSource(target));
     const endFrame = captureDomFrame(node);
     let activeFrame = endFrame;
     const activate = (frame) => {
@@ -102,15 +102,16 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
       disposeScene();
       if (value === 0 || value === 1) {
         const endpoint = compileTransitionSource(value === 0 ? source : target);
-        prepareScrollSourceState(node, config, {}, shell.tooltip, d3, aq, endpoint);
+        prepareSeekSourceState(node, config, {}, shell.tooltip, d3, aq, endpoint);
       } else {
-        drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, ['scroll', 'tooltip'], {
-          previousViewSpec: source
+        drawView(node, target, config, {}, shell.tooltip, d3, aq, scenes, {
+          previousViewSpec: source,
+          seekable: true
         });
         // The pair's progress is already normalized. Chart-local timing and
-        // The step order applies inside the plan; scroll easing is not a control here.
+        // step order apply inside the plan.
         const scene = node.__visDeltaScene;
-        if (!applyVirtualScrollSequence(scene, value, canonicalDirection)) {
+        if (!applySeekSequence(scene, value, canonicalDirection)) {
           scene.transitionProgress?.progress(value, canonicalDirection);
         }
       }

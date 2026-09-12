@@ -7,7 +7,7 @@ const ready = async page => {
 };
 
 const snapshot = page => page.locator('#chart svg').evaluate(svg =>
-  Array.from(svg.querySelectorAll('circle.sl-unit, .tick, .sl-legend-item')).map(node => ({
+  Array.from(svg.querySelectorAll('circle.vd-unit, .tick, .vd-legend-item')).map(node => ({
     tag: node.tagName,
     text: node.textContent,
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort(),
@@ -52,22 +52,27 @@ test('unit bar uses category position while every unit keeps equal size', async 
   await ready(page);
   await page.locator('#end').click();
 
-  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
-  await expect(page.locator('#chart .sl-x-axis .tick')).toHaveCount(3);
+  await expect(page.locator('#chart circle.vd-unit')).toHaveCount(150);
+  await expect(page.locator('#chart .vd-x-axis .tick')).toHaveCount(3);
   const result = await page.locator('#chart').evaluate(chart => {
-    const marks = [...chart.querySelectorAll('circle.sl-unit')].map(node => ({
+    const marks = [...chart.querySelectorAll('circle.vd-unit')].map(node => ({
       group: node.dataset.groupKey,
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy')),
-      r: Number(node.getAttribute('r'))
+      r: Number(node.getAttribute('r')),
+      screenX: node.getBoundingClientRect().left + node.getBoundingClientRect().width / 2
     }));
     const groups = Object.groupBy(marks, mark => mark.group);
     return {
       radii: [...new Set(marks.map(mark => mark.r))],
       groupCenters: Object.values(groups).map(group =>
-        group.reduce((sum, mark) => sum + mark.x, 0) / group.length),
+        group.reduce((sum, mark) => sum + mark.screenX, 0) / group.length),
       groupYCounts: Object.values(groups).map(group => new Set(group.map(mark => mark.y)).size),
-      labels: [...chart.querySelectorAll('.sl-x-axis .tick')].map(node => node.textContent)
+      labels: [...chart.querySelectorAll('.vd-x-axis .tick')].map(node => node.textContent),
+      tickCenters: [...chart.querySelectorAll('.vd-x-axis .tick')].map(node => {
+        const box = node.getBoundingClientRect();
+        return box.left + box.width / 2;
+      })
     };
   });
 
@@ -75,12 +80,15 @@ test('unit bar uses category position while every unit keeps equal size', async 
   expect(new Set(result.groupCenters).size).toBe(3);
   expect(result.groupYCounts.every(count => count > 1)).toBe(true);
   expect(result.labels).toEqual(['setosa', 'versicolor', 'virginica']);
+  result.groupCenters.forEach((center, index) => {
+    expect(center).toBeCloseTo(result.tickCenters[index], 0);
+  });
 });
 
 test('Unit bar sets horizontal positions before units fall', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/unit-lab.html#bar');
   await ready(page);
-  const geometry = () => page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+  const geometry = () => page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
     Object.fromEntries(nodes.map(node => [node.dataset.key, {
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy'))
@@ -106,7 +114,7 @@ test('Unit fall uses the direction inferred from successive progress values', as
   await page.goto('/docs/.vitepress/dist/unit-lab.html#beeswarm');
   await ready(page);
   const progress = page.locator('#progress');
-  const positions = () => page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+  const positions = () => page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
     nodes.map(node => Number(node.getAttribute('cy'))));
 
   await progress.fill('0.7');
@@ -125,7 +133,7 @@ test('Unit uses a light bounded per-mark delay by default', async ({ page }) => 
   await ready(page);
   await page.locator('#progress').fill('0.5');
 
-  const radii = await page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+  const radii = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
     nodes.map(node => Number(node.getAttribute('r')).toFixed(4)));
   expect(new Set(radii).size).toBeGreaterThan(1);
 });
@@ -135,10 +143,10 @@ test('unit focus keeps every unit and uses the shared 2D camera', async ({ page 
   await ready(page);
   await page.locator('#end').click();
 
-  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
+  await expect(page.locator('#chart circle.vd-unit')).toHaveCount(150);
   const result = await page.locator('#chart svg').evaluate(svg => {
-    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
-    const selected = [...svg.querySelectorAll('circle.sl-unit')]
+    const plot = svg.querySelector('clipPath[id^="vd-mark-clip-"] rect');
+    const selected = [...svg.querySelectorAll('circle.vd-unit')]
       .find(node => node.__data__?.flowerId === 'iris-001');
     return {
       width: Number(plot?.getAttribute('width')),
@@ -164,10 +172,10 @@ test('unit lab loads the tidy Iris data and keeps one keyed unit per flower', as
   await ready(page);
   await page.locator('#end').click();
 
-  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
+  await expect(page.locator('#chart circle.vd-unit')).toHaveCount(150);
   expect(dataRequests.length).toBeGreaterThan(0);
   const result = await page.locator('#chart').evaluate(chart => {
-    const marks = [...chart.querySelectorAll('circle.sl-unit')];
+    const marks = [...chart.querySelectorAll('circle.vd-unit')];
     return {
       keys: new Set(marks.map(node => node.dataset.key)).size,
       parentKeys: new Set(marks.map(node => node.dataset.parentKey)).size,
@@ -199,7 +207,7 @@ test('zero count renders zero units and group does not silently choose layout or
     change.progress(1);
     const spec = grouped.toSpec();
     return {
-      marks: document.querySelectorAll('circle.sl-unit').length,
+      marks: document.querySelectorAll('circle.vd-unit').length,
       zeroMarks: document.querySelectorAll('[data-parent-key="zero"]').length,
       layout: spec.meta.state.sceneState.axis.layout,
       group: spec.meta.state.sceneState.axis.group,
@@ -260,7 +268,7 @@ test('grid reflow stages the view, preserves keyed identity, and uses the same p
     const forward = await transition(narrow, wide, { target: forwardHost, d3, aq, height: 320 });
     const reverse = await transition(wide, narrow, { target: reverseHost, d3, aq, height: 320 });
 
-    const geometry = host => [...host.querySelectorAll('circle.sl-unit')]
+    const geometry = host => [...host.querySelectorAll('circle.vd-unit')]
       .map(node => [
         Number(node.getAttribute('cx')).toFixed(3),
         Number(node.getAttribute('cy')).toFixed(3),
@@ -272,7 +280,7 @@ test('grid reflow stages the view, preserves keyed identity, and uses the same p
     forward.progress(0.15);
     const viewStageGeometry = geometry(forwardHost);
     forward.progress(0.5);
-    const assignments = [...forwardHost.querySelectorAll('circle.sl-unit')].map(node => ({
+    const assignments = [...forwardHost.querySelectorAll('circle.vd-unit')].map(node => ({
       source: node.dataset.sourceKey,
       target: node.dataset.key
     }));
@@ -282,7 +290,7 @@ test('grid reflow stages the view, preserves keyed identity, and uses the same p
       sourceGeometry,
       viewStageGeometry,
       keyedIdentityPreserved: assignments.every(match => match.source === match.target),
-      matchedByKey: [...forwardHost.querySelectorAll('circle.sl-unit')]
+      matchedByKey: [...forwardHost.querySelectorAll('circle.vd-unit')]
         .every(node => node.dataset.matchedBy === 'key'),
       reverseMatches: JSON.stringify(geometry(forwardHost)) === JSON.stringify(geometry(reverseHost)),
       steps: forward.view.dataset.transitionSteps
@@ -319,7 +327,7 @@ test('Unit regroup is one staged transition evaluated in opposite directions', a
     const reverse = await transition(byRegion, byTeam, { target: reverseHost, d3, aq, height: 320 });
     forward.progress(0.41);
     reverse.progress(0.59);
-    const frame = host => [...host.querySelectorAll('circle.sl-unit')].map(node => ({
+    const frame = host => [...host.querySelectorAll('circle.vd-unit')].map(node => ({
       cx: Number(node.getAttribute('cx')).toFixed(3),
       cy: Number(node.getAttribute('cy')).toFixed(3),
       r: Number(node.getAttribute('r')).toFixed(3),

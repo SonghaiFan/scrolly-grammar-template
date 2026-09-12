@@ -3,7 +3,7 @@ import { scenarios } from '../../examples/transition/scenarios.js';
 
 const ready = page => expect(page.locator('#status')).toHaveText('Ready');
 const snapshot = page => page.locator('#chart svg').evaluateAll(svgs => svgs.map(svg =>
-  Array.from(svg.querySelectorAll('rect.sl-bar, .tick')).map(node => ({
+  Array.from(svg.querySelectorAll('rect.vd-bar, .tick')).map(node => ({
     tag: node.tagName, text: node.textContent,
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort()
   }))));
@@ -62,7 +62,7 @@ test('invalid code and invalid pairs preserve preview; reset recovers', async ({
 test('bar focus moves one camera over the full category scale without filtering bars', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/transition-lab.html#focus');
   await ready(page);
-  const start = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
+  const start = await page.locator('#chart rect.vd-bar').evaluateAll(nodes =>
     nodes.map(node => ({
       key: node.getAttribute('data-key'),
       category: node.getAttribute('data-category'),
@@ -77,17 +77,17 @@ test('bar focus moves one camera over the full category scale without filtering 
       const translateY = node => Number(
         (node?.getAttribute('transform') || '').match(/translate\([^,]+,\s*([\d.-]+)/)?.[1]
       );
-      const frameTop = translateY(svg.querySelector('.sl-frame'));
-      const axisY = translateY(svg.querySelector('.sl-x-axis')) - frameTop;
-      const bottoms = [...svg.querySelectorAll('rect.sl-bar')]
+      const frameTop = translateY(svg.querySelector('.vd-frame'));
+      const axisY = translateY(svg.querySelector('.vd-x-axis')) - frameTop;
+      const bottoms = [...svg.querySelectorAll('rect.vd-bar')]
         .map(bar => Number(bar.getAttribute('y')) + Number(bar.getAttribute('height')));
       return { axisY, bottoms };
     });
     baseline.bottoms.forEach(bottom => expect(Math.abs(bottom - baseline.axisY)).toBeLessThan(0.5));
   }
   await page.locator('#end').click();
-  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(52);
-  const focused = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
+  await expect(page.locator('#chart rect.vd-bar')).toHaveCount(52);
+  const focused = await page.locator('#chart rect.vd-bar').evaluateAll(nodes =>
     nodes.map(node => ({
       key: node.getAttribute('data-key'),
       category: node.getAttribute('data-category'),
@@ -98,10 +98,10 @@ test('bar focus moves one camera over the full category scale without filtering 
     })));
   expect(focused).not.toEqual(start);
   const visibility = await page.locator('#chart').evaluate(chart => {
-    const clip = chart.querySelector('clipPath[id^="sl-mark-clip-"] rect');
+    const clip = chart.querySelector('clipPath[id^="vd-mark-clip-"] rect');
     const width = Number(clip?.getAttribute('width'));
     const height = Number(clip?.getAttribute('height'));
-    const bars = [...chart.querySelectorAll('rect.sl-bar')].map(node => ({
+    const bars = [...chart.querySelectorAll('rect.vd-bar')].map(node => ({
       key: node.getAttribute('data-key'),
       category: node.getAttribute('data-category'),
       hasX: node.hasAttribute('x'),
@@ -116,7 +116,7 @@ test('bar focus moves one camera over the full category scale without filtering 
       inside: bars
         .filter(bar => bar.x + bar.width / 2 >= 0 && bar.x + bar.width / 2 <= width)
         .map(bar => bar.category),
-      ticks: [...chart.querySelectorAll('.sl-x-axis .tick')]
+      ticks: [...chart.querySelectorAll('.vd-x-axis .tick')]
         .filter(node => {
           const x = Number((node.getAttribute('transform') || '').match(/translate\(([-\d.]+)/)?.[1]);
           return x >= 0 && x <= width;
@@ -158,10 +158,10 @@ test('grouped split keeps aggregate bars on the visible baseline while the legen
         const values = (node.getAttribute('transform') || '').match(/-?\d+(?:\.\d+)?/g) || [];
         return Number(values[index] || 0);
       };
-      const frameTop = numberFromTranslate(svg.querySelector('.sl-frame'), 1);
-      const axisY = numberFromTranslate(svg.querySelector('.sl-x-axis'), 1);
-      const clipHeight = Number(svg.querySelector('clipPath[id^="sl-mark-clip-"] rect')?.getAttribute('height'));
-      const visible = [...svg.querySelectorAll('rect.sl-bar')]
+      const frameTop = numberFromTranslate(svg.querySelector('.vd-frame'), 1);
+      const axisY = numberFromTranslate(svg.querySelector('.vd-x-axis'), 1);
+      const clipHeight = Number(svg.querySelector('clipPath[id^="vd-mark-clip-"] rect')?.getAttribute('height'));
+      const visible = [...svg.querySelectorAll('rect.vd-bar')]
         .filter((bar) => Number(getComputedStyle(bar).opacity) > 0.001);
       const bottoms = new Map();
       for (const bar of visible) {
@@ -219,7 +219,7 @@ test('late async evaluation cannot overwrite a newer edit', async ({ page }) => 
   await ready(page);
   await page.evaluate(() => window.releaseLabRun());
   await page.locator('#end').click();
-  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(4);
+  await expect(page.locator('#chart rect.vd-bar')).toHaveCount(4);
   await expect(page.locator('#chart')).not.toContainText('Stale');
   await expect(page.locator('#chart > div')).toHaveCount(1);
 });
@@ -235,10 +235,10 @@ test('bar lab loads tidy population observations with ordered age detail', async
   await expect(page.locator('#editor')).toHaveValue(/\.breakdown\("age"\)/);
   await expect(page.locator('#editor')).not.toHaveValue(/\.segment\(\{[\s\S]*fields:/);
   await expect(page.locator('#editor')).toHaveValue(/\.color\("age", \{ domain: AGE_BANDS, range: AGE_COLORS \}\)/);
-  await expect(page.locator('#chart rect.sl-bar:not(.sl-bar-segment)')).toHaveCount(52);
+  await expect(page.locator('#chart rect.vd-bar:not(.vd-bar-segment)')).toHaveCount(52);
   await page.locator('#end').click();
-  await expect(page.locator('#chart rect.sl-bar-segment')).toHaveCount(52 * 9);
-  await expect(page.locator('#chart .sl-legend-item text')).toHaveText([
+  await expect(page.locator('#chart rect.vd-bar-segment')).toHaveCount(52 * 9);
+  await expect(page.locator('#chart .vd-legend-item text')).toHaveText([
     '<10', '10-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '≥80'
   ]);
   expect(requests).toHaveLength(1);
@@ -262,7 +262,7 @@ for (const [splitId, mergeId] of [['split', 'merge'], ['grouped-split', 'grouped
             ? null
             : String(value).replace(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi, token =>
                 String(Math.round(Number(token) * 1e8) / 1e8));
-          return [...svg.querySelectorAll('rect.sl-bar, path.sl-bar-seam')]
+          return [...svg.querySelectorAll('rect.vd-bar, path.vd-bar-seam')]
             .map(node => ({
               tag: node.tagName,
               className: node.getAttribute('class'),

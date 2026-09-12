@@ -14,7 +14,7 @@ for (const width of [1100, 390]) {
     const workbench = page.locator('.transition-workbench');
     await workbench.scrollIntoViewIfNeeded();
     await expect(workbench.locator('.workbench-kicker')).toContainText('Ready');
-    await expect(workbench.locator('rect.sl-bar')).toHaveCount(4);
+    await expect(workbench.locator('rect.vd-bar')).toHaveCount(4);
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(errors).toEqual([]);

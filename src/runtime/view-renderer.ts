@@ -1,8 +1,7 @@
 // @ts-nocheck — extracted rendering pipeline; D3 scene internals remain dynamic.
 import { applyTransforms } from '../data/transforms.js';
 import { resolveMarkRendererKey } from '../charts/index.js';
-import { serializeViewSpec, specScroll, specState } from '../spec-meta.js';
-import { easeProgress, hasScrollAction, normalizeScrollAction } from './actions.js';
+import { serializeViewSpec, specState } from '../spec-meta.js';
 import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effectiveTransitionSpec, fadeLayers, transitionSpec } from './marks.js';
 
 import { domainTransforms, viewRows } from './data.js';
@@ -11,15 +10,15 @@ import { applySceneTransitions, getScene, resetSceneToEmptySource, resizeScene }
 import { clamp } from './utils.js';
 import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
 import { createViewCompiler } from './view-compile.js';
-import type { AnyRecord } from '../types.js';
+import type { AnyRecord } from '../types/index.js';
 import type { ChartTypeRegistry } from '../charts/index.js';
 
-/** Per-instance rendering pipeline, shared by standalone transitions and stories. */
+/** Per-instance rendering pipeline for standalone transitions. */
 export function createViewRenderer(chartTypes: ChartTypeRegistry) {
 const { compileEffectiveView, compileTransitionSource } = createViewCompiler(chartTypes);
-return { drawView, applyScrollAction, prepareScrollSourceState, compileTransitionSource,
-  renderVirtualScrollPhase, applyVirtualScrollSequence };
-function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, stepTransition: AnyRecord = {}, stepAction: string[] = [], options: AnyRecord = {}) {
+return { drawView, prepareSeekSourceState, compileTransitionSource,
+  renderSeekPhase, applySeekSequence };
+function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, stepTransition: AnyRecord = {}, options: AnyRecord = {}) {
   const scene = getScene(node, viewConfig, d3);
   scene.progressRoots = [
     node,
@@ -27,7 +26,7 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
   ].filter(Boolean);
 
   if (!viewSpec || !viewSpec.mark) {
-    clearVirtualScrollSequence(scene);
+    clearSeekSequence(scene);
     scene.empty.style("display", "grid").text("No view for this step.");
     fadeLayers(scene, null, null, d3);
     return;
@@ -36,7 +35,7 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
   scene.empty.style("display", "none");
 
   if (viewSpec.mark === "text") {
-    clearVirtualScrollSequence(scene);
+    clearSeekSequence(scene);
     fadeLayers(scene, "text", null, d3);
     drawTextBoard(scene, viewSpec);
     return;
@@ -53,11 +52,8 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
     scene.virtualRenderTimer = null;
   }
 
-  // Scroll is continuous, so each scroll step scrubs from its authored adjacent
-  // source. Stepped rendering is discrete and diffs from the currently rendered
-  // state held in scene.previousSpec.
-  const scrollDrivenStep = hasScrollAction(stepAction);
-  const rawSourceSpec = scrollDrivenStep
+  const seekableStep = Boolean(options.seekable);
+  const rawSourceSpec = seekableStep
     ? transitionSource.effectiveViewSpec
     : scene.previousSpec;
   const chartType = chartTypes.get(effectiveViewSpec);
@@ -74,33 +70,34 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
       tooltip,
       d3,
       aq,
-      stepAction,
+      seekable: seekableStep,
       finalSceneTransition: sceneTransition,
       transitionSource
     });
 
-    if (scrollDrivenStep) {
-      scene.virtualScrollSequence = createVirtualScrollSequence(renderPhases);
-      renderVirtualScrollPhase(scene, 0);
+    if (seekableStep) {
+      scene.seekSequence = createSeekSequence(renderPhases);
+      renderSeekPhase(scene, 0);
       return;
     }
 
-    clearVirtualScrollSequence(scene);
+    clearSeekSequence(scene);
     renderPhaseSequence(scene, renderPhases, 0);
     return;
   }
 
-  clearVirtualScrollSequence(scene);
-  renderCompiledView(node, effectiveViewSpec, viewConfig, datasets, tooltip, d3, aq, stepAction, sceneTransition, {
-    transitionSource
+  clearSeekSequence(scene);
+  renderCompiledView(node, effectiveViewSpec, viewConfig, datasets, tooltip, d3, aq, sceneTransition, {
+    transitionSource,
+    seekable: seekableStep
   });
 }
 
-function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, stepAction: string[] = [], sceneTransition: AnyRecord = {}, renderOptions: AnyRecord = {}) {
+function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, sceneTransition: AnyRecord = {}, renderOptions: AnyRecord = {}) {
   const scene = getScene(node, viewConfig, d3);
-  const scrollDriven = renderOptions.scrollDriven ?? hasScrollAction(stepAction);
-  if (scrollDriven && !renderOptions.skipScrollSourcePrep) {
-    prepareScrollSourceState(
+  const seekable = Boolean(renderOptions.seekable);
+  if (seekable && !renderOptions.skipSourcePrep) {
+    prepareSeekSourceState(
       node,
       viewConfig,
       datasets,
@@ -110,14 +107,14 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
       renderOptions.transitionSource
     );
   }
-  clearSceneTransitionProgress(scene, { finish: !scrollDriven });
+  clearSceneTransitionProgress(scene, { finish: !seekable });
   const chartType = chartTypes.get(effectiveViewSpec);
   const typedSpec = resolveSpecDataTypes(
     effectiveViewSpec,
     viewRows(effectiveViewSpec.data, datasets)
   );
   const renderSpec = chartType?.prepareSpec?.(typedSpec) || typedSpec;
-  const previousRawSpec = scrollDriven
+  const previousRawSpec = seekable
     ? renderOptions.transitionSource?.effectiveViewSpec || null
     : scene.previousSpec;
   const previousSpec = prepareChartSpec(chartType, previousRawSpec, datasets);
@@ -125,14 +122,14 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   const rows = applyTransforms(source, renderSpec.transform || [], aq);
   const domainRows = applyTransforms(source, domainTransforms(renderSpec.transform || []), aq);
   if (!rows.length) {
-    const emptyTransition = transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 });
+    const emptyTransition = transitionSpec(renderSpec, previousSpec, { seekable, d3 });
     scene.empty.style("display", "grid").style('opacity', 0).text("No rows after transforms.")
       .transition(emptyTransition.base).style('opacity', 1);
     fadeLayers(scene, null, emptyTransition, d3);
     for (const layer of [scene.grid, scene.xAxis, scene.yAxis, scene.xLabel, scene.yLabel, scene.legend, scene.unitLabel]) {
       layer.transition(emptyTransition.base).style('opacity', 0);
     }
-    if (scrollDriven) {
+    if (seekable) {
       scene.transitionProgress = createSceneTransitionProgress(scene, { transitionName: VISDELTA_TRANSITION_NAME });
     }
     scene.previousSpec = renderSpec;
@@ -154,7 +151,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     ...(viewConfig.margin || {})
   });
   scene.svg
-    .attr('class', `sl-chart sl-chart-${rendererKey}`)
+    .attr('class', `vd-chart vd-chart-${rendererKey}`)
     .attr('data-chart-type', rendererKey);
   const previousSource = previousSpec ? viewRows(previousSpec.data, datasets) : [];
   const previousRows = previousSpec
@@ -162,9 +159,9 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     : [];
   const observationChange = observationMembershipChange(previousSpec, renderSpec, previousRows, rows);
   const chartTransition = observationTransition(
-    transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 } as AnyRecord),
+    transitionSpec(renderSpec, previousSpec, { seekable, d3 } as AnyRecord),
     observationChange,
-    { d3, scrollDriven }
+    { d3, seekable }
   );
   const chart: AnyRecord = {
     scene,
@@ -175,8 +172,8 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     transition: chartTransition,
     transitionPlan: chartType?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
     sceneTransition,
-    scrollDriven,
-    scrollTransitionName: VISDELTA_TRANSITION_NAME,
+    seekable,
+    seekTransitionName: VISDELTA_TRANSITION_NAME,
     sourceRows: source,
     domainRows,
     aq
@@ -202,7 +199,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   if (rendererKey === "unit") hideUnitMetaLabel(scene);
 
   applySceneTransitions(chart, rows, renderSpec);
-  if (scrollDriven) {
+  if (seekable) {
     scene.transitionProgress = createSceneTransitionProgress(scene, {
       transitionName: VISDELTA_TRANSITION_NAME
     });
@@ -231,7 +228,7 @@ function observationMembershipChange(previousSpec, nextSpec, previousRows, nextR
  * old view; then the scale moves; then entering marks appear in the new view.
  * A one-way add or remove simply omits the unused third.
  */
-function observationTransition(transition, change, { d3, scrollDriven }) {
+function observationTransition(transition, change, { d3, seekable }) {
   if (!change.exit && !change.enter) return transition;
   const totalDuration = Math.max(1, Number(transition.duration) || 900);
   const parts = 1 + Number(change.exit) + Number(change.enter);
@@ -241,7 +238,7 @@ function observationTransition(transition, change, { d3, scrollDriven }) {
   const scaleDuration = Math.max(1, totalDuration - exitDuration - enterDuration);
   const ease = transition.base.ease();
   const create = (duration, delay = 0) => {
-    const next = scrollDriven
+    const next = seekable
       ? d3.transition(VISDELTA_TRANSITION_NAME)
       : d3.transition();
     return next.duration(duration).delay(delay).ease(ease);
@@ -313,7 +310,7 @@ function renderPhaseConfigs(intermediatePhases, context) {
       tooltip: context.tooltip,
       d3: context.d3,
       aq: context.aq,
-      stepAction: context.stepAction,
+      seekable: context.seekable,
       sceneTransition,
       transitionSource: source,
       transitionPlanDuration
@@ -333,7 +330,7 @@ function renderPhaseConfigs(intermediatePhases, context) {
     tooltip: context.tooltip,
     d3: context.d3,
     aq: context.aq,
-    stepAction: context.stepAction,
+    seekable: context.seekable,
     sceneTransition: context.finalSceneTransition,
     transitionSource: source,
     transitionPlanDuration: transitionPlanDurationForPhase(context.chartType, source?.effectiveViewSpec, context.finalSpec)
@@ -363,7 +360,7 @@ function sceneTransitionForPhase(phase) {
   };
 }
 
-function prepareScrollSourceState(node: any, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, transitionSource: AnyRecord = {}) {
+function prepareSeekSourceState(node: any, viewConfig: AnyRecord, datasets: AnyRecord, tooltip: Element, d3: AnyRecord, aq: AnyRecord, transitionSource: AnyRecord = {}) {
   const scene = getScene(node, viewConfig, d3);
   const sourceSpec = transitionSource?.effectiveViewSpec || null;
   if (!sourceSpec) {
@@ -379,11 +376,10 @@ function prepareScrollSourceState(node: any, viewConfig: AnyRecord, datasets: An
     tooltip,
     d3,
     aq,
-    ["scroll"],
     transitionSource.sceneTransition || {},
     {
-      scrollDriven: true,
-      skipScrollSourcePrep: true,
+      seekable: true,
+      skipSourcePrep: true,
       transitionSource: null
     }
   );
@@ -416,11 +412,11 @@ function virtualRenderDelay(phaseOrSpec: AnyRecord = {}) {
   return Math.max(1, Number.isFinite(effectiveDuration) ? effectiveDuration : fallbackDuration) + (Number.isFinite(staggerMax) ? staggerMax : 0);
 }
 
-function clearVirtualScrollSequence(scene) {
-  scene.virtualScrollSequence = null;
+function clearSeekSequence(scene) {
+  scene.seekSequence = null;
 }
 
-function createVirtualScrollSequence(phases = []) {
+function createSeekSequence(phases = []) {
   const durations = phases.map((phase) => virtualRenderDelay(phase));
   const total = Math.max(1, durations.reduce((sum, duration) => sum + duration, 0));
   let cursor = 0;
@@ -447,10 +443,10 @@ function renderPhaseSequence(scene, phases = [], index = 0) {
     config.tooltip,
     config.d3,
     config.aq,
-    config.stepAction,
     config.sceneTransition,
     {
-      transitionSource: config.transitionSource
+      transitionSource: config.transitionSource,
+      seekable: config.seekable
     }
   );
 
@@ -461,8 +457,8 @@ function renderPhaseSequence(scene, phases = [], index = 0) {
   }, virtualRenderDelay(config));
 }
 
-function renderVirtualScrollPhase(scene, phaseIndex) {
-  const sequence = scene.virtualScrollSequence;
+function renderSeekPhase(scene, phaseIndex) {
+  const sequence = scene.seekSequence;
   const config = sequence?.phases?.[phaseIndex];
   if (!sequence || !config || sequence.phase === phaseIndex) return;
 
@@ -475,16 +471,16 @@ function renderVirtualScrollPhase(scene, phaseIndex) {
     config.tooltip,
     config.d3,
     config.aq,
-    config.stepAction,
     config.sceneTransition,
     {
-      transitionSource: config.transitionSource
+      transitionSource: config.transitionSource,
+      seekable: config.seekable
     }
   );
 }
 
-function applyVirtualScrollSequence(scene, progress, direction = 1) {
-  const sequence = scene.virtualScrollSequence;
+function applySeekSequence(scene, progress, direction = 1) {
+  const sequence = scene.seekSequence;
   if (!sequence?.phases?.length) return false;
 
   const bounded = clamp(progress, 0, 1);
@@ -495,7 +491,7 @@ function applyVirtualScrollSequence(scene, progress, direction = 1) {
   const phase = phases[Math.max(0, phaseIndex)];
   const span = Math.max(0.001, phase.end - phase.start);
 
-  renderVirtualScrollPhase(scene, Math.max(0, phaseIndex));
+  renderSeekPhase(scene, Math.max(0, phaseIndex));
   scene.transitionProgress?.progress(
     clamp((bounded - phase.start) / span, 0, 1),
     direction
@@ -507,13 +503,4 @@ function hideUnitMetaLabel(scene) {
   scene.unitLabel.interrupt().text("").style("opacity", 0);
 }
 
-function applyScrollAction(node, viewSpec, progress, d3) {
-  const scene = node.__visDeltaScene;
-  if (!scene || !viewSpec?.mark) return;
-
-  const action = normalizeScrollAction(specScroll(viewSpec)) as AnyRecord;
-  const eased = easeProgress(progress, action.ease, d3);
-  if (applyVirtualScrollSequence(scene, eased)) return;
-  scene.transitionProgress?.progress(eased);
-}
 }

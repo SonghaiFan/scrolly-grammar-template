@@ -96,7 +96,7 @@ class AreaChart extends BaseChart {
       ? areaDividerPaths(cells, layers, frame, edge)
       : [];
     const opacity = (cell) => areaSelectionOpacity(
-      cell.layer, state.selection, themeValue('--sl-dim-opacity', 0.22)
+      cell.layer, state.selection, themeValue('--vd-dim-opacity', 0.22)
     );
     const addedKeys = new Set((chart.transitionPlan?.observation?.addedKeys || []).map(String));
     const isAdded = (cell) => addedKeys.has(String(cell.observationKey));
@@ -117,7 +117,7 @@ class AreaChart extends BaseChart {
     };
 
     // Area owns this cleanup locally; Core does not need to know the chart type.
-    chart.g.selectAll('rect.sl-bar,path.sl-line,circle.sl-line-point,circle.sl-point,circle.sl-unit')
+    chart.g.selectAll('rect.vd-bar,path.vd-line,circle.vd-line-point,circle.vd-point,circle.vd-unit')
       .transition(chart.transition.base).style('opacity', 0);
     this.setCartesianState(chart, enc, { x, y, color }, {
       x: (row) => position(x, row[xField]),
@@ -125,11 +125,11 @@ class AreaChart extends BaseChart {
     });
     drawAreaAxes(chart, x, y, enc, d3, this.deps);
 
-    chart.g.selectAll('path.sl-area')
+    chart.g.selectAll('path.vd-area')
       .data(cells, (cell) => cell.key)
       .join(
         (enter) => enter.append('path')
-          .attr('class', 'sl-area sl-area-cell')
+          .attr('class', 'vd-area vd-area-cell')
           .attr('data-key', (cell) => cell.key)
           .attr('data-layer-key', (cell) => cell.layerKey)
           .attr('data-observation-key', (cell) => cell.observationKey)
@@ -166,17 +166,17 @@ class AreaChart extends BaseChart {
 
     // Area is fill-first by default. Do not add a persistent outline or use a
     // border to imply layer separation that the author did not encode.
-    chart.g.selectAll('path.sl-area-edge').remove();
+    chart.g.selectAll('path.vd-area-edge').remove();
 
     // A stacked Area has one continuous internal boundary per lower layer and
     // connected stretch. During a total -> detail split, draw those boundaries
     // over the still-visible parent before the detailed fills appear.
     // Cached canonical playback makes detail -> total the exact reverse.
-    const dividerJoin = chart.g.selectAll('path.sl-area-divider')
+    const dividerJoin = chart.g.selectAll('path.vd-area-divider')
       .data(dividers, (divider) => divider.key);
     dividerJoin.exit().transition(chart.transition.base).style('opacity', 0).remove();
     const dividerEnter = dividerJoin.enter().append('path')
-      .attr('class', 'sl-area-divider')
+      .attr('class', 'vd-area-divider')
       .attr('data-key', (divider) => divider.key)
       .attr('data-layer-key', (divider) => divider.layerKey)
       .attr('fill', 'none')

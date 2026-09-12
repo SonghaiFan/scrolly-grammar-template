@@ -52,10 +52,6 @@ const publicExports = {
     types: "./dist/charts/style.d.ts",
     import: "./dist/charts/style.js"
   },
-  "./composition": {
-    types: "./dist/composition.d.ts",
-    import: "./dist/composition.js"
-  },
   "./style.css": "./dist/visdelta.css",
   "./themes/default.css": "./dist/themes/default.css",
   "./themes/dark.css": "./dist/themes/dark.css",
@@ -82,8 +78,6 @@ const requiredFiles = [
   "dist/core.js",
   "dist/index.d.ts",
   "dist/index.js",
-  "dist/composition.d.ts",
-  "dist/composition.js",
   "dist/charts/style.d.ts",
   "dist/charts/style.js",
   "dist/transition-entry.d.ts",

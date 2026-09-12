@@ -38,18 +38,18 @@ export function createMarkHelpers(context: RenderContext = {}) {
 
 // Tableau 10 — widely-adopted, perceptually balanced categorical palette.
 const DEFAULT_PALETTE = [
-  ['--sl-series-1',  '#4e79a7'],
-  ['--sl-series-2',  '#f28e2b'],
-  ['--sl-series-3',  '#e15759'],
-  ['--sl-series-4',  '#76b7b2'],
-  ['--sl-series-5',  '#59a14f'],
-  ['--sl-series-6',  '#edc948'],
-  ['--sl-series-7',  '#b07aa1'],
-  ['--sl-series-8',  '#ff9da7'],
-  ['--sl-series-9',  '#9c755f'],
-  ['--sl-series-10', '#bab0ac']
+  ['--vd-series-1',  '#4e79a7'],
+  ['--vd-series-2',  '#f28e2b'],
+  ['--vd-series-3',  '#e15759'],
+  ['--vd-series-4',  '#76b7b2'],
+  ['--vd-series-5',  '#59a14f'],
+  ['--vd-series-6',  '#edc948'],
+  ['--vd-series-7',  '#b07aa1'],
+  ['--vd-series-8',  '#ff9da7'],
+  ['--vd-series-9',  '#9c755f'],
+  ['--vd-series-10', '#bab0ac']
 ];
-const DEFAULT_LUMINANCE_BASE = ['--sl-accent', '#4e79a7'];
+const DEFAULT_LUMINANCE_BASE = ['--vd-accent', '#4e79a7'];
 
 // ─── Hue-maximisation helpers ─────────────────────────────────────────────────
 
@@ -135,14 +135,14 @@ function pickCategoricalColors(n, colors) {
 function themeValue(cssVar, fallback) {
   if (typeof document === 'undefined') return fallback;
   const contextRoot = context.root ?? document.documentElement;
-  const scopedRoot = contextRoot.matches?.('.sl-transition-root, .sl-chart-root')
+  const scopedRoot = contextRoot.matches?.('.vd-transition-root, .vd-chart-root')
     ? contextRoot
-    : contextRoot.querySelector?.('.sl-transition-root, .sl-chart-root');
+    : contextRoot.querySelector?.('.vd-transition-root, .vd-chart-root');
   const style = getComputedStyle(scopedRoot ?? contextRoot);
   const raw = style.getPropertyValue(cssVar).trim();
   if (!raw) return fallback;
   // Defensive var() resolution: if the browser returns an unresolved
-  // var() reference (e.g. "var(--sl-rounded-md)"), resolve one level.
+  // var() reference (e.g. "var(--vd-rounded-md)"), resolve one level.
   // Modern browsers should already compute the final value, but this
   // guards against edge-cases and non-browser environments.
   if (raw.startsWith('var(')) {
@@ -166,13 +166,13 @@ function themeValue(cssVar, fallback) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-function transitionSpec(spec, previousSpec, { scrollDriven = false, d3 } = {}) {
+function transitionSpec(spec, previousSpec, { seekable = false, d3 } = {}) {
   if (!d3) throw new Error('VisDelta transitions require D3. Pass { d3 } to transition() or the driver runtime.');
   const local = specTransition(spec);
   const previous = previousSpec ? specTransition(previousSpec) : {};
   const transition = { ...defaultTransition(), ...previous, ...local };
   const ease = easeFor(transition.ease, d3);
-  const base = (scrollDriven ? d3.transition(VISDELTA_TRANSITION_NAME) : d3.transition())
+  const base = (seekable ? d3.transition(VISDELTA_TRANSITION_NAME) : d3.transition())
     .duration(transition.duration).ease(ease);
   return { ...transition, base };
 }
@@ -192,7 +192,7 @@ function easeFor(name, d3) {
 function activeMarkLayer(scene, mark, transition) {
   fadeLayers(scene, mark, transition);
   if (!scene.markLayers.has(mark)) {
-    scene.markLayers.set(mark, scene.markRoot.append('g').attr('class', `sl-mark-layer sl-${mark}-layer`));
+    scene.markLayers.set(mark, scene.markRoot.append('g').attr('class', `vd-mark-layer vd-${mark}-layer`));
   }
   const layer = scene.markLayers.get(mark);
   layer.interrupt().style('display', null).transition(transition.base).style('opacity', 1);
@@ -237,24 +237,24 @@ function drawPath(selection, transition, d3) {
 }
 
 function fadeNonBarShapes(chart) {
-  chart.g.selectAll('circle,path:not(.sl-line)').transition(chart.transition.base).style('opacity', 0);
+  chart.g.selectAll('circle,path:not(.vd-line)').transition(chart.transition.base).style('opacity', 0);
 }
 
 function fadeNonLineShapes(chart) {
-  chart.g.selectAll('rect.sl-bar,circle.sl-point,circle.sl-unit').transition(chart.transition.base).style('opacity', 0);
+  chart.g.selectAll('rect.vd-bar,circle.vd-point,circle.vd-unit').transition(chart.transition.base).style('opacity', 0);
 }
 
 function fadeNonPointShapes(chart) {
-  chart.g.selectAll('rect.sl-bar,path.sl-line,circle.sl-line-point,circle.sl-unit').transition(chart.transition.base).style('opacity', 0);
+  chart.g.selectAll('rect.vd-bar,path.vd-line,circle.vd-line-point,circle.vd-unit').transition(chart.transition.base).style('opacity', 0);
 }
 
 function fadeNonUnitShapes(chart) {
-  chart.g.selectAll('rect.sl-bar,path.sl-line,circle.sl-line-point,circle.sl-point').transition(chart.transition.base).style('opacity', 0);
+  chart.g.selectAll('rect.vd-bar,path.vd-line,circle.vd-line-point,circle.vd-point').transition(chart.transition.base).style('opacity', 0);
 }
 
 function applyPlotClip(chart, enabled) {
   if (!enabled) { chart.g.attr('clip-path', null); return; }
-  const id = `sl-mark-clip-${chart.scene.clipIdentity}`;
+  const id = `vd-mark-clip-${chart.scene.clipIdentity}`;
   ensureClipRect(chart.scene, id, { x: 0, y: 0, width: chart.innerWidth, height: chart.innerHeight });
   chart.g.attr('clip-path', `url(#${id})`);
 }
@@ -263,13 +263,13 @@ function drawTextBoard(scene, spec) {
   const items = Array.isArray(spec.text) ? spec.text : [spec.text || ''];
   scene.textLayer
     .attr('x', 0).attr('y', 0).attr('width', scene.width).attr('height', scene.height)
-    .html(`<div class="sl-text-board"><ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`);
+    .html(`<div class="vd-text-board"><ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`);
 }
 
 function drawUnsupported(chart, spec, availableTypes = []) {
   chart.g.append('text')
     .attr('x', chart.innerWidth / 2).attr('y', chart.innerHeight / 2)
-    .attr('text-anchor', 'middle').attr('fill', 'var(--sl-muted)')
+    .attr('text-anchor', 'middle').attr('fill', 'var(--vd-muted)')
     .text(`Unsupported chart type "${spec.mark}"${availableTypes.length ? ` · available: ${availableTypes.join(', ')}` : ''}`);
 }
 
@@ -361,13 +361,13 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
       .style('opacity', 0);
     timedTransition(chart.scene.xLabel, transition, duration)
       .attr('transform', `translate(${chart.margin.left},0)`)
-      .attr('y', xLabelSideY(chart, inactiveSide, true, themeValue('--sl-axis-label-offset', 48)))
+      .attr('y', xLabelSideY(chart, inactiveSide, true, themeValue('--vd-axis-label-offset', 48)))
       .style('opacity', 0);
     return;
   }
   applyXAxisClip(chart);
-  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
-  const labelOffset = themeValue('--sl-axis-label-offset', 48);
+  const tickCount = options.tickCount ?? themeValue('--vd-tick-count', 6);
+  const labelOffset = themeValue('--vd-axis-label-offset', 48);
   const axisFactory = side === 'top' ? d3.axisTop : d3.axisBottom;
   let axis = typeof scale.bandwidth === 'function'
     ? axisFactory(scale)
@@ -427,8 +427,8 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, 
     timedTransition(chart.scene.yLabel, transition, duration).style('opacity', 0);
     return;
   }
-  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
-  const labelOffset = themeValue('--sl-axis-label-offset', 48);
+  const tickCount = options.tickCount ?? themeValue('--vd-tick-count', 6);
+  const labelOffset = themeValue('--vd-axis-label-offset', 48);
   const axisFactory = side === 'right' ? d3.axisRight : d3.axisLeft;
   let axis = typeof scale.bandwidth === 'function'
     ? axisFactory(scale)
@@ -481,22 +481,22 @@ function updateGrid(chart, y, d3, transition = chart.transition.base, options = 
     return;
   }
   const grid = chart.scene.grid.interrupt().attr('transform', null);
-  const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
+  const tickCount = options.tickCount ?? themeValue('--vd-tick-count', 6);
   renderAxisWithGuard(grid, d3.axisLeft(y).ticks(tickCount).tickSize(-chart.innerWidth).tickFormat(''), transition, axisKind('grid-left', y), options.duration);
   timedTransition(grid, transition, options.duration).style('opacity', 1);
 }
 
 function updateXGrid(chart, x, d3, transition, tickCount, duration) {
-  const layer = chart.scene.grid.selectAll('g.sl-point-x-grid')
+  const layer = chart.scene.grid.selectAll('g.vd-point-x-grid')
     .data(x ? [null] : [])
     .join(
-      (enter) => enter.append('g').attr('class', 'sl-point-x-grid'),
+      (enter) => enter.append('g').attr('class', 'vd-point-x-grid'),
       (update) => update,
       (exit) => timedTransition(exit, transition, duration).style('opacity', 0).remove()
     );
   if (!x) return;
 
-  const count = tickCount ?? themeValue('--sl-tick-count', 6);
+  const count = tickCount ?? themeValue('--vd-tick-count', 6);
   const values = typeof x.ticks === 'function' ? x.ticks(count) : x.domain();
   layer.interrupt().style('opacity', 1)
     .selectAll('line')
@@ -544,8 +544,8 @@ function drawLegend(chart, rows, channel, d3) {
         ? (d) => fieldRegistry.get(String(d)) ?? themeColor(DEFAULT_LUMINANCE_BASE)
         : d3.scaleOrdinal(channel.range || categoricalRange(domain)).domain(domain);
   const legendRow = (value) => ({ [legendChannel.field]: value });
-  const swatchSize = themeValue('--sl-legend-swatch-size', 9);
-  const swatchRadius = themeValue('--sl-legend-swatch-radius', 1.5);
+  const swatchSize = themeValue('--vd-legend-swatch-size', 9);
+  const swatchRadius = themeValue('--vd-legend-swatch-radius', 1.5);
   const legendInset = context.chartStyle?.legendInset ?? { top: 8, left: 8 };
   const atRight = context.chartStyle?.legendPosition === 'right';
   const layout = legendLayout(
@@ -555,8 +555,8 @@ function drawLegend(chart, rows, channel, d3) {
   );
   const legend = chart.scene.legend.interrupt().style('opacity', 1)
     .attr('transform', `translate(${chart.margin.left + legendInset.left + (atRight ? chart.innerWidth : 0)},${legendInset.top + (atRight ? chart.margin.top : 0)})`);
-  const items = legend.selectAll('g.sl-legend-item').data(domain, (d) => d);
-  const entered = items.enter().append('g').attr('class', 'sl-legend-item').style('opacity', 0);
+  const items = legend.selectAll('g.vd-legend-item').data(domain, (d) => d);
+  const entered = items.enter().append('g').attr('class', 'vd-legend-item').style('opacity', 0);
   entered.append('rect').attr('width', swatchSize).attr('height', swatchSize).attr('rx', swatchRadius);
   entered.append('text').attr('x', swatchSize + 6).attr('y', swatchSize - 0.5);
   items.merge(entered).transition(chart.transition.base).style('opacity', 1)
@@ -597,7 +597,7 @@ function markAxisInactive(axisGroup) {
 }
 
 function applyXAxisClip(chart) {
-  const id = `sl-x-axis-clip-${chart.scene.clipIdentity}`;
+  const id = `vd-x-axis-clip-${chart.scene.clipIdentity}`;
   ensureClipRect(chart.scene, id, { x: -28, y: -8, width: chart.innerWidth + 56, height: 72 });
   chart.scene.xAxis.attr('clip-path', `url(#${id})`);
 }
@@ -684,7 +684,7 @@ function renderAxisWithGuard(axisGroup, axis, transition, kind, duration) {
   if (node) { node.__visDeltaAxisActive = true; node.__visDeltaAxisKind = kind; }
   if (canTransition) { timedTransition(axisGroup, transition, duration).call(axis); return; }
   if (replacesKind) {
-    fadeClone(axisGroup, 'sl-axis sl-axis-ghost', transition, duration);
+    fadeClone(axisGroup, 'vd-axis vd-axis-ghost', transition, duration);
     axisGroup.call(axis).style('opacity', 0);
     return;
   }
@@ -695,7 +695,7 @@ function transitionAxisLabel(label, title, transition, duration) {
   const previousTitle = label.text();
   // An axis has one meaning in each frame, so it must have one label node.
   // Keep incompatible axis geometry ghosts, but never duplicate title text.
-  label.node()?.parentNode?.querySelectorAll?.('.sl-axis-label-ghost')
+  label.node()?.parentNode?.querySelectorAll?.('.vd-axis-label-ghost')
     .forEach((node) => node.remove());
   if (previousTitle && previousTitle !== title) {
     label.text(previousTitle).style('opacity', 1);
@@ -749,7 +749,7 @@ function normalizeColorSubchannel(rows, channel = {}) {
 function categoricalRange(domain) {
   const resolved = DEFAULT_PALETTE.map((entry) => themeColor(entry));
   // Sequential slot assignment: Nth category → series-N. Consistent with the
-  // stacked/grouped bar chart's explicit 'var(--sl-series-N)' range and with
+  // stacked/grouped bar chart's explicit 'var(--vd-series-N)' range and with
   // the story-level registry, so fallback scenes never get mismatched colors.
   return domain.map((_, i) => resolved[i % resolved.length]);
 }

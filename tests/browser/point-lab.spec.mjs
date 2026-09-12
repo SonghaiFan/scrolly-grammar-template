@@ -3,7 +3,7 @@ import { pointScenarios } from '../../examples/point/scenarios.js';
 
 const ready = page => expect(page.locator('#status')).toHaveText('Ready');
 const snapshot = page => page.locator('#chart svg').evaluate(svg =>
-  Array.from(svg.querySelectorAll('circle.sl-point, .tick, .sl-legend-item')).map(node => ({
+  Array.from(svg.querySelectorAll('circle.vd-point, .tick, .vd-legend-item')).map(node => ({
     tag: node.tagName,
     text: node.textContent,
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort()
@@ -47,10 +47,10 @@ test('point radius, highlight, and cached node identity are real renderer behavi
   await ready(page);
   const result = await page.evaluate(() => {
     const chart = document.querySelector('#chart');
-    const before = [...chart.querySelectorAll('circle.sl-point')];
+    const before = [...chart.querySelectorAll('circle.vd-point')];
     document.querySelector('#progress').value = '1';
     document.querySelector('#progress').dispatchEvent(new Event('input', { bubbles: true }));
-    const after = [...chart.querySelectorAll('circle.sl-point')];
+    const after = [...chart.querySelectorAll('circle.vd-point')];
     return {
       reused: before.every(node => after.includes(node)),
       opacity: after.map(node => Number(node.style.opacity)).sort()
@@ -63,9 +63,9 @@ test('point radius, highlight, and cached node identity are real renderer behavi
   await page.locator('#scenario').selectOption('size');
   await ready(page);
   await page.locator('#start').click();
-  await expect(page.locator('#chart circle.sl-point').first()).toHaveAttribute('r', '5');
+  await expect(page.locator('#chart circle.vd-point').first()).toHaveAttribute('r', '5');
   await page.locator('#end').click();
-  const radii = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+  const radii = await page.locator('#chart circle.vd-point').evaluateAll(nodes =>
     nodes.map(node => Number(node.getAttribute('r'))));
   expect(new Set(radii.map(value => value.toFixed(3))).size).toBeGreaterThan(1);
 });
@@ -74,16 +74,16 @@ test('point defaults use compact, open correlation axes', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/point-lab.html#x');
   await ready(page);
   const style = await page.locator('#chart svg').evaluate(svg => ({
-    verticalGridLines: svg.querySelectorAll('.sl-point-x-grid line').length,
-    horizontalGridLines: svg.querySelectorAll('.sl-grid > .tick line').length,
-    xDomainOpacity: getComputedStyle(svg.querySelector('.sl-x-axis .domain')).opacity,
-    yDomainOpacity: getComputedStyle(svg.querySelector('.sl-y-axis .domain')).opacity,
-    xTitle: svg.querySelector('.sl-x-label')?.textContent,
-    yTitle: svg.querySelector('.sl-y-label')?.textContent,
-    xTitleAnchor: svg.querySelector('.sl-x-label')?.getAttribute('text-anchor'),
-    yTitleAnchor: svg.querySelector('.sl-y-label')?.getAttribute('text-anchor'),
-    xAxisTransform: svg.querySelector('.sl-x-axis')?.getAttribute('transform'),
-    yAxisTransform: svg.querySelector('.sl-y-axis')?.getAttribute('transform')
+    verticalGridLines: svg.querySelectorAll('.vd-point-x-grid line').length,
+    horizontalGridLines: svg.querySelectorAll('.vd-grid > .tick line').length,
+    xDomainOpacity: getComputedStyle(svg.querySelector('.vd-x-axis .domain')).opacity,
+    yDomainOpacity: getComputedStyle(svg.querySelector('.vd-y-axis .domain')).opacity,
+    xTitle: svg.querySelector('.vd-x-label')?.textContent,
+    yTitle: svg.querySelector('.vd-y-label')?.textContent,
+    xTitleAnchor: svg.querySelector('.vd-x-label')?.getAttribute('text-anchor'),
+    yTitleAnchor: svg.querySelector('.vd-y-label')?.getAttribute('text-anchor'),
+    xAxisTransform: svg.querySelector('.vd-x-axis')?.getAttribute('transform'),
+    yAxisTransform: svg.querySelector('.vd-y-axis')?.getAttribute('transform')
   }));
 
   expect(style.verticalGridLines).toBeGreaterThan(1);
@@ -105,7 +105,7 @@ test('point defaults use compact, open correlation axes', async ({ page }) => {
       const rect = svg.querySelector(selector)?.getBoundingClientRect();
       return rect && { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left };
     };
-    return { legend: box('.sl-legend'), yTitle: box('.sl-y-label') };
+    return { legend: box('.vd-legend'), yTitle: box('.vd-y-label') };
   });
   expect(
     header.legend.bottom <= header.yTitle.top ||
@@ -124,7 +124,7 @@ test('point lab loads the tidy mtcars dataset without inventing observations', a
   await page.goto('/docs/.vitepress/dist/point-lab.html#x');
   await ready(page);
   await expect(page.locator('#editor')).toHaveValue(/\.\/data\/mtcars\.csv/);
-  await expect(page.locator('#chart circle.sl-point')).toHaveCount(32);
+  await expect(page.locator('#chart circle.vd-point')).toHaveCount(32);
   expect(requests).toHaveLength(1);
   expect(new URL(requests[0]).pathname).toBe('/docs/.vitepress/dist/data/mtcars.csv');
 });
@@ -134,9 +134,9 @@ test('axis title changes use one label node without a ghost copy', async ({ page
   await ready(page);
   for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
     await page.locator('#progress').fill(String(progress));
-    await expect(page.locator('#chart .sl-x-label')).toHaveCount(1);
-    await expect(page.locator('#chart .sl-y-label')).toHaveCount(1);
-    await expect(page.locator('#chart .sl-axis-label-ghost')).toHaveCount(0);
+    await expect(page.locator('#chart .vd-x-label')).toHaveCount(1);
+    await expect(page.locator('#chart .vd-y-label')).toHaveCount(1);
+    await expect(page.locator('#chart .vd-axis-label-ghost')).toHaveCount(0);
   }
 });
 
@@ -145,7 +145,7 @@ test('an added point grows at its target instead of flying from an unrelated anc
   await ready(page);
   const pointAt = async (progress) => {
     await page.locator('#progress').fill(String(progress));
-    return page.locator('#chart circle.sl-point[data-key="Maserati Bora"]').evaluate(node => ({
+    return page.locator('#chart circle.vd-point[data-key="Maserati Bora"]').evaluate(node => ({
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy')),
       radius: Number(node.getAttribute('r'))
@@ -165,16 +165,16 @@ test('an added point grows at its target instead of flying from an unrelated anc
 test('point focus moves the view without filtering points', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/point-lab.html#focus');
   await ready(page);
-  const start = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+  const start = await page.locator('#chart circle.vd-point').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-point')).toHaveCount(32);
-  const focused = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+  await expect(page.locator('#chart circle.vd-point')).toHaveCount(32);
+  const focused = await page.locator('#chart circle.vd-point').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
   expect(focused).not.toEqual(start);
   const fit = await page.locator('#chart svg').evaluate(svg => {
-    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
-    const circles = [...svg.querySelectorAll('circle.sl-point')];
+    const plot = svg.querySelector('clipPath[id^="vd-mark-clip-"] rect');
+    const circles = [...svg.querySelectorAll('circle.vd-point')];
     const selected = circles.filter(node => Number(node.__data__?.cyl) === 4);
     const bounds = {
       x0: Math.min(...selected.map(node => Number(node.getAttribute('cx')) - Number(node.getAttribute('r')))),
@@ -199,7 +199,7 @@ test('point focus moves the view without filtering points', async ({ page }) => 
 test('point flip changes the authored first axis before the second axis', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/point-lab.html#flip');
   await ready(page);
-  const positions = async () => page.locator('#chart circle.sl-point').evaluateAll(nodes =>
+  const positions = async () => page.locator('#chart circle.vd-point').evaluateAll(nodes =>
     nodes.map(node => ({
       key: node.getAttribute('data-key'),
       x: Number(node.getAttribute('cx')),
@@ -230,7 +230,7 @@ test('opposite point flip endpoints use the same transition in reverse', async (
     const options = target => ({ target, d3, aq, height: 360 });
     const forward = await transition(base, flipped, options('#forward'));
     const reverse = await transition(flipped, base, options('#reverse'));
-    const geometry = selector => [...document.querySelectorAll(`${selector} circle.sl-point`)]
+    const geometry = selector => [...document.querySelectorAll(`${selector} circle.vd-point`)]
       .map(node => ({
         key: node.getAttribute('data-key'),
         x: Number(Number(node.getAttribute('cx')).toFixed(9)),
@@ -268,7 +268,7 @@ test('point rollup and breakdown are the same transition in reverse', async ({ p
     const options = target => ({ target, d3, aq, height: 360 });
     const split = await transition(summary, detailed, options('#split'));
     const merge = await transition(detailed, summary, options('#merge'));
-    const geometry = selector => [...document.querySelectorAll(`${selector} circle.sl-point`)]
+    const geometry = selector => [...document.querySelectorAll(`${selector} circle.vd-point`)]
       .map(node => ({
         key: node.getAttribute('data-key'),
         x: Number(node.getAttribute('cx')),
@@ -291,7 +291,7 @@ test('point combine starts slowly and accelerates into the summary', async ({ pa
   await ready(page);
   const positionAt = async (progress) => {
     await page.locator('#progress').fill(String(progress));
-    return page.locator('#chart circle.sl-point[data-key="detail:Datsun 710"]').evaluate(node => ({
+    return page.locator('#chart circle.vd-point[data-key="detail:Datsun 710"]').evaluate(node => ({
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy'))
     }));
@@ -329,11 +329,11 @@ test('point detail sets the view before summary points spread', async ({ page })
       target: '#chart', d3, aq, height: 360
     });
     const snapshot = () => ({
-      points: [...document.querySelectorAll('#chart circle.sl-point')]
+      points: [...document.querySelectorAll('#chart circle.vd-point')]
         .filter(node => Number(node.style.opacity || 1) > 0)
         .map(node => node.getAttribute('data-key'))
         .sort(),
-      axes: [...document.querySelectorAll('#chart .sl-x-axis .tick, #chart .sl-y-axis .tick')]
+      axes: [...document.querySelectorAll('#chart .vd-x-axis .tick, #chart .vd-y-axis .tick')]
         .map(node => [node.textContent, node.getAttribute('transform')])
     });
     change.progress(0);
@@ -359,7 +359,7 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   await expect(effect).toHaveValue('blend');
 
   await page.locator('#progress').fill('0.75');
-  const layer = page.locator('#chart .sl-point-blend-layer');
+  const layer = page.locator('#chart .vd-point-blend-layer');
   await expect(layer).toHaveCount(1);
   const first = await layer.evaluate(node => ({
     visibility: node.style.visibility,
@@ -370,8 +370,8 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   }));
   expect(first.visibility).toBe('visible');
   expect(first.opacity).toBe('1');
-  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('visibility', 'hidden');
-  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('opacity', '1');
+  await expect(page.locator('#chart .vd-point-crisp-layer')).toHaveCSS('visibility', 'hidden');
+  await expect(page.locator('#chart .vd-point-crisp-layer')).toHaveCSS('opacity', '1');
   // Six entering detail circles plus two exiting summary circles share the
   // temporary layer while the same cached frame remains reversible.
   expect(first.circles).toHaveLength(8);
@@ -389,8 +389,8 @@ test('point lab Blend is deterministic decoration and Clean removes it', async (
   await effect.selectOption('clean');
   await ready(page);
   await page.locator('#progress').fill('0.75');
-  await expect(page.locator('#chart .sl-point-blend-layer')).toHaveCount(0);
-  await expect(page.locator('#chart .sl-point-crisp-layer')).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('#chart .vd-point-blend-layer')).toHaveCount(0);
+  await expect(page.locator('#chart .vd-point-crisp-layer')).toHaveCSS('visibility', 'visible');
 });
 
 test('point Blend parent exists only while a child is close enough to connect', async ({ page }) => {
@@ -398,7 +398,7 @@ test('point Blend parent exists only while a child is close enough to connect', 
   await ready(page);
 
   await page.locator('#progress').fill('0');
-  const fullRadii = await page.locator('#chart .sl-point-blend-group').evaluateAll(groups =>
+  const fullRadii = await page.locator('#chart .vd-point-blend-group').evaluateAll(groups =>
     Object.fromEntries(groups.map(group => [
       String(group.__data__.parent),
       Number(group.querySelector('[data-blend-role="parent"], [data-blend-role="summary"]')?.getAttribute('r'))
@@ -409,7 +409,7 @@ test('point Blend parent exists only while a child is close enough to connect', 
     const frames = [];
     for (const progress of progressValues) {
       await page.locator('#progress').fill(String(progress));
-      frames.push(await page.locator('#chart .sl-point-blend-group').evaluateAll(groups =>
+      frames.push(await page.locator('#chart .vd-point-blend-group').evaluateAll(groups =>
         groups.map(group => {
           const parent = group.querySelector('[data-blend-role="parent"]');
           const children = [...group.querySelectorAll('[data-blend-role="child"]')];

@@ -72,10 +72,16 @@ export function unitLayout(units, chart, spec, deps) {
     const cell = radius * 2.45;
     const groupColumns = Math.max(1, Math.min(columns, Math.floor(groupScale.bandwidth() / cell) || 1));
     const stackByGroup = stackIndex(units, (d) => d.__row[groupKey]);
+    const groupStart = (group) => {
+      const count = groupCounts.get(group) || 1;
+      const usedColumns = Math.min(groupColumns, count);
+      const usedWidth = (usedColumns - 1) * cell;
+      return groupScale(group) + (groupScale.bandwidth() - usedWidth) / 2;
+    };
     return {
       name: 'bar', axes: true, r: radius, groupField: groupKey,
       axis: { scale: groupScale, channel: { field: groupKey, title: groupKey, type: 'nominal' } },
-      x: (d) => groupScale(d.__row[groupKey]) + (stackByGroup(d) % groupColumns) * cell + radius,
+      x: (d) => groupStart(d.__row[groupKey]) + (stackByGroup(d) % groupColumns) * cell,
       y: (d) => chart.innerHeight - radius - Math.floor(stackByGroup(d) / groupColumns) * cell
     };
   }
@@ -173,7 +179,7 @@ export function matchUnitSlotsByIdentityAndTravel(chart, units, layout) {
   if (chart.transitionPlan?.match?.mode !== 'key-first-travel') {
     return { units, maxDistance: 0, totalDistance: 0 };
   }
-  const sourceNodes = chart.g.selectAll('circle.sl-unit').nodes();
+  const sourceNodes = chart.g.selectAll('circle.vd-unit').nodes();
   const sources = sourceNodes.map((node, index) => ({
     index,
     key: String(node.dataset.key ?? node.__data__?.__semanticUnitKey ?? node.__data__?.__unitKey ?? index),

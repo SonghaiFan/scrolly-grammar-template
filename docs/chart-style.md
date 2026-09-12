@@ -40,7 +40,7 @@ Three presets ship with the main stylesheet:
   monochrome blueprint-blue series scale.
 
 They are also available as `chartStylePresets.d3`, `.paper`, and `.dark`. Import
-`visdelta/style.css` once; the runtime applies the matching `.sl-style-*` class
+`visdelta/style.css` once; the runtime applies the matching `.vd-style-*` class
 to its own root, so different presets can coexist on one page.
 
 ```js
@@ -71,7 +71,7 @@ const change = await transition(from, to, {
 });
 ```
 
-The host receives `data-chart-style="compact"` and `.sl-style-compact`, so a
+The host receives `data-chart-style="compact"` and `.vd-style-compact`, so a
 style package can pair structural rules with scoped CSS tokens. Style modules
 do not enter visualization specs or semantic deltas.
 

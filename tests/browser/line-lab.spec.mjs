@@ -9,7 +9,7 @@ const ready = async page => {
   }
 };
 const snapshot = page => page.locator('#chart svg').evaluate(svg =>
-  Array.from(svg.querySelectorAll('path.sl-line, circle.sl-line-point, .tick, .sl-legend-item')).map(node => ({
+  Array.from(svg.querySelectorAll('path.vd-line, circle.vd-line-point, .tick, .vd-legend-item')).map(node => ({
     tag: node.tagName,
     text: node.textContent,
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort(),
@@ -33,11 +33,11 @@ test('line infers an ISO date x field and places every mark on its time scale', 
     const to = from.y('value');
     const controller = await transition(from, to, { target: '#chart', d3, aq, height: 360 });
     controller.progress(1);
-    const path = document.querySelector('path.sl-line')?.getAttribute('d') || '';
+    const path = document.querySelector('path.vd-line')?.getAttribute('d') || '';
     return {
       xType: from.toSpec().encoding.x.type,
       path,
-      ticks: [...document.querySelectorAll('.sl-x-axis .tick text')].map(node => node.textContent)
+      ticks: [...document.querySelectorAll('.vd-x-axis .tick text')].map(node => node.textContent)
     };
   });
 
@@ -84,7 +84,7 @@ test('line highlight and style are real renderer behavior', async ({ page }) => 
   await page.goto('/docs/.vitepress/dist/line-lab.html#highlight');
   await ready(page);
   await page.locator('#end').click();
-  const highlightedLines = await page.locator('#chart path.sl-line').evaluateAll(nodes =>
+  const highlightedLines = await page.locator('#chart path.vd-line').evaluateAll(nodes =>
     nodes.map(node => ({
       key: node.getAttribute('data-key'),
       opacity: Number(node.style.opacity),
@@ -95,9 +95,9 @@ test('line highlight and style are real renderer behavior', async ({ page }) => 
   await page.locator('#scenario').selectOption('style');
   await ready(page);
   await page.locator('#start').click();
-  await expect(page.locator('#chart path.sl-line')).toHaveAttribute('stroke-width', '2');
+  await expect(page.locator('#chart path.vd-line')).toHaveAttribute('stroke-width', '2');
   await page.locator('#progress').fill('0.55');
-  const pathShape = await page.locator('#chart path.sl-line').evaluate(node => {
+  const pathShape = await page.locator('#chart path.vd-line').evaluate(node => {
     const length = node.getTotalLength();
     const points = Array.from({ length: 101 }, (_, index) =>
       node.getPointAtLength(length * index / 100));
@@ -111,8 +111,8 @@ test('line highlight and style are real renderer behavior', async ({ page }) => 
   expect(pathShape.length).toBeGreaterThan(0);
   expect(pathShape.backwards, pathShape.d).toBe(false);
   await page.locator('#end').click();
-  await expect(page.locator('#chart path.sl-line')).toHaveAttribute('stroke-width', '6');
-  await expect(page.locator('#chart circle.sl-line-point').first()).toHaveAttribute('r', '7');
+  await expect(page.locator('#chart path.vd-line')).toHaveAttribute('stroke-width', '6');
+  await expect(page.locator('#chart circle.vd-line-point').first()).toHaveAttribute('r', '7');
 });
 
 test('line filter keeps an internal gap while focus keeps every observation', async ({ page }) => {
@@ -120,18 +120,18 @@ test('line filter keeps an internal gap while focus keeps every observation', as
   await ready(page);
   await expect(page.locator('.playground-line-plan')).toContainText('Remove points');
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(21);
-  await expect(page.locator('#chart path.sl-line')).toHaveCount(2);
+  await expect(page.locator('#chart circle.vd-line-point')).toHaveCount(21);
+  await expect(page.locator('#chart path.vd-line')).toHaveCount(2);
 
   await page.locator('#scenario').selectOption('focus');
   await ready(page);
   await expect(page.locator('.playground-line-plan')).toContainText('Focus view');
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(24);
-  await expect(page.locator('#chart path.sl-line')).toHaveCount(1);
+  await expect(page.locator('#chart circle.vd-line-point')).toHaveCount(24);
+  await expect(page.locator('#chart path.vd-line')).toHaveCount(1);
   const fit = await page.locator('#chart svg').evaluate(svg => {
-    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
-    const points = [...svg.querySelectorAll('circle.sl-line-point')];
+    const plot = svg.querySelector('clipPath[id^="vd-mark-clip-"] rect');
+    const points = [...svg.querySelectorAll('circle.vd-line-point')];
     const selected = points.filter(node => Number(node.__data__?.close) >= 325);
     const bounds = {
       x0: Math.min(...selected.map(node => Number(node.getAttribute('cx')) - Number(node.getAttribute('r')))),
@@ -174,8 +174,8 @@ test('line axis ticks and grid lines share one scale transition', async ({ page 
         opacity: Number(getComputedStyle(node).opacity)
       }));
       return {
-        axis: ticks('.sl-y-axis > .tick'),
-        grid: ticks('.sl-grid > .tick')
+        axis: ticks('.vd-y-axis > .tick'),
+        grid: ticks('.vd-grid > .tick')
       };
     });
 
@@ -218,7 +218,7 @@ test('all exact D3 curve names render through the Line module', async ({ page })
       document.body.append(target);
       const change = await transition(base, base.curve(name), { target, d3, aq, height: 320 });
       change.progress(0.5);
-      const path = target.querySelector('path.sl-line');
+      const path = target.querySelector('path.vd-line');
       output.push({
         name,
         d: path?.getAttribute('d') || '',
@@ -240,7 +240,7 @@ test('all exact D3 curve names render through the Line module', async ({ page })
 test('line flip changes x before y', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/line-lab.html#flip');
   await ready(page);
-  const positions = async () => page.locator('#chart circle.sl-line-point').evaluateAll(nodes =>
+  const positions = async () => page.locator('#chart circle.vd-line-point').evaluateAll(nodes =>
     nodes.map(node => ({
       key: node.getAttribute('data-key'),
       x: Number(node.getAttribute('cx')),
@@ -256,20 +256,20 @@ test('line flip changes x before y', async ({ page }) => {
   const end = await positions();
   expect(end.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))).toBe(true);
   expect(new Set(end.map(point => Math.round(point.y))).size).toBeGreaterThan(12);
-  await expect(page.locator('#chart path.sl-line')).not.toHaveAttribute('d', /NaN/);
+  await expect(page.locator('#chart path.vd-line')).not.toHaveAttribute('d', /NaN/);
 });
 
 test('line time window combines keyed add and remove without a path wiggle', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/line-lab.html#shift');
   await ready(page);
   await expect(page.locator('.playground-line-plan')).toContainText('Add and remove points');
-  const startPoint = await page.locator('#chart path.sl-line').evaluate(node => {
+  const startPoint = await page.locator('#chart path.vd-line').evaluate(node => {
     const point = node.getPointAtLength(0);
     return { x: point.x, y: point.y };
   });
   const frameAt = async progress => {
     await page.locator('#progress').fill(String(progress));
-    return page.locator('#chart path.sl-line').evaluate(node => {
+    return page.locator('#chart path.vd-line').evaluate(node => {
       const length = node.getTotalLength();
       const points = Array.from({ length: 121 }, (_, index) =>
         node.getPointAtLength(length * index / 120));
@@ -281,7 +281,7 @@ test('line time window combines keyed add and remove without a path wiggle', asy
         left: Math.min(...points.map(point => point.x)),
         right: Math.max(...points.map(point => point.x)),
         backwards: points.some((point, index) => index > 0 && point.x < points[index - 1].x - 0.5),
-        circles: [...node.parentElement.querySelectorAll('circle.sl-line-point')].map(point => ({
+        circles: [...node.parentElement.querySelectorAll('circle.vd-line-point')].map(point => ({
           key: point.getAttribute('data-key'),
           x: Number(point.getAttribute('cx')),
           radius: Number(point.getAttribute('r'))
@@ -342,8 +342,8 @@ test('opposite time-window endpoints use the same add-and-remove frames in rever
       item => String(Math.round(Number(item) * 1e6) / 1e6)
     );
     const geometry = selector => [...document.querySelectorAll(
-      `${selector} path.sl-line, ${selector} circle.sl-line-point, ` +
-      `${selector} .sl-x-axis .tick, ${selector} .sl-y-axis .tick`
+      `${selector} path.vd-line, ${selector} circle.vd-line-point, ` +
+      `${selector} .vd-x-axis .tick, ${selector} .vd-y-axis .tick`
     )].map(node => ({
       tag: node.tagName,
       key: node.getAttribute('data-key'),
@@ -392,8 +392,8 @@ test('line add and remove are the same transition in reverse', async ({ page }) 
       number => String(Math.round(Number(number) * 1e9) / 1e9)
     );
     const geometry = selector => [...document.querySelectorAll(
-      `${selector} path.sl-line, ${selector} circle.sl-line-point, ` +
-      `${selector} .sl-x-axis .tick, ${selector} .sl-y-axis .tick`
+      `${selector} path.vd-line, ${selector} circle.vd-line-point, ` +
+      `${selector} .vd-x-axis .tick, ${selector} .vd-y-axis .tick`
     )].map(node => ({
       tag: node.tagName,
       className: node.getAttribute('class'),
@@ -418,15 +418,15 @@ test('line add and remove are the same transition in reverse', async ({ page }) 
     add.progress(0.69);
     const beforePoint = {
       radius: Number(document.querySelector('#add circle[data-key="Q7"]')?.getAttribute('r')),
-      path: document.querySelector('#add path.sl-line')?.getAttribute('d')
+      path: document.querySelector('#add path.vd-line')?.getAttribute('d')
     };
     add.progress(0.8);
     const afterLine = {
       radius: Number(document.querySelector('#add circle[data-key="Q7"]')?.getAttribute('r')),
-      path: document.querySelector('#add path.sl-line')?.getAttribute('d')
+      path: document.querySelector('#add path.vd-line')?.getAttribute('d')
     };
     add.progress(0);
-    const startPath = document.querySelector('#add path.sl-line')?.getAttribute('d');
+    const startPath = document.querySelector('#add path.vd-line')?.getAttribute('d');
     return { frames, beforePoint, afterLine, startPath };
   });
 
@@ -470,7 +470,7 @@ test('line filter and restore are the same transition in reverse', async ({ page
       number => String(Math.round(Number(number) * 1e9) / 1e9)
     );
     const geometry = selector => [...document.querySelectorAll(
-      `${selector} path.sl-line, ${selector} circle.sl-line-point`
+      `${selector} path.vd-line, ${selector} circle.vd-line-point`
     )].map(node => ({
       tag: node.tagName,
       key: node.getAttribute('data-key'),
@@ -501,8 +501,8 @@ test('line filter and restore are the same transition in reverse', async ({ page
       pointIsLeaving: removalFrame(0.25),
       lineIsRetracting: removalFrame(0.35),
       isolated: {
-        paths: document.querySelectorAll('#isolated path.sl-line').length,
-        points: document.querySelectorAll('#isolated circle.sl-line-point').length
+        paths: document.querySelectorAll('#isolated path.vd-line').length,
+        points: document.querySelectorAll('#isolated circle.vd-line-point').length
       }
     };
   });
@@ -537,7 +537,7 @@ test('line split and merge are one transition in reverse', async ({ page }) => {
     const options = target => ({ target, d3, aq, height: 360 });
     const split = await transition(total, detailed, options('#split'));
     const merge = await transition(detailed, total, options('#merge'));
-    const geometry = selector => [...document.querySelectorAll(`${selector} path.sl-line, ${selector} circle.sl-line-point`)]
+    const geometry = selector => [...document.querySelectorAll(`${selector} path.vd-line, ${selector} circle.vd-line-point`)]
       .map(node => ({
         tag: node.tagName,
         key: node.getAttribute('data-key'),
@@ -561,8 +561,8 @@ test('line split cuts first, moves second, and connects last', async ({ page }) 
   await ready(page);
 
   await page.locator('#progress').fill('0.24');
-  await expect(page.locator('#chart path.sl-line[data-line-stage="segments"]')).toHaveCount(2);
-  const cutPositions = await page.locator('#chart circle.sl-line-point[data-key*="|"]').evaluateAll(nodes =>
+  await expect(page.locator('#chart path.vd-line[data-line-stage="segments"]')).toHaveCount(2);
+  const cutPositions = await page.locator('#chart circle.vd-line-point[data-key*="|"]').evaluateAll(nodes =>
     nodes.map(node => ({ key: node.getAttribute('data-key'), y: Number(node.getAttribute('cy')) })));
   const byPeriod = new Map();
   for (const point of cutPositions) {
@@ -573,13 +573,13 @@ test('line split cuts first, moves second, and connects last', async ({ page }) 
   for (const values of byPeriod.values()) expect(new Set(values).size).toBe(1);
 
   await page.locator('#progress').fill('0.58');
-  await expect(page.locator('#chart path.sl-line[data-line-stage="segments"]')).toHaveCount(2);
-  const movedPositions = await page.locator('#chart circle.sl-line-point[data-key*="|"]').evaluateAll(nodes =>
+  await expect(page.locator('#chart path.vd-line[data-line-stage="segments"]')).toHaveCount(2);
+  const movedPositions = await page.locator('#chart circle.vd-line-point[data-key*="|"]').evaluateAll(nodes =>
     nodes.map(node => ({ key: node.getAttribute('data-key'), y: Number(node.getAttribute('cy')) })));
   expect(movedPositions.map(point => point.y)).not.toEqual(cutPositions.map(point => point.y));
 
   await page.locator('#progress').fill('0.92');
-  await expect(page.locator('#chart path.sl-line[data-line-stage="connected"]')).toHaveCount(2);
+  await expect(page.locator('#chart path.vd-line[data-line-stage="connected"]')).toHaveCount(2);
 });
 
 test('line lab fits a narrow viewport and keeps progress after resize', async ({ page }) => {

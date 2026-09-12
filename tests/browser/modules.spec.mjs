@@ -28,7 +28,7 @@ test('selected bar transition loads no Story runtime or unrelated chart types', 
   await expect(page.locator('#status')).toHaveText('Ready');
   // This isolated fixture intentionally stays tiny; the docs lab uses the
   // bundled population CSV.
-  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
+  await expect(page.locator('#chart rect.vd-bar')).toHaveCount(3);
   await page.locator('#progress').fill('0.37');
   await expect(page.locator('#value')).toHaveText('0.37');
   expect(modules).toContain('/dist/charts/bar/plugin.js');
@@ -61,10 +61,10 @@ test('custom chart compiler runs and an existing pair keeps its renderer after r
     const a = { mark: 'custom-bar', key: 'id', measure: 'a', data: [{ id: 'A', a: 2, b: 7 }] };
     const pair = await transition(a, { ...a, measure: 'b' }, { target: host, d3 });
     pair.progress(0.4);
-    const before = host.querySelector('rect.sl-bar')?.getAttribute('height');
+    const before = host.querySelector('rect.vd-bar')?.getAttribute('height');
     registerChartModule({ plugin: defineChartType({ key: 'custom-bar', renderer() { throw new Error('replacement must not run'); } }) });
     pair.progress(0.7).progress(0.4).resize();
-    const after = host.querySelector('rect.sl-bar')?.getAttribute('height');
+    const after = host.querySelector('rect.vd-bar')?.getAttribute('height');
     pair.destroy();
     host.remove();
     return { compiled, before, after };

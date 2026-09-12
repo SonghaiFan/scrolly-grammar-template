@@ -10,10 +10,10 @@ test('VitePress reference loads the real seekable transition', async ({ page }) 
   await expect(page.locator('#VPSidebarNav').getByRole('link', { name: 'Chart types', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Search/ })).toBeVisible();
   const workbench = page.locator('.transition-workbench');
-  await expect(workbench.locator('rect.sl-bar')).toHaveCount(4);
+  await expect(workbench.locator('rect.vd-bar')).toHaveCount(4);
 
   const range = page.getByRole('slider', { name: 'Transition progress', exact: true });
-  const firstHeight = async () => Number(await workbench.locator('rect.sl-bar').first().getAttribute('height'));
+  const firstHeight = async () => Number(await workbench.locator('rect.vd-bar').first().getAttribute('height'));
   const start = await firstHeight();
   await range.fill('1');
   await expect(page.locator('.workbench-readout output')).toHaveText('1.00');
@@ -51,7 +51,7 @@ return { from: all, to: north };`);
   await expect(status).toHaveText('Waiting for input');
   await expect(status).toHaveText('Ready');
   await page.getByRole('slider', { name: 'Playground transition progress' }).fill('1');
-  await expect(page.locator('.playground-chart rect.sl-bar')).toHaveCount(2);
+  await expect(page.locator('.playground-chart rect.vd-bar')).toHaveCount(2);
 
   await editor.fill('const broken = ;');
   await expect(status).toHaveText('Waiting for input');
@@ -61,7 +61,7 @@ return { from: all, to: north };`);
   await page.getByRole('combobox', { name: 'Syntax example' }).selectOption('line');
   await expect(status).toHaveText('Waiting for input');
   await expect(status).toHaveText('Ready');
-  await expect(page.locator('.playground-chart path.sl-line')).toHaveCount(1);
+  await expect(page.locator('.playground-chart path.vd-line')).toHaveCount(1);
 });
 
 test('every editable preset produces real marks', async ({ page }) => {
@@ -69,16 +69,16 @@ test('every editable preset produces real marks', async ({ page }) => {
   const picker = page.getByRole('combobox', { name: 'Syntax example' });
   const status = page.locator('.playground-status');
   const cases = [
-    ['filter', 'rect.sl-bar'],
-    ['highlight', 'rect.sl-bar'],
-    ['split', 'rect.sl-bar'],
-    ['flip', 'rect.sl-bar'],
-    ['line', 'path.sl-line'],
+    ['filter', 'rect.vd-bar'],
+    ['highlight', 'rect.vd-bar'],
+    ['split', 'rect.vd-bar'],
+    ['flip', 'rect.vd-bar'],
+    ['line', 'path.vd-line'],
     ['point', 'circle'],
     ['unit', 'circle']
   ];
 
-  await expect(page.locator('.playground-chart rect.sl-bar')).toHaveCount(4);
+  await expect(page.locator('.playground-chart rect.vd-bar')).toHaveCount(4);
   for (const [sample, mark] of cases) {
     await picker.selectOption(sample);
     await expect(status).toHaveText('Waiting for input');
@@ -107,7 +107,7 @@ test('language map is the status source of truth with inline live grammar', asyn
   const firstPlayground = page.locator('.syntax-playground').first();
   await firstPlayground.scrollIntoViewIfNeeded();
   await expect(firstPlayground.locator('.playground-status')).toHaveText('Ready');
-  expect(await firstPlayground.locator('rect.sl-bar').count()).toBeGreaterThan(0);
+  expect(await firstPlayground.locator('rect.vd-bar').count()).toBeGreaterThan(0);
 });
 
 test('examples are inline editors rather than source-file references', async ({ page }) => {

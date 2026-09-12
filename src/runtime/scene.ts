@@ -17,27 +17,27 @@ export function getScene(node, viewConfig, d3) {
     .attr('viewBox', `0 0 ${width} ${height}`)
     .attr('preserveAspectRatio', 'xMidYMid meet')
     .attr('role', 'img');
-  const frame = svg.append('g').attr('class', 'sl-frame');
-  const grid = frame.append('g').attr('class', 'sl-grid');
-  const markRoot = frame.append('g').attr('class', 'sl-mark-root');
+  const frame = svg.append('g').attr('class', 'vd-frame');
+  const grid = frame.append('g').attr('class', 'vd-grid');
+  const markRoot = frame.append('g').attr('class', 'vd-mark-root');
   const scene = {
     clipIdentity: ++sceneIdentity,
     node, svg, frame, grid, markRoot,
-    xAxis: svg.append('g').attr('class', 'sl-axis sl-x-axis'),
-    yAxis: svg.append('g').attr('class', 'sl-axis sl-y-axis'),
-    xLabel: svg.append('text').attr('class', 'sl-axis-label sl-x-label'),
-    yLabel: svg.append('text').attr('class', 'sl-axis-label sl-y-label'),
-    legend: svg.append('g').attr('class', 'sl-legend'),
-    unitLabel: svg.append('text').attr('class', 'sl-unit-label'),
-    textLayer: svg.append('foreignObject').attr('class', 'sl-text-layer'),
+    xAxis: svg.append('g').attr('class', 'vd-axis vd-x-axis'),
+    yAxis: svg.append('g').attr('class', 'vd-axis vd-y-axis'),
+    xLabel: svg.append('text').attr('class', 'vd-axis-label vd-x-label'),
+    yLabel: svg.append('text').attr('class', 'vd-axis-label vd-y-label'),
+    legend: svg.append('g').attr('class', 'vd-legend'),
+    unitLabel: svg.append('text').attr('class', 'vd-unit-label'),
+    textLayer: svg.append('foreignObject').attr('class', 'vd-text-layer'),
     markLayers: new Map(),
     previousSpec: null,
     width,
     height
   };
-  scene.detailLayer = markRoot.append('g').attr('class', 'sl-scene-layer sl-detail-layer');
-  scene.axisLayer = frame.append('g').attr('class', 'sl-scene-layer sl-axis-layer');
-  scene.empty = d3.select(node).append('div').attr('class', 'sl-empty').style('display', 'none');
+  scene.detailLayer = markRoot.append('g').attr('class', 'vd-scene-layer vd-detail-layer');
+  scene.axisLayer = frame.append('g').attr('class', 'vd-scene-layer vd-axis-layer');
+  scene.empty = d3.select(node).append('div').attr('class', 'vd-empty').style('display', 'none');
   node.__visDeltaScene = scene;
   return scene;
 }
@@ -90,12 +90,12 @@ function applyAxisScene(chart, rows, spec) {
   const y = row ? chart.position.y(row) : NaN;
   const data = Number.isFinite(x) && Number.isFinite(y) ? [{ row, x, y }] : [];
   layer.raise().interrupt().style('opacity', 1);
-  joinAxisLine(layer, 'sl-axis-rule-x', data, chart.transition.base, (d) => ({ x1: d.x, x2: d.x, y1: 0, y2: chart.innerHeight }));
-  joinAxisLine(layer, 'sl-axis-rule-y', data, chart.transition.base, (d) => ({ x1: 0, x2: chart.innerWidth, y1: d.y, y2: d.y }));
-  layer.selectAll('circle.sl-axis-dot')
+  joinAxisLine(layer, 'vd-axis-rule-x', data, chart.transition.base, (d) => ({ x1: d.x, x2: d.x, y1: 0, y2: chart.innerHeight }));
+  joinAxisLine(layer, 'vd-axis-rule-y', data, chart.transition.base, (d) => ({ x1: 0, x2: chart.innerWidth, y1: d.y, y2: d.y }));
+  layer.selectAll('circle.vd-axis-dot')
     .data(data, (d) => sceneRowKey(d.row, spec))
     .join(
-      (enter) => enter.append('circle').attr('class', 'sl-axis-dot')
+      (enter) => enter.append('circle').attr('class', 'vd-axis-dot')
         .attr('cx', (d) => d.x).attr('cy', (d) => d.y).attr('r', 0)
         .transition(chart.transition.base).attr('r', 5),
       (update) => update.transition(chart.transition.base).attr('cx', (d) => d.x).attr('cy', (d) => d.y).attr('r', 5),
@@ -110,7 +110,7 @@ function joinAxisLine(layer, className, data, transition, attrs) {
   layer.selectAll(`line.${className}`)
     .data(data, (d) => sceneRowKey(d.row))
     .join(
-      (enter) => setAttrs(enter.append('line').attr('class', `sl-axis-rule ${className}`))
+      (enter) => setAttrs(enter.append('line').attr('class', `vd-axis-rule ${className}`))
         .style('opacity', 0).transition(transition).style('opacity', 1),
       (update) => setAttrs(update.transition(transition)).style('opacity', 1),
       (exit) => exit.transition(transition).style('opacity', 0).remove()

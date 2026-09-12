@@ -70,10 +70,6 @@
       "types": "./dist/charts/style.d.ts",
       "import": "./dist/charts/style.js"
     },
-    "./composition": {
-      "types": "./dist/composition.d.ts",
-      "import": "./dist/composition.js"
-    },
     "./style.css": "./dist/visdelta.css",
     "./themes/default.css": "./dist/themes/default.css",
     "./themes/dark.css": "./dist/themes/dark.css",

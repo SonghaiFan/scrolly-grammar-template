@@ -62,7 +62,7 @@ export function createSimpleBarRenderer(deps, kit) {
     kit.renderBarJoin({
       chart, rows, spec, tooltip, d3, bindTooltip, key,
       category: (d) => d[categoryField],
-      className: 'sl-bar', orientation, rx: cameraSize(themeValue('--sl-bar-radius', 3), camera),
+      className: 'vd-bar', orientation, rx: cameraSize(themeValue('--vd-bar-radius', 3), camera),
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, steps, geometry
     });

@@ -18,7 +18,7 @@ export function pointStoredKey(
   index: number,
   key: KeyFn
 ): string | number {
-  return (datum['__slPointJoinKey'] as string | number) || key(datum, index);
+  return (datum['__visDeltaPointJoinKey'] as string | number) || key(datum, index);
 }
 
 export function applyPointIdentity(
@@ -32,7 +32,7 @@ export function applyPointIdentity(
   const sel = selection as Sel;
   return sel
     .each(function(this: unknown, d: Record<string, unknown>, i: number) {
-      d['__slPointJoinKey'] = key(d, i);
+      d['__visDeltaPointJoinKey'] = key(d, i);
     })
     .attr('data-key', (d: Record<string, unknown>, i: number) => key(d, i));
 }

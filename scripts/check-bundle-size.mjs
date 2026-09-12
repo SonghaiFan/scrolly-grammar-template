@@ -7,32 +7,32 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const cases = [
   {
     name: 'core delta',
-    source: 'import { delta } from "./src/core.ts"; globalThis.__slBundle = { delta };',
+    source: 'import { delta } from "./src/core.ts"; globalThis.__visDeltaBundle = { delta };',
     gzipBudget: 4_000
   },
   {
     name: 'area authoring',
-    source: 'import { area } from "./src/area.ts"; globalThis.__slBundle = { area };',
+    source: 'import { area } from "./src/area.ts"; globalThis.__visDeltaBundle = { area };',
     gzipBudget: 8_000
   },
   {
     name: 'bar authoring',
-    source: 'import { bar } from "./src/bar.ts"; globalThis.__slBundle = { bar };',
+    source: 'import { bar } from "./src/bar.ts"; globalThis.__visDeltaBundle = { bar };',
     gzipBudget: 9_100
   },
   {
     name: 'point authoring',
-    source: 'import { point } from "./src/point.ts"; globalThis.__slBundle = { point };',
+    source: 'import { point } from "./src/point.ts"; globalThis.__visDeltaBundle = { point };',
     gzipBudget: 8_000
   },
   {
     name: 'line authoring',
-    source: 'import { line } from "./src/line.ts"; globalThis.__slBundle = { line };',
+    source: 'import { line } from "./src/line.ts"; globalThis.__visDeltaBundle = { line };',
     gzipBudget: 8_000
   },
   {
     name: 'unit authoring',
-    source: 'import { unit } from "./src/unit.ts"; globalThis.__slBundle = { unit };',
+    source: 'import { unit } from "./src/unit.ts"; globalThis.__visDeltaBundle = { unit };',
     gzipBudget: 8_000
   }
 ];
@@ -82,7 +82,7 @@ for (const entry of cases) {
 const split = await esbuild.build({
   absWorkingDir: root,
   stdin: {
-    contents: 'import { bar } from "./src/bar.ts"; import { transition } from "./src/transition-entry.ts"; globalThis.__slBundle = { bar, transition };',
+    contents: 'import { bar } from "./src/bar.ts"; import { transition } from "./src/transition-entry.ts"; globalThis.__visDeltaBundle = { bar, transition };',
     loader: 'ts', resolveDir: root
   },
   bundle: true, splitting: true, format: 'esm', platform: 'browser',
@@ -107,7 +107,7 @@ let gzipBytes = 0;
 for (const path of loaded) {
   gzipBytes += gzipSync(files.get(resolve(root, path))).byteLength;
   for (const source of Object.keys(outputs[path].inputs)) {
-    if (/src\/composition\.ts$|src\/charts\/manifest\.ts$|src\/charts\/(line|point|unit)\/|scrollytelling\//.test(source)) {
+    if (/src\/charts\/manifest\.ts$|src\/charts\/(line|point|unit)\//.test(source)) {
       throw new Error(`Focused bar transition pulled in unrelated code: ${source}`);
     }
   }

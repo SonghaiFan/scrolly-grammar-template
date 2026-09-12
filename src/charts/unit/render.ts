@@ -112,15 +112,15 @@ class UnitChart extends BaseChart {
     const updateMarkDelay = (unit, index) =>
       (chart.transition.exitDuration || 0) + baseMarkDelay(unit, index);
     const opacity = (unit) => unitSelectionOpacity(
-      unit, spec, themeValue('--sl-dim-opacity', 0.22)
+      unit, spec, themeValue('--vd-dim-opacity', 0.22)
     );
 
-    chart.g.selectAll('circle.sl-unit')
+    chart.g.selectAll('circle.vd-unit')
       .data(units, unitKey)
       .join(
         (enter) => enter
           .append('circle')
-          .attr('class', 'sl-unit')
+          .attr('class', 'vd-unit')
           .attr('data-key', semanticUnitKey)
           .attr('data-source-key', (d) => d.__sourceUnitKey)
           .attr('data-travel-distance', (d) => d.__travelDistance || 0)
@@ -132,8 +132,8 @@ class UnitChart extends BaseChart {
           .attr('cy', layout.y)
           .attr('r', 0)
           .attr('fill', (d) => color(d.__row || d))
-          .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', cameraSize(themeValue('--sl-unit-stroke-width', 0.5), camera))
+          .attr('stroke', themeValue('--vd-mark-stroke', 'white'))
+          .attr('stroke-width', cameraSize(themeValue('--vd-unit-stroke-width', 0.5), camera))
           .call(bindTooltip, spec, tooltip)
           .transition(enterTransition)
           .delay(enterMarkDelay)
@@ -154,7 +154,7 @@ class UnitChart extends BaseChart {
             .attr('cx', layout.x)
             .attr('r', layout.r)
             .attr('fill', (d) => color(d.__row || d))
-            .attr('stroke-width', cameraSize(themeValue('--sl-unit-stroke-width', 0.5), camera))
+            .attr('stroke-width', cameraSize(themeValue('--vd-unit-stroke-width', 0.5), camera))
             .style('opacity', opacity);
 
           if (!fallsToAxis) return moveAcross.attr('cy', layout.y);
@@ -191,8 +191,8 @@ function travelDelay(unit, maxDistance, travelWindow) {
 }
 
 function transitionFor(chart, d3, duration) {
-  const transition = chart.scrollDriven
-    ? d3.transition(chart.scrollTransitionName)
+  const transition = chart.seekable
+    ? d3.transition(chart.seekTransitionName)
     : d3.transition();
   return transition.duration(Math.max(1, duration)).ease(chart.transition.base.ease());
 }

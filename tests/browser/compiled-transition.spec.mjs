@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
-  await page.waitForSelector('rect.sl-bar');
+  await page.waitForSelector('rect.vd-bar');
   await page.evaluate(async () => {
     window.sl = await import('/dist/visdelta.esm.js');
     document.body.innerHTML = '<div id="cached" style="width:800px"></div><div id="reference" style="width:800px"></div>';
@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
     ];
     window.base = sl.bar().data(rows).x('id').y('value').key('id');
     window.options = target => ({ target, d3, aq, height: 400 });
-    window.geometry = selector => [...document.querySelector(selector).querySelectorAll('rect.sl-bar')].map(node => ({
+    window.geometry = selector => [...document.querySelector(selector).querySelectorAll('rect.vd-bar')].map(node => ({
       key: node.dataset.key,
       x: Number(node.getAttribute('x')), y: Number(node.getAttribute('y')),
       width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')),
@@ -34,7 +34,7 @@ test('seek and play reuse nodes without unnecessary transforms, scales or D3 sch
     const change = await sl.transition(base, base.y('other'), { ...options('#cached'), d3: measuredD3, aq: measuredAq });
     const initialized = { ...calls };
     const svg = change.view.querySelector('svg');
-    const marks = [...change.view.querySelectorAll('rect.sl-bar')];
+    const marks = [...change.view.querySelectorAll('rect.vd-bar')];
     let clicks = 0;
     d3.select(marks[0]).on('click.consumer', () => clicks++);
     let reused = true;
@@ -87,22 +87,22 @@ test('a chart-style module changes presentation without entering transition sema
     const change = await sl.transition(base, target, { ...options('#cached'), chartStyle: compact });
     change.progress(0.37);
     const svg = change.view.querySelector('svg');
-    const keys = [...svg.querySelectorAll('rect.sl-bar')].map(node => node.dataset.key).sort();
-    const midTitle = svg.querySelector('.sl-y-label').textContent;
+    const keys = [...svg.querySelectorAll('rect.vd-bar')].map(node => node.dataset.key).sort();
+    const midTitle = svg.querySelector('.vd-y-label').textContent;
     change.progress(0.8);
     return {
-      className: change.view.closest('.sl-transition-root').className,
-      styleKey: change.view.closest('.sl-transition-root').dataset.chartStyle,
+      className: change.view.closest('.vd-transition-root').className,
+      styleKey: change.view.closest('.vd-transition-root').dataset.chartStyle,
       keys,
       delta: change.delta,
-      gridLines: svg.querySelectorAll('.sl-grid line').length,
-      xTitle: svg.querySelector('.sl-x-label').textContent,
+      gridLines: svg.querySelectorAll('.vd-grid line').length,
+      xTitle: svg.querySelector('.vd-x-label').textContent,
       midTitle,
-      targetTitle: svg.querySelector('.sl-y-label').textContent
+      targetTitle: svg.querySelector('.vd-y-label').textContent
     };
   });
 
-  expect(result.className).toContain('sl-style-compact-editorial');
+  expect(result.className).toContain('vd-style-compact-editorial');
   expect(result.styleKey).toBe('compact-editorial');
   expect(result.keys).toEqual(['A', 'B', 'C']);
   expect(result.delta).toEqual(await page.evaluate(() => sl.delta(base, base.y('other'))));
@@ -121,11 +121,11 @@ test('the Paper preset owns conventional axis titles, a right legend, and its pa
     const from = sl.point(rows).x('income', { title: 'Income' }).y('health', { title: 'Health' }).key('id').color('region');
     const change = await sl.transition(from, from, { ...options('#cached'), chartStyle: sl.paperChartStyle });
     change.progress(1);
-    const root = change.view.closest('.sl-transition-root');
-    const frame = root.querySelector('.sl-frame').getBoundingClientRect();
-    const legend = root.querySelector('.sl-legend').getBoundingClientRect();
-    const xLabel = root.querySelector('.sl-x-label');
-    const yLabel = root.querySelector('.sl-y-label');
+    const root = change.view.closest('.vd-transition-root');
+    const frame = root.querySelector('.vd-frame').getBoundingClientRect();
+    const legend = root.querySelector('.vd-legend').getBoundingClientRect();
+    const xLabel = root.querySelector('.vd-x-label');
+    const yLabel = root.querySelector('.vd-y-label');
     return {
       styleKey: root.dataset.chartStyle,
       xText: xLabel.textContent,
@@ -133,10 +133,10 @@ test('the Paper preset owns conventional axis titles, a right legend, and its pa
       yText: yLabel.textContent,
       yAnchor: yLabel.getAttribute('text-anchor'),
       yTransform: yLabel.getAttribute('transform'),
-      xDomainOpacity: getComputedStyle(root.querySelector('.sl-x-axis .domain')).opacity,
-      yDomainOpacity: getComputedStyle(root.querySelector('.sl-y-axis .domain')).opacity,
+      xDomainOpacity: getComputedStyle(root.querySelector('.vd-x-axis .domain')).opacity,
+      yDomainOpacity: getComputedStyle(root.querySelector('.vd-y-axis .domain')).opacity,
       legendIsRight: legend.left > frame.right,
-      fills: [...root.querySelectorAll('circle.sl-point')].map(node => getComputedStyle(node).fill)
+      fills: [...root.querySelectorAll('circle.vd-point')].map(node => getComputedStyle(node).fill)
     };
   });
 
@@ -156,7 +156,8 @@ for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip
   test(`${scenario}: cached mark geometry matches reconstruction`, async ({ page }) => {
     const samples = await page.evaluate(async scenario => {
       const { createTransitionSurface } = await import('/dist/runtime/transition-surface.js');
-      const { transitionRegistry, createChartRuntimeDeps } = await import('/dist/composition.js');
+      const { transitionRegistry } = await import('/dist/runtime/chart-registry.js');
+      const { createChartRuntimeDeps } = await import('/dist/runtime/chart-deps.js');
       const segmented = sl.bar().data([
         { id: 'A', group: 'one', value: 10 }, { id: 'A', group: 'two', value: 20 },
         { id: 'B', group: 'one', value: 30 }, { id: 'B', group: 'two', value: 15 }
@@ -203,18 +204,18 @@ test('exit nodes are detached and restored by identity; endpoint tooltip data fo
   await page.evaluate(async () => {
     const start = base.tooltip('value');
     window.change = await sl.transition(start, start.where({ group: 'one' }).tooltip('other'), options('#cached'));
-    window.exiting = [...change.view.querySelectorAll('rect.sl-bar')].find(node => node.__data__.id === 'B');
+    window.exiting = [...change.view.querySelectorAll('rect.vd-bar')].find(node => node.__data__.id === 'B');
     change.progress(1);
   });
   expect(await page.evaluate(() => exiting.isConnected)).toBe(false);
-  await page.locator('#cached rect.sl-bar').first().hover();
-  expect(await page.locator('#cached .sl-tooltip').innerText()).toContain('Other');
+  await page.locator('#cached rect.vd-bar').first().hover();
+  expect(await page.locator('#cached .vd-tooltip').innerText()).toContain('Other');
   await page.evaluate(() => change.progress(0));
   expect(await page.evaluate(() => exiting.isConnected && change.view.contains(exiting))).toBe(true);
-  await expect(page.locator('#cached .sl-tooltip')).toHaveCSS('opacity', '0');
+  await expect(page.locator('#cached .vd-tooltip')).toHaveCSS('opacity', '0');
   await page.mouse.move(1, 1);
-  await page.locator('#cached rect.sl-bar').first().hover();
-  expect(await page.locator('#cached .sl-tooltip').innerText()).toContain('Value');
+  await page.locator('#cached rect.vd-bar').first().hover();
+  expect(await page.locator('#cached .vd-tooltip').innerText()).toContain('Value');
 });
 
 test('delayed property changes can jump back before their start without retaining later values', async ({ page }) => {
@@ -302,16 +303,16 @@ test('resize recompiles changed theme at the same progress; inspection cannot mu
     const change = await sl.transition(base, base.y('other'), options('#cached'));
     change.progress(0.37);
     const before = geometry('#cached');
-    const initialRadius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    const initialRadius = change.view.querySelector('rect.vd-bar').getAttribute('rx');
     change.delta.previous.encoding.y.field = 'missing';
     change.from.encoding.y.field = 'missing';
-    document.documentElement.style.setProperty('--sl-bar-radius', '9');
+    document.documentElement.style.setProperty('--vd-bar-radius', '9');
     change.progress(0.37);
-    const cachedRadius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    const cachedRadius = change.view.querySelector('rect.vd-bar').getAttribute('rx');
     change.resize();
-    const radius = change.view.querySelector('rect.sl-bar').getAttribute('rx');
+    const radius = change.view.querySelector('rect.vd-bar').getAttribute('rx');
     const after = geometry('#cached');
-    document.documentElement.style.removeProperty('--sl-bar-radius');
+    document.documentElement.style.removeProperty('--vd-bar-radius');
     return { initialRadius, cachedRadius, radius, value: change.value, before, after };
   });
   expect(result.cachedRadius).toBe(result.initialRadius);

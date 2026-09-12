@@ -7,7 +7,7 @@ const browser = await chromium.launch(chromePath ? { executablePath: chromePath 
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto('http://127.0.0.1:5511/tests/fixtures/runtime.html');
-  await page.waitForSelector('rect.sl-bar');
+  await page.waitForSelector('rect.vd-bar');
   const results = await page.evaluate(async () => {
     const sl = await import('/dist/visdelta.esm.js');
     const results = [];

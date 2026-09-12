@@ -72,7 +72,7 @@ function duplicateCategory(rows, channel = {}) {
 
 function drawBarDataError(chart, message) {
   chart.scene.empty.style('display', 'grid').text(message);
-  chart.g.selectAll('rect.sl-bar').transition(chart.transition.base).style('opacity', 0).remove();
+  chart.g.selectAll('rect.vd-bar').transition(chart.transition.base).style('opacity', 0).remove();
   chart.scene.grid.transition(chart.transition.base).style('opacity', 0);
   chart.scene.xAxis.transition(chart.transition.base).style('opacity', 0);
   chart.scene.yAxis.transition(chart.transition.base).style('opacity', 0);

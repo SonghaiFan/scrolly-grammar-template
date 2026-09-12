@@ -7,7 +7,7 @@ const ready = async page => {
   await expect(page.locator('#status')).toHaveText('Ready');
 };
 const snapshot = page => page.locator('#chart svg').evaluate(svg =>
-  Array.from(svg.querySelectorAll('path.sl-area, .tick, .sl-legend-item')).map(node => ({
+  Array.from(svg.querySelectorAll('path.vd-area, .tick, .vd-legend-item')).map(node => ({
     tag: node.tagName,
     text: node.textContent,
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort(),
@@ -28,7 +28,7 @@ for (const sample of scenarios) {
     await page.locator('#progress').fill('0.37');
     const direct = await snapshot(page);
     expect(direct).not.toEqual(start);
-    const areaPaths = await page.locator('#chart path.sl-area').evaluateAll(nodes =>
+    const areaPaths = await page.locator('#chart path.vd-area').evaluateAll(nodes =>
       nodes.map(node => node.getAttribute('d') || ''));
     expect(areaPaths.length).toBeGreaterThan(0);
     for (const path of areaPaths) {
@@ -77,7 +77,7 @@ test('area split and merge are the same cached transition in reverse', async ({ 
     const split = await transition(total, detail, options('#split'));
     const merge = await transition(detail, total, options('#merge'));
     const geometry = selector => [...document.querySelectorAll(
-      `${selector} path.sl-area, ${selector} path.sl-area-divider`
+      `${selector} path.vd-area, ${selector} path.vd-area-divider`
     )]
       .map(node => ({
         className: node.getAttribute('class'),
@@ -103,12 +103,12 @@ test('area split and merge are the same cached transition in reverse', async ({ 
 test('area focus fits selected cells with one camera without removing area cells', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/area-lab.html#focus');
   await ready(page);
-  const count = await page.locator('#chart path.sl-area').count();
+  const count = await page.locator('#chart path.vd-area').count();
   await page.locator('#end').click();
-  await expect(page.locator('#chart path.sl-area')).toHaveCount(count);
+  await expect(page.locator('#chart path.vd-area')).toHaveCount(count);
   const fit = await page.locator('#chart svg').evaluate(svg => {
-    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
-    const selected = [...svg.querySelectorAll('path.sl-area')]
+    const plot = svg.querySelector('clipPath[id^="vd-mark-clip-"] rect');
+    const selected = [...svg.querySelectorAll('path.vd-area')]
       .filter(node => Number(node.__data__?.row?.year) === 2009)
       .map(node => node.getBBox());
     const bounds = {
@@ -134,11 +134,11 @@ test('area axis titles align to the plot frame and stay clear of y-axis ticks', 
   for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
     await page.locator('#progress').fill(String(progress));
     const frame = await page.locator('#chart svg').evaluate(svg => {
-      const title = svg.querySelector('.sl-y-label')?.getBoundingClientRect();
-      const xTitle = svg.querySelector('.sl-x-label')?.getBoundingClientRect();
-      const plot = svg.querySelector('.sl-frame')?.getBoundingClientRect();
+      const title = svg.querySelector('.vd-y-label')?.getBoundingClientRect();
+      const xTitle = svg.querySelector('.vd-x-label')?.getBoundingClientRect();
+      const plot = svg.querySelector('.vd-frame')?.getBoundingClientRect();
       if (!title || !xTitle || !plot) return null;
-      const overlaps = [...svg.querySelectorAll('.sl-y-axis .tick text')]
+      const overlaps = [...svg.querySelectorAll('.vd-y-axis .tick text')]
         .filter(node => {
           const tick = node.getBoundingClientRect();
           return title.left < tick.right && title.right > tick.left &&
@@ -163,8 +163,8 @@ test('area is borderless by default at endpoints and during ordinary transitions
   await ready(page);
   for (const progress of [0, 0.5, 1]) {
     await page.locator('#progress').fill(String(progress));
-    await expect(page.locator('#chart path.sl-area-edge')).toHaveCount(0);
-    const strokes = await page.locator('#chart path.sl-area-cell')
+    await expect(page.locator('#chart path.vd-area-edge')).toHaveCount(0);
+    const strokes = await page.locator('#chart path.vd-area-cell')
       .evaluateAll(nodes => nodes.map(node => getComputedStyle(node).stroke));
     expect(strokes.every(stroke => stroke === 'none')).toBe(true);
   }
@@ -176,12 +176,12 @@ test('area split draws a thin contrast divider only between endpoints', async ({
   const read = async progress => {
     await page.locator('#progress').fill(String(progress));
     return page.locator('#chart').evaluate(chart => {
-      const node = chart.querySelector('path.sl-area-divider');
-      const borderCount = chart.querySelectorAll('path.sl-area-edge').length;
+      const node = chart.querySelector('path.vd-area-divider');
+      const borderCount = chart.querySelectorAll('path.vd-area-edge').length;
       if (!node) return { count: 0, length: 0, offset: 0, width: '', blend: '', borderCount };
       const style = getComputedStyle(node);
       return {
-        count: chart.querySelectorAll('path.sl-area-divider').length,
+        count: chart.querySelectorAll('path.vd-area-divider').length,
         length: node.getTotalLength(),
         offset: Number(node.getAttribute('stroke-dashoffset')),
         width: style.strokeWidth,
@@ -238,7 +238,7 @@ test('area divider marks only internal same-direction stack boundaries', async (
       d3, aq, height: 360
     });
     change.progress(0.5);
-    return [...document.querySelectorAll('path.sl-area-divider')]
+    return [...document.querySelectorAll('path.vd-area-divider')]
       .map(node => ({
         layer: node.getAttribute('data-layer-key'),
         opacity: Number(getComputedStyle(node).opacity)
@@ -277,7 +277,7 @@ test('area restore, prepend, and append keep both boundaries in observation orde
     ];
     transitions.forEach(value => value.progress(0.49));
 
-    const pathPoints = selector => [...document.querySelectorAll(`${selector} path.sl-area-cell`)]
+    const pathPoints = selector => [...document.querySelectorAll(`${selector} path.vd-area-cell`)]
       .map(path => [...(path.getAttribute('d') || '').matchAll(
         /(-?\d*\.?\d+(?:e[-+]?\d+)?),(-?\d*\.?\d+(?:e[-+]?\d+)?)/gi
       )].map(match => ({ x: Number(match[1]), y: Number(match[2]) })));
@@ -332,7 +332,7 @@ test('area add/remove and restore/filter reuse the same frames backward', async 
     const restore = await transition(filtered, base, options('#restore'));
     const filter = await transition(base, filtered, options('#filter'));
     const geometry = selector => ({
-        paths: [...document.querySelectorAll(`${selector} path.sl-area`)]
+        paths: [...document.querySelectorAll(`${selector} path.vd-area`)]
           .map(node => ({
             className: node.getAttribute('class'),
             key: node.getAttribute('data-key'),
@@ -340,7 +340,7 @@ test('area add/remove and restore/filter reuse the same frames backward', async 
             opacity: node.style.opacity
           }))
           .sort((a, b) => `${a.className}:${a.key}`.localeCompare(`${b.className}:${b.key}`)),
-        xTicks: [...document.querySelectorAll(`${selector} .sl-x-axis .tick`)].map(tick => ({
+        xTicks: [...document.querySelectorAll(`${selector} .vd-x-axis .tick`)].map(tick => ({
           text: tick.textContent,
           transform: (tick.getAttribute('transform') || '').replace(
             /-?\d+(?:\.\d+)?/g,
@@ -399,7 +399,7 @@ test('area filter preserves connected cells, gaps, and the no-isolated-area rule
       /(-?\d*\.?\d+(?:e[-+]?\d+)?),(-?\d*\.?\d+(?:e[-+]?\d+)?)/gi
     )].map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
     const observation = (target, key) => document.querySelector(
-      `${target} path.sl-area-cell[data-observation-key="${key}"]`
+      `${target} path.vd-area-cell[data-observation-key="${key}"]`
     );
     adjacent.progress(0);
     const start = {
@@ -414,7 +414,7 @@ test('area filter preserves connected cells, gaps, and the no-isolated-area rule
     adjacent.progress(1);
     across.progress(1);
     isolated.progress(1);
-    const cells = target => [...document.querySelectorAll(`${target} path.sl-area-cell`)].map(node => ({
+    const cells = target => [...document.querySelectorAll(`${target} path.vd-area-cell`)].map(node => ({
       key: node.getAttribute('data-observation-key'),
       d: node.getAttribute('d'),
       points: coordinates(node),
@@ -478,13 +478,13 @@ test('every D3 Area curve renders and curve changes interpolate from the real pa
       const change = await transition(base, base.curve(name), {
         target: '#target', d3, aq, height: 360
       });
-      const geometry = () => [...document.querySelectorAll('#target path.sl-area-cell')]
+      const geometry = () => [...document.querySelectorAll('#target path.vd-area-cell')]
         .map(node => node.getAttribute('d') || '');
       change.progress(0);
       const start = geometry();
       change.progress(0.5);
       const middle = geometry();
-      const strategy = document.querySelector('#target path.sl-area-cell')
+      const strategy = document.querySelector('#target path.vd-area-cell')
         ?.getAttribute('data-area-transition');
       change.progress(1);
       const end = geometry();
@@ -514,10 +514,10 @@ test('stacked area uses cumulative boundaries and explicit color', async ({ page
   await page.goto('/docs/.vitepress/dist/area-lab.html#split');
   await ready(page);
   await page.locator('#end').click();
-  await expect(page.locator('#chart path.sl-area-cell')).toHaveCount(190);
-  await expect(page.locator('#chart path.sl-area-edge')).toHaveCount(0);
-  await expect(page.locator('#chart .sl-legend-item')).toHaveCount(5);
-  const paths = await page.locator('#chart path.sl-area-cell').evaluateAll(nodes => nodes.map(node => ({
+  await expect(page.locator('#chart path.vd-area-cell')).toHaveCount(190);
+  await expect(page.locator('#chart path.vd-area-edge')).toHaveCount(0);
+  await expect(page.locator('#chart .vd-legend-item')).toHaveCount(5);
+  const paths = await page.locator('#chart path.vd-area-cell').evaluateAll(nodes => nodes.map(node => ({
     key: node.getAttribute('data-key'),
     layer: node.getAttribute('data-layer-key'),
     fill: node.getAttribute('fill'),
@@ -538,7 +538,7 @@ test('area lab loads prepared tidy unemployment observations', async ({ page }) 
   await expect(page.locator('#editor')).toHaveValue(/\.\/data\/unemployment\.csv/);
   await page.locator('#end').click();
 
-  const rows = await page.locator('#chart path.sl-area-cell').evaluateAll(nodes => nodes.map(node => ({
+  const rows = await page.locator('#chart path.vd-area-cell').evaluateAll(nodes => nodes.map(node => ({
     date: node.__data__?.row?.date,
     year: node.__data__?.row?.year,
     industry: node.__data__?.row?.industry,

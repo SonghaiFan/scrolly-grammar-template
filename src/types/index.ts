@@ -202,7 +202,6 @@ export interface SpecMeta {
   state?: ChartStateMeta;
   transition?: TransitionSpec;
   transform?: TransformSpec[];
-  action?: { scroll?: ScrollSpec };
   unit?: Record<string, unknown>;
   annotation?: { title?: string; description?: string };
   [key: string]: unknown;
@@ -218,7 +217,6 @@ export interface ResolvedChartState {
 // ─── View Spec ────────────────────────────────────────────────────────────────
 
 export type Mark = 'area' | 'bar' | 'line' | 'point' | 'unit' | (string & {});
-export type ScrollSpec = true | { ease?: string; [key: string]: unknown };
 
 export interface ViewSpec {
   mark?: Mark;
@@ -229,7 +227,6 @@ export interface ViewSpec {
   key?: string | string[] | null;
   semanticKey?: SemanticKey | null;
   transition?: TransitionSpec;
-  scroll?: ScrollSpec;
   axis?: AxisSpec | null;
   detail?: DetailSpec | null;
   selection?: SelectionSpec | null;
@@ -240,48 +237,6 @@ export interface ViewSpec {
 }
 
 // ─── Story ───────────────────────────────────────────────────────────────────
-
-export type StepActionToken = 'step' | 'scroll' | 'tooltip' | 'enter';
-export type StepActionInput = StepActionToken | string;
-
-export interface StepDefinition {
-  title?: string;
-  body?: string;
-  view?: ViewSpec | { toSpec(): ViewSpec };
-  action?: StepActionInput | StepActionInput[];
-  code?: string;
-}
-
-export interface StepSpec {
-  id?: string;
-  title?: string;
-  body?: string;
-  transition?: { scene: string[] };
-  action?: StepActionToken[];
-  views?: Record<string, ViewSpec>;
-  inspector?: { code: string };
-}
-
-export interface LayoutSpec {
-  preset?: string;
-  [key: string]: unknown;
-}
-
-export interface ThemeSpec {
-  href?: string;
-  [key: string]: unknown;
-}
-
-export interface StorySpec {
-  $schema?: string;
-  title?: string;
-  description?: string;
-  data?: Record<string, unknown>;
-  layout?: LayoutSpec;
-  theme?: ThemeSpec;
-  views?: Record<string, ViewSpec>;
-  steps?: StepSpec[];
-}
 
 // ─── Bar-specific ─────────────────────────────────────────────────────────────
 
@@ -543,43 +498,10 @@ export interface ChartPlugin<S extends ViewSpec = ViewSpec> {
 
 // ─── Actions & Events ─────────────────────────────────────────────────────────
 
-export type ActionType =
-  | 'enter' | 'exit' | 'step' | 'scroll' | 'progress'
-  | 'tooltip' | 'input' | 'scrub' | 'click' | 'unclick'
-  | (string & {});
-
-export type Direction = 'up' | 'down' | (string & {});
-export type ActionToken = 'step' | 'scroll' | 'tooltip' | 'enter' | (string & {});
-
-export type RawActionEvent =
-  | number
-  | string
-  | Event
-  | {
-      type?: string;
-      step?: number;
-      index?: number;
-      value?: number;
-      progress?: number;
-      scrollProgress?: number;
-      direction?: Direction;
-      action?: ActionToken | ActionToken[];
-      force?: boolean;
-    };
-
-export interface NormalizedActionEvent {
-  type: ActionType;
-  index: number;
-  value: number;
-  direction: Direction;
-  action: ActionToken[];
-  force?: boolean;
-  progress: boolean;
-}
-
 // ─── Runtime ─────────────────────────────────────────────────────────────────
 
 export type Target = string | Element;
+export type AnyRecord = Record<string, any>;
 
 export interface RuntimeOptions {
   target?: Target;
@@ -588,80 +510,4 @@ export interface RuntimeOptions {
   debug?: boolean;
   /** Structural chart presentation; CSS can target its generated style class. */
   chartStyle?: import('../charts/style.js').ChartStyleModule;
-}
-
-export interface PageOptions {
-  target?: Target;
-  debug?: boolean;
-}
-
-export interface ChartOptions extends RuntimeOptions {
-  view?: string;
-  viewId?: string;
-  initialStep?: number;
-}
-
-export interface ScrollRuntime {
-  readonly type: 'native';
-  resize(): void;
-  refresh(): void;
-  scrollToStep(index: number, options?: { progress?: number; behavior?: 'instant' | 'smooth' | 'auto' }): number | null;
-  destroy(): void;
-}
-
-export interface StoryRuntime {
-  spec: StorySpec;
-  data: Record<string, unknown>;
-  signature: Record<string, unknown>[];
-  /** Programmatically jump to step `index` with a natural animated transition. */
-  to(index: number): void;
-  scrollDriver: ScrollRuntime;
-  destroy(): void;
-}
-
-export interface PageRuntime {
-  spec: StorySpec;
-  shell: Record<string, unknown>;
-  root: Element;
-  story: Element;
-  steps: Element[];
-  views: Record<string, Element>;
-  tooltip: Element;
-  destroy(): void;
-}
-
-/** A state returned by Seq navigation methods */
-export interface SeqState {
-  spec: ViewSpec;
-  text: string;
-  title?: string;
-  index: number;
-}
-
-export interface ChartRuntime {
-  spec: StorySpec;
-  data: Record<string, unknown>;
-  view: Element;
-  tooltip: Element;
-  /**
-   * Animate to a step with a full animated transition.
-   * Accepts a step index, or a SeqState object from `seq.next()` / `seq.at(n)`.
-   * Works with any event trigger — button click, route change, hover, timer, etc.
-   *
-   * @example
-   * chart.to(1);
-   * chart.to(seq.next());  // SeqState — index is extracted automatically
-   * el.addEventListener('mouseenter', () => chart.to(1));
-   */
-  to(target: number | SeqState | { index: number }): void;
-  /**
-   * Scrub the transition toward step `index` at a continuous `value` (0 → 1).
-   * Use with sliders, scroll offsets, or any gesture-driven input.
-   *
-   * @example
-   * slider.oninput = () => chart.progress(1, +slider.value);
-   */
-  progress(index: number, value: number): void;
-  resize(): void;
-  destroy(): void;
 }

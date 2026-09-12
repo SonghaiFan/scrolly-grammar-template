@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
-  await page.waitForSelector('rect.sl-bar');
+  await page.waitForSelector('rect.vd-bar');
   await page.evaluate(async () => {
     window.sl = await import('/dist/visdelta.esm.js');
     document.body.innerHTML = '<div id="a" style="width:800px"></div><div id="b" style="width:800px"></div>';
@@ -149,7 +149,7 @@ test('inline data without transforms does not require Arquero', async ({ page })
     change.progress(0.5);
     return {
       value: change.value,
-      marks: change.view.querySelectorAll('rect.sl-bar').length
+      marks: change.view.querySelectorAll('rect.vd-bar').length
     };
   });
   expect(result).toEqual({ value: 0.5, marks: 3 });
@@ -174,7 +174,7 @@ test('a numeric midpoint interpolates geometry and endpoints contain only live m
     const a = base.y('value', { domain: [0, 40] }).transition({ duration: 1000, ease: 'linear', stagger: 0 });
     const b = a.y('other', { domain: [0, 40] });
     const pair = await sl.transition(a, b, opts('#a'));
-    const heights = () => [...pair.view.querySelectorAll('rect.sl-bar')].map(node => Number(node.getAttribute('height')));
+    const heights = () => [...pair.view.querySelectorAll('rect.vd-bar')].map(node => Number(node.getAttribute('height')));
     const start = heights();
     pair.progress(1);
     const end = heights();
@@ -183,9 +183,9 @@ test('a numeric midpoint interpolates geometry and endpoints contain only live m
     pair.destroy();
     const filtered = await sl.transition(base, base.where({ type: 'one' }), opts('#a'));
     filtered.progress(1);
-    const remaining = filtered.view.querySelectorAll('rect.sl-bar').length;
+    const remaining = filtered.view.querySelectorAll('rect.vd-bar').length;
     filtered.progress(0);
-    const restored = filtered.view.querySelectorAll('rect.sl-bar').length;
+    const restored = filtered.view.querySelectorAll('rect.vd-bar').length;
     return { start, end, middle, remaining, restored };
   });
   expect(result.middle).toHaveLength(3);
@@ -206,17 +206,17 @@ test('incompatible axes crossfade in place instead of exiting and entering', asy
       };
       return {
         progress,
-        x: opacity(change.view.querySelector('.sl-x-axis')),
-        y: opacity(change.view.querySelector('.sl-y-axis')),
-        xPosition: translate(change.view.querySelector('.sl-x-axis')),
-        yPosition: translate(change.view.querySelector('.sl-y-axis')),
-        ghostAxes: [...change.view.querySelectorAll('.sl-axis-ghost')].map(node => ({
+        x: opacity(change.view.querySelector('.vd-x-axis')),
+        y: opacity(change.view.querySelector('.vd-y-axis')),
+        xPosition: translate(change.view.querySelector('.vd-x-axis')),
+        yPosition: translate(change.view.querySelector('.vd-y-axis')),
+        ghostAxes: [...change.view.querySelectorAll('.vd-axis-ghost')].map(node => ({
           opacity: opacity(node),
           position: translate(node),
           labels: [...node.querySelectorAll('.tick text')].map(label => label.textContent)
         })),
-        labels: [...change.view.querySelectorAll('.sl-x-label, .sl-y-label')].map(node => node.textContent),
-        ghostLabelCount: change.view.querySelectorAll('.sl-axis-label-ghost').length
+        labels: [...change.view.querySelectorAll('.vd-x-label, .vd-y-label')].map(node => node.textContent),
+        ghostLabelCount: change.view.querySelectorAll('.vd-axis-label-ghost').length
       };
     };
     return [frame(0), frame(0.001), frame(0.5), frame(1)];
@@ -254,7 +254,7 @@ test('URL data loads once, .data replacement is resolved, and later seeks do not
     pair.destroy();
     const named = sl.bar('rows').x('category').y('value');
     const next = await sl.transition(named, named.y('other'), { ...opts('#a'), data: { rows } });
-    return { deltaTypes, marks: next.view.querySelectorAll('rect.sl-bar').length };
+    return { deltaTypes, marks: next.view.querySelectorAll('rect.vd-bar').length };
   });
   expect(requests).toBe(1);
   expect(result.deltaTypes).toContain('encoding.y');
@@ -278,7 +278,7 @@ for (const chartType of ['line', 'point', 'unit']) {
       const b = await sl.transition(from, to, opts('#b'));
       a.progress(0.37);
       b.progress(1).progress(0.2).progress(0).progress(0.37);
-      return { a: snapshot('#a'), b: snapshot('#b'), marks: a.view.querySelectorAll('circle, path.sl-line, rect.sl-unit').length };
+      return { a: snapshot('#a'), b: snapshot('#b'), marks: a.view.querySelectorAll('circle, path.vd-line, rect.vd-unit').length };
     }, chartType);
     expect(result.a).toEqual(result.b);
     expect(result.marks).toBeGreaterThan(0);

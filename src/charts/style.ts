@@ -93,7 +93,7 @@ const PAPER_CARTESIAN = {
   edgeTitles: false
 };
 
-/** Print-oriented spacing paired with the scoped `.sl-style-paper` CSS preset. */
+/** Print-oriented spacing paired with the scoped `.vd-style-paper` CSS preset. */
 export const paperChartStyle = defineChartStyle({
   key: 'paper',
   tickSpacing: { x: 92, y: 62 },
@@ -109,7 +109,7 @@ export const paperChartStyle = defineChartStyle({
   axisTitle: channel => channel?.title
 });
 
-/** Compact high-contrast spacing paired with the scoped `.sl-style-dark` CSS preset. */
+/** Compact high-contrast spacing paired with the scoped `.vd-style-dark` CSS preset. */
 export const darkChartStyle = defineChartStyle({
   key: 'dark',
   tickSpacing: { x: 66, y: 46 },

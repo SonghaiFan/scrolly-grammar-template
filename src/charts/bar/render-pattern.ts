@@ -23,7 +23,7 @@ export function createBarRenderKit(deps) {
       startDelay: chart.transition.exitDuration || 0,
       ease: easeFor(timing.ease || chart.transition.ease, d3),
       stagger: chart.camera?.bounds ? null : timing.stagger,
-      transitionName: chart.scrollDriven ? chart.scrollTransitionName : null
+      transitionName: chart.seekable ? chart.seekTransitionName : null
     };
   }
 
@@ -89,7 +89,7 @@ export function createBarRenderKit(deps) {
       ? () => 0
       : (d, i) => staggerDelay(spec, d, i);
 
-    chart.g.selectAll('rect.sl-bar')
+    chart.g.selectAll('rect.vd-bar')
       .data(rows, key)
       .join(
         (enter) => enter
@@ -104,7 +104,7 @@ export function createBarRenderKit(deps) {
           .each(function(d) { setRectGeometry(d3.select(this), startGeometry(d)); })
           .transition(chart.transition.enter || chart.transition.base)
           .delay((d, i) => (chart.transition.enterDelay || 0) + delay(d, i))
-          .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
+          .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--vd-dim-opacity', 0.22)))
           .attr('x', targetGeometry.x)
           .attr('y', targetGeometry.y)
           .attr('width', targetGeometry.width)
@@ -117,12 +117,12 @@ export function createBarRenderKit(deps) {
             .call(bindTooltip, spec, tooltip);
           if (steps) {
             return applyMarkSteps(prepared, steps, spec, markGeometry,
-              (selection) => selection.style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22))).attr('fill', fill));
+              (selection) => selection.style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--vd-dim-opacity', 0.22))).attr('fill', fill));
           }
           return prepared
             .transition(chart.transition.base)
             .delay((d, i) => (chart.transition.exitDuration || 0) + delay(d, i))
-            .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
+            .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--vd-dim-opacity', 0.22)))
             .call(applyGeometry)
             .attr('fill', fill);
         },
@@ -137,10 +137,10 @@ export function createBarRenderKit(deps) {
   }
 
   function renderBarSeams({ chart, path = '', startPath = path, draw = false }) {
-    const seams = chart.g.selectAll('path.sl-bar-seam').data(path ? [path] : []);
+    const seams = chart.g.selectAll('path.vd-bar-seam').data(path ? [path] : []);
     seams.exit().transition(chart.transition.base).style('opacity', 0).remove();
     const seam = seams.enter().append('path')
-      .attr('class', 'sl-bar-seam')
+      .attr('class', 'vd-bar-seam')
       .style('opacity', 0)
       .attr('d', startPath)
       .merge(seams);
@@ -171,7 +171,7 @@ export function collapseLineage(chart, parentField) {
   const enterPlan = chart.transitionPlan?.enter;
   if (enterPlan?.mode !== 'parent-child-lineage' || enterPlan.from !== 'child-bounds' || !parentField) return null;
   const bounds = new Map();
-  chart.g.selectAll('rect.sl-bar').each(function() {
+  chart.g.selectAll('rect.vd-bar').each(function() {
     const node = this;
     const parent = node.dataset.category || parentFromChildKey(node.dataset.key);
     const box = rectGeometry(node);

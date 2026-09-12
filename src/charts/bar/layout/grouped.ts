@@ -82,8 +82,8 @@ export function createGroupedBarRenderer(deps, kit) {
     kit.renderBarJoin({
       chart, rows, spec, tooltip, d3, bindTooltip, key,
       category: (d) => d[categoryField],
-      className: 'sl-bar sl-bar-segment sl-bar-grouped',
-      orientation: rendererOrientation, rx: cameraSize(themeValue('--sl-bar-radius', 3), camera),
+      className: 'vd-bar vd-bar-segment vd-bar-grouped',
+      orientation: rendererOrientation, rx: cameraSize(themeValue('--vd-bar-radius', 3), camera),
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, steps, geometry
     });

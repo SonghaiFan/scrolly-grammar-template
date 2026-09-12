@@ -6,104 +6,104 @@
 :root {
   color-scheme: light;
 
-  --sl-color-primary: #4e79a7;
-  --sl-color-surface: #ffffff;
-  --sl-color-bg: #f8f8f7;
-  --sl-color-on-surface: #1f2328;
-  --sl-color-muted: #66707a;
-  --sl-color-border: #dde1e6;
-  --sl-color-outline: #747b83;
-  --sl-color-outline-variant: #e7eaed;
-  --sl-color-series-1: #4e79a7;
-  --sl-color-series-2: #f28e2b;
-  --sl-color-series-3: #59a14f;
-  --sl-color-series-4: #b07aa1;
-  --sl-color-series-5: #e15759;
-  --sl-color-series-6: #76b7b2;
-  --sl-color-series-7: #edc948;
-  --sl-color-series-8: #9c755f;
-  --sl-color-series-9: #ff9da7;
-  --sl-color-series-10: #bab0ac;
+  --vd-color-primary: #4e79a7;
+  --vd-color-surface: #ffffff;
+  --vd-color-bg: #f8f8f7;
+  --vd-color-on-surface: #1f2328;
+  --vd-color-muted: #66707a;
+  --vd-color-border: #dde1e6;
+  --vd-color-outline: #747b83;
+  --vd-color-outline-variant: #e7eaed;
+  --vd-color-series-1: #4e79a7;
+  --vd-color-series-2: #f28e2b;
+  --vd-color-series-3: #59a14f;
+  --vd-color-series-4: #b07aa1;
+  --vd-color-series-5: #e15759;
+  --vd-color-series-6: #76b7b2;
+  --vd-color-series-7: #edc948;
+  --vd-color-series-8: #9c755f;
+  --vd-color-series-9: #ff9da7;
+  --vd-color-series-10: #bab0ac;
 
-  --sl-rounded-sm: 2;
-  --sl-rounded-md: 3;
-  --sl-rounded-lg: 6;
-  --sl-type-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  --vd-rounded-sm: 2;
+  --vd-rounded-md: 3;
+  --vd-rounded-lg: 6;
+  --vd-type-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
                     "Segoe UI", sans-serif;
-  --sl-type-label-size: 10px;
-  --sl-type-label-weight: 400;
+  --vd-type-label-size: 10px;
+  --vd-type-label-weight: 400;
 
-  --sl-axis-text: var(--sl-color-muted);
-  --sl-axis-title: var(--sl-color-on-surface);
-  --sl-legend-text: var(--sl-color-muted);
-  --sl-shadow: none;
-  --sl-dim-opacity: 0.22;
-  --sl-bar-radius: 3;
-  --sl-line-width: 2;
-  --sl-line-point-size: 3.5;
-  --sl-unit-stroke-width: 0.75;
-  --sl-legend-swatch-radius: 2;
+  --vd-axis-text: var(--vd-color-muted);
+  --vd-axis-title: var(--vd-color-on-surface);
+  --vd-legend-text: var(--vd-color-muted);
+  --vd-shadow: none;
+  --vd-dim-opacity: 0.22;
+  --vd-bar-radius: 3;
+  --vd-line-width: 2;
+  --vd-line-point-size: 3.5;
+  --vd-unit-stroke-width: 0.75;
+  --vd-legend-swatch-radius: 2;
 
-  --sl-figure-bg: var(--sl-color-surface);
-  --sl-figure-blur: 0px;
-  --sl-figure-radius: 4px;
-  --sl-figure-border: 1px solid var(--sl-color-border);
-  --sl-figure-shadow: none;
+  --vd-figure-bg: var(--vd-color-surface);
+  --vd-figure-blur: 0px;
+  --vd-figure-radius: 4px;
+  --vd-figure-border: 1px solid var(--vd-color-border);
+  --vd-figure-shadow: none;
 
-  --sl-step-bg: rgba(255, 255, 255, 0.96);
-  --sl-step-bg-active: #ffffff;
-  --sl-step-blur: 0px;
-  --sl-step-radius: 3px;
-  --sl-step-border: 1px solid var(--sl-color-border);
-  --sl-step-shadow: none;
+  --vd-step-bg: rgba(255, 255, 255, 0.96);
+  --vd-step-bg-active: #ffffff;
+  --vd-step-blur: 0px;
+  --vd-step-radius: 3px;
+  --vd-step-border: 1px solid var(--vd-color-border);
+  --vd-step-shadow: none;
 }
 
 body,
-.sl-intro {
-  background: var(--sl-color-bg);
+.vd-intro {
+  background: var(--vd-color-bg);
 }
 
-.sl-figure-header {
+.vd-figure-header {
   background: transparent;
 }
 
-.sl-figure-title {
-  color: var(--sl-fg);
+.vd-figure-title {
+  color: var(--vd-fg);
   font-weight: 650;
   letter-spacing: -0.018em;
 }
 
-.sl-step-card {
+.vd-step-card {
   border-left-color: transparent;
 }
 
-.sl-step.is-active .sl-step-card {
-  border-left-color: var(--sl-accent);
+.vd-step.is-active .vd-step-card {
+  border-left-color: var(--vd-accent);
 }
 
-:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step-card {
+:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step-card {
   border-left: 3px solid transparent;
 }
 
-:is(.sl-layering-text-over-vis, .sl-layout-preset-text-over-vis) .sl-step.is-active .sl-step-card {
-  border-left-color: var(--sl-accent);
+:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step.is-active .vd-step-card {
+  border-left-color: var(--vd-accent);
 }
 
 .demo-toolbar {
-  background: color-mix(in srgb, var(--sl-color-bg) 92%, transparent);
-  border-bottom: 1px solid var(--sl-color-border);
+  background: color-mix(in srgb, var(--vd-color-bg) 92%, transparent);
+  border-bottom: 1px solid var(--vd-color-border);
   box-shadow: none;
 }
 
-.sl-progress {
-  background: color-mix(in srgb, var(--sl-color-primary) 10%, transparent);
+.vd-progress {
+  background: color-mix(in srgb, var(--vd-color-primary) 10%, transparent);
 }
 
-.sl-nav button {
-  border-color: var(--sl-color-primary);
+.vd-nav button {
+  border-color: var(--vd-color-primary);
   border-radius: 2px;
 }
 
-.sl-nav button.is-active {
-  background: var(--sl-color-primary);
+.vd-nav button.is-active {
+  background: var(--vd-color-primary);
 }

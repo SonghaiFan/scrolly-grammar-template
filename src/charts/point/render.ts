@@ -74,7 +74,7 @@ class PointChart extends BaseChart {
       : (row, index) => staggerDelay(spec, row, index);
     const scaleMarkDelay = (row, index) =>
       (chart.transition.exitDuration || 0) + markDelay(row, index);
-    const opacity = (row) => pointSelectionOpacity(row, spec, themeValue('--sl-dim-opacity', 0.22));
+    const opacity = (row) => pointSelectionOpacity(row, spec, themeValue('--vd-dim-opacity', 0.22));
     const key = pointKeyAccessor(spec, enc.x?.field || enc.y?.field);
 
     // Anchor tracking for gather/scatter animation across detail transitions.
@@ -117,10 +117,10 @@ class PointChart extends BaseChart {
     drawPointAxes(chart, x, y, viewEnc, d3, { chartStyle, drawGrid, drawXAxis, drawYAxis });
     drawLegend(chart, rows, enc.color, d3);
 
-    const crispLayer = chart.g.selectAll('g.sl-point-crisp-layer')
+    const crispLayer = chart.g.selectAll('g.vd-point-crisp-layer')
       .data([null])
       .join('g')
-      .attr('class', 'sl-point-crisp-layer');
+      .attr('class', 'vd-point-crisp-layer');
     const blendMotion = pointBlendMotion({
       rows, state, radius, enterAnchor, exitAnchor, chartPosition
     });
@@ -129,19 +129,19 @@ class PointChart extends BaseChart {
       chartPosition, crispLayer, blendMotion, movesPoints, transition: t, d3
     });
 
-    crispLayer.selectAll('circle.sl-point')
+    crispLayer.selectAll('circle.vd-point')
       .data(rows, (d, i) => pointStoredKey(d, i, key))
       .join(
         (enter) => enter
           .append('circle')
-          .attr('class', 'sl-point')
+          .attr('class', 'vd-point')
           .call(applyPointIdentity, key)
           .attr('cx', (d) => pointEnterPosition(d).x)
           .attr('cy', (d) => pointEnterPosition(d).y)
           .attr('r', 0)
           .attr('fill', (d) => color(d))
-          .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
+          .attr('stroke', themeValue('--vd-mark-stroke', 'white'))
+          .attr('stroke-width', cameraSize(themeValue('--vd-point-stroke-width', 1.5), camera))
           .style('opacity', 0)
           .call(bindTooltip, spec, tooltip)
           .transition(chart.transition.enter || t)
@@ -159,7 +159,7 @@ class PointChart extends BaseChart {
           .attr('cy', (d) => chartPosition(d).y)
           .attr('r', (d) => radius(d))
           .attr('fill', (d) => color(d))
-          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
+          .attr('stroke-width', cameraSize(themeValue('--vd-point-stroke-width', 1.5), camera))
           .style('opacity', (d) => opacity(d)),
         (exit) => {
           const leaving = exit
@@ -184,7 +184,7 @@ class PointChart extends BaseChart {
     };
 
     // Clean up any stale parent-centroid markers from previous renders.
-    chart.g.selectAll('circle.sl-point-parent')
+    chart.g.selectAll('circle.vd-point-parent')
       .transition(t)
       .attr('r', 0)
       .style('opacity', 0)
@@ -199,11 +199,11 @@ function drawPointBlend({
 }) {
   const enabled = state.effect === 'blend';
   crispLayer.interrupt().style('visibility', 'visible');
-  const layer = chart.g.selectAll('g.sl-point-blend-layer')
+  const layer = chart.g.selectAll('g.vd-point-blend-layer')
     .data(enabled ? [null] : [])
     .join(
       (enter) => enter.append('g')
-        .attr('class', 'sl-point-blend-layer')
+        .attr('class', 'vd-point-blend-layer')
         .style('pointer-events', 'none')
         .style('visibility', 'hidden')
         .raise(),
@@ -217,21 +217,21 @@ function drawPointBlend({
     d3.group(rows, (row) => parentKey(row, state.parentField)),
     ([parent, values]) => ({ parent, values })
   );
-  const group = layer.selectAll('g.sl-point-blend-group')
+  const group = layer.selectAll('g.vd-point-blend-group')
     .data(groups, (entry) => entry.parent)
     .join(
-      (enter) => enter.append('g').attr('class', 'sl-point-blend-group'),
+      (enter) => enter.append('g').attr('class', 'vd-point-blend-group'),
       (update) => update,
       (exit) => exit.remove()
     )
     .attr('filter', `url(#${filterId})`);
 
   group.each(function(entry) {
-    d3.select(this).selectAll('circle.sl-point-blend')
+    d3.select(this).selectAll('circle.vd-point-blend')
       .data(entry.values, (row, index) => pointStoredKey(row, index, key))
       .join(
         (enter) => enter.append('circle')
-          .attr('class', 'sl-point-blend')
+          .attr('class', 'vd-point-blend')
           .attr('data-blend-role', state.detailMode === 'aggregate' ? 'summary' : 'child')
           .attr('cx', (row) => enterAnchor(row).x)
           .attr('cy', (row) => enterAnchor(row).y)
@@ -360,11 +360,11 @@ function smoothStep(from, to, value) {
 }
 
 function ensurePointBlendFilter(scene, d3) {
-  const id = `sl-point-blend-${scene.clipIdentity}`;
-  const defs = scene.svg.selectAll('defs.sl-point-blend-defs')
+  const id = `vd-point-blend-${scene.clipIdentity}`;
+  const defs = scene.svg.selectAll('defs.vd-point-blend-defs')
     .data([null])
     .join('defs')
-    .attr('class', 'sl-point-blend-defs');
+    .attr('class', 'vd-point-blend-defs');
   let filter = defs.select(`#${id}`);
   if (!filter.empty()) return id;
 

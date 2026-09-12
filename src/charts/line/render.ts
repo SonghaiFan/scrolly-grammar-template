@@ -64,7 +64,7 @@ class LineChart extends BaseChart {
     const baseY = bandOrLinear(scaleRows, enc.y, [chart.innerHeight, 0], d3);
     const authoredPointRadius = Number.isFinite(Number(spec.pointSize))
       ? Number(spec.pointSize)
-      : themeValue('--sl-line-point-size', 4.5);
+      : themeValue('--vd-line-point-size', 4.5);
     const camera = focusCamera(
       plottedRows.map((row) => ({
         datum: row,
@@ -109,7 +109,7 @@ class LineChart extends BaseChart {
         y: position(y, row[enc.y.field])
       }))
     });
-    const previousPointFrame = chart.g.selectAll('circle.sl-line-point').nodes().map((node) => ({
+    const previousPointFrame = chart.g.selectAll('circle.vd-line-point').nodes().map((node) => ({
       key: String(node.getAttribute('data-key')),
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy'))
@@ -124,10 +124,10 @@ class LineChart extends BaseChart {
       y: position(y, row[enc.y.field])
     });
     const pointRadius = cameraSize(authoredPointRadius, camera);
-    const lineWidth = cameraSize(spec.strokeWidth || themeValue('--sl-line-width', 3), camera);
+    const lineWidth = cameraSize(spec.strokeWidth || themeValue('--vd-line-width', 3), camera);
     const lineIsSplit = state.detailStage === 'segments';
     const visiblePointRadius = lineIsSplit ? 0 : pointRadius;
-    const pointOpacity = (row) => lineSelectionOpacity(row, state.selection, themeValue('--sl-dim-opacity', 0.22));
+    const pointOpacity = (row) => lineSelectionOpacity(row, state.selection, themeValue('--vd-dim-opacity', 0.22));
     const visiblePointOpacity = (row) => lineIsSplit ? 0 : pointOpacity(row);
     const seriesOpacity = (entry) => entry.rows.length
       ? Math.max(...entry.rows.map(pointOpacity))
@@ -140,13 +140,13 @@ class LineChart extends BaseChart {
     });
     drawLineAxes(chart, x, y, enc, d3, this.deps, { duration: lineDuration });
 
-    chart.g.selectAll('path.sl-line')
+    chart.g.selectAll('path.vd-line')
       .data(series, lineSeriesKey)
       .join(
         (enter) => {
           const entered = enter
             .append('path')
-            .attr('class', 'sl-line')
+            .attr('class', 'vd-line')
             .attr('data-key', lineSeriesKey)
             .attr('fill', 'none')
             .attr('stroke', (d) => color(d.rows[0]))
@@ -206,20 +206,20 @@ class LineChart extends BaseChart {
           .remove()
       );
 
-    chart.g.selectAll('circle.sl-line-point')
+    chart.g.selectAll('circle.vd-line-point')
       .data(plottedRows, key)
       .join(
         (enter) => enter
           .append('circle')
-          .attr('class', 'sl-line-point')
+          .attr('class', 'vd-line-point')
           .attr('data-key', (d, i) => key(d, i))
           .attr('cx', (d, i) => targetPoint(d, i).x)
           .attr('cy', (d, i) => targetPoint(d, i).y)
           .attr('r', 0)
           .attr('data-scroll-radius', pointRadius)
           .attr('fill', (d) => color(d))
-          .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
+          .attr('stroke', themeValue('--vd-mark-stroke', 'white'))
+          .attr('stroke-width', cameraSize(themeValue('--vd-point-stroke-width', 1.5), camera))
           .call(bindTooltip, spec, tooltip)
           .transition(enterTransition)
           .delay((d, i) => addedKeys.has(String(key(d, i)))
@@ -239,7 +239,7 @@ class LineChart extends BaseChart {
           .attr('cx', (d) => position(x, d[enc.x.field]))
           .attr('cy', (d) => position(y, d[enc.y.field]))
           .attr('fill', (d) => color(d))
-          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
+          .attr('stroke-width', cameraSize(themeValue('--vd-point-stroke-width', 1.5), camera))
           .attr('data-scroll-radius', pointRadius)
           .attr('r', visiblePointRadius),
         (exit) => exit

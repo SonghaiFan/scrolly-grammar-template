@@ -9,7 +9,6 @@ import type {
   SpecMeta,
   ChartStateMeta,
   ResolvedChartState,
-  ScrollSpec,
   SemanticKey,
   TransformSpec,
   TransitionSpec,
@@ -53,11 +52,6 @@ export function serializeViewSpec(spec: ViewSpec): ViewSpec {
   if (next.transition !== undefined) {
     meta.transition = { ...(meta.transition ?? {}), ...clonePlain(next.transition) } as TransitionSpec;
     delete next.transition;
-  }
-
-  if (next.scroll !== undefined) {
-    meta.action = { ...(meta.action ?? {}), scroll: clonePlain(next.scroll) as ScrollSpec };
-    delete next.scroll;
   }
 
   if (next.unit !== undefined) {
@@ -116,7 +110,6 @@ export function normalizeViewSpec(spec: ViewSpec): ViewSpec & Record<string, unk
     key: object.key ?? (spec.encoding?.key?.field ?? null) as string | null,
     semanticKey: semanticFromMeta(object.semantic) ?? null,
     transition: (meta.transition ?? {}) as TransitionSpec,
-    scroll: meta.action?.scroll,
     unit: meta.unit ?? null,
     selection: state.selection ?? null,
     axis: state.axis ?? null,
@@ -139,11 +132,6 @@ export function specSemanticKey(spec: ViewSpec): SemanticKey | null {
 export function specTransition(spec: ViewSpec): TransitionSpec {
   const meta = getSpecMeta(spec);
   return meta.transition ?? {};
-}
-
-export function specScroll(spec: ViewSpec): ScrollSpec | null {
-  const meta = getSpecMeta(spec);
-  return meta.action?.scroll ?? null;
 }
 
 export function specUnit(spec: ViewSpec): Record<string, unknown> | null {

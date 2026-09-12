@@ -1,5 +1,4 @@
-import type { ViewSpec, DiffResult } from './types/index.js';
-import type { RuntimeOptions } from './types.js';
+import type { ViewSpec, DiffResult, RuntimeOptions } from './types/index.js';
 import { cloneState } from './grammar/view-state.js';
 import { delta, visualizationChartModule, visualizationSpec } from './core.js';
 import type { Visualization } from './core.js';

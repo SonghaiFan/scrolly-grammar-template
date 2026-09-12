@@ -33,7 +33,7 @@ for (const mode of ['undeclared', 'field', 'range', 'domain', 'stacked', 'groupe
         target: host, d3, aq, height: 400, reconstruct: mode === 'reconstruct'
       });
       const read = () => {
-        const nodes = [...host.querySelectorAll('rect.sl-bar')];
+        const nodes = [...host.querySelectorAll('rect.vd-bar')];
         return {
           bars: nodes.map(node => ({
             key: node.dataset.key, category: node.dataset.category,
@@ -43,7 +43,7 @@ for (const mode of ['undeclared', 'field', 'range', 'domain', 'stacked', 'groupe
           })).sort((a, b) => a.key.localeCompare(b.key)),
           order: nodes.map(node => ({ key: node.dataset.category, x: Number(node.getAttribute('x')) }))
             .sort((a, b) => a.x - b.x).map(node => node.key),
-          legend: [...host.querySelectorAll('.sl-legend-item')].map(node => ({
+          legend: [...host.querySelectorAll('.vd-legend-item')].map(node => ({
             text: node.querySelector('text').textContent,
             fill: d3.color(getComputedStyle(node.querySelector('rect')).fill).formatHex(),
             position: node.getAttribute('transform')
@@ -95,7 +95,7 @@ test('explicit color changes are still allowed during sorting', async ({ page })
     const host = document.createElement('div');
     document.body.append(host);
     const change = await transition(from, to, { target: host, d3, aq, height: 400 });
-    const read = () => Object.fromEntries([...host.querySelectorAll('rect.sl-bar')]
+    const read = () => Object.fromEntries([...host.querySelectorAll('rect.vd-bar')]
       .map(node => [node.dataset.category, d3.color(node.getAttribute('fill')).formatHex()]));
     const start = read();
     change.progress(1);
@@ -111,7 +111,7 @@ test('explicit color changes are still allowed during sorting', async ({ page })
 test('sort lab keeps the same colors at both endpoints', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/transition-lab.html#sort');
   await expect(page.locator('#status')).toHaveText('Ready');
-  const read = () => page.locator('#chart rect.sl-bar').evaluateAll(nodes => Object.fromEntries(
+  const read = () => page.locator('#chart rect.vd-bar').evaluateAll(nodes => Object.fromEntries(
     nodes.map(node => [node.dataset.category, {
       fill: getComputedStyle(node).fill,
       height: node.getAttribute('height')
@@ -134,9 +134,9 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
     document.body.append(host);
     const plain = bar(rows).x('category').y('value').key('category');
     const change = await transition(plain, plain.sort('value', 'descending'), { target: host, d3, aq, height: 400 });
-    const fills = [...host.querySelectorAll('rect.sl-bar')]
+    const fills = [...host.querySelectorAll('rect.vd-bar')]
       .map(node => d3.color(getComputedStyle(node).fill).formatHex());
-    const legends = host.querySelectorAll('.sl-legend-item').length;
+    const legends = host.querySelectorAll('.vd-legend-item').length;
     change.destroy();
 
     const detailed = bar([
@@ -147,10 +147,10 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
     ]).x('category').y('value').key('category').breakdown('type');
     const split = await transition(detailed.rollup(), detailed, { target: host, d3, aq, height: 400 });
     split.progress(1);
-    const splitFills = [...host.querySelectorAll('rect.sl-bar')]
+    const splitFills = [...host.querySelectorAll('rect.vd-bar')]
       .map(node => d3.color(getComputedStyle(node).fill).formatHex());
-    const splitLegends = host.querySelectorAll('.sl-legend-item').length;
-    const segments = host.querySelectorAll('rect.sl-bar-segment').length;
+    const splitLegends = host.querySelectorAll('.vd-legend-item').length;
+    const segments = host.querySelectorAll('rect.vd-bar-segment').length;
     split.destroy(); host.remove();
     return { fills, legends, splitFills, splitLegends, segments };
   });
@@ -168,8 +168,8 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
   await expect(page.locator('#status')).toHaveText('Ready');
   await expect(page.locator('#editor')).toHaveValue(/\.color\("age"/);
   await page.locator('#end').click();
-  await expect(page.locator('#chart .sl-legend-item')).toHaveCount(9);
-  const segmentFills = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
+  await expect(page.locator('#chart .vd-legend-item')).toHaveCount(9);
+  const segmentFills = await page.locator('#chart rect.vd-bar').evaluateAll(nodes =>
     nodes.map(node => getComputedStyle(node).fill));
   expect(new Set(segmentFills).size).toBe(9);
 });
@@ -193,7 +193,7 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
     });
     const change = await transition(colored.rollup(), colored, { target: host, d3, aq, height: 400 });
 
-    const readSegments = () => [...host.querySelectorAll('rect.sl-bar-segment')]
+    const readSegments = () => [...host.querySelectorAll('rect.vd-bar-segment')]
       .map(node => {
         const style = getComputedStyle(node);
         return {
@@ -209,14 +209,14 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
       .sort((a, b) => a.key.localeCompare(b.key));
 
     change.progress(0);
-    const startSeamCount = host.querySelectorAll('path.sl-bar-seam').length;
+    const startSeamCount = host.querySelectorAll('path.vd-bar-seam').length;
     change.progress(0.25);
     const reveal = readSegments();
-    const underlay = [...host.querySelectorAll('rect.sl-bar:not(.sl-bar-segment)')].map(node => ({
+    const underlay = [...host.querySelectorAll('rect.vd-bar:not(.vd-bar-segment)')].map(node => ({
       category: node.dataset.category,
       opacity: Number(getComputedStyle(node).opacity)
     }));
-    const seam = [...host.querySelectorAll('path.sl-bar-seam')].map(node => {
+    const seam = [...host.querySelectorAll('path.vd-bar-seam')].map(node => {
       const style = getComputedStyle(node);
       const length = node.getTotalLength();
       return {
@@ -227,24 +227,24 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
       };
     });
     change.progress(0.32);
-    const fullSeam = [...host.querySelectorAll('path.sl-bar-seam')].map(node => ({
+    const fullSeam = [...host.querySelectorAll('path.vd-bar-seam')].map(node => ({
       length: node.getTotalLength(),
       opacity: Number(getComputedStyle(node).opacity)
     }));
     change.progress(1);
     const end = readSegments();
-    const endSeamCount = host.querySelectorAll('path.sl-bar-seam').length;
+    const endSeamCount = host.querySelectorAll('path.vd-bar-seam').length;
     change.destroy();
 
     const monochrome = await transition(plain.rollup(), plain, { target: host, d3, aq, height: 400 });
     monochrome.progress(0.5);
-    const noColor = [...host.querySelectorAll('rect.sl-bar-segment')].map(node => {
+    const noColor = [...host.querySelectorAll('rect.vd-bar-segment')].map(node => {
       const style = getComputedStyle(node);
       return {
         fill: d3.color(style.fill)?.formatHex() || style.fill
       };
     });
-    const noColorSeams = [...host.querySelectorAll('path.sl-bar-seam')].map(node =>
+    const noColorSeams = [...host.querySelectorAll('path.vd-bar-seam')].map(node =>
       Number(getComputedStyle(node).opacity));
     monochrome.destroy();
     host.remove();
