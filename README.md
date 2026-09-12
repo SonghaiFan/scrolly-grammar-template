@@ -1,10 +1,12 @@
 # VisDelta
 
-Describe how one chart looks before and after a change. VisDelta finds the
-difference, then lets you play the movement or show any exact frame from
-progress `0` to `1`. This state-first approach is what “declarative” means here.
+VisDelta is a declarative visualization-transition library. Describe a chart
+before and after a change; VisDelta finds the difference and lets any external
+control play or seek the transition.
 
-Scrolling is not part of the core runtime. It is one possible external control.
+```text
+Data -> Chart state -> Difference -> Transition -> Frame
+```
 
 ```js
 import * as d3 from "d3";
@@ -27,23 +29,7 @@ change.progress(0.42);
 change.play({ duration: 800 });
 ```
 
-The plain-English subset methods have separate jobs:
-
-```js
-base.where({ region: "North" })     // remove the other rows
-base.highlight({ region: "North" }) // keep every row; change emphasis
-base.focus({ region: "North" })     // keep every row; fit the visible range
-```
-
-## What VisDelta includes
-
-VisDelta owns:
-
-- chart states that never change the state they were created from
-- a meaningful difference between the first and last state
-- chart-type compilation and rendering
-- transitions that can show any progress value from `0` to `1`
-- transform execution and plugin contracts
+Chart states are immutable: creating `profit` does not change `revenue`.
 
 ## Install
 
@@ -51,68 +37,81 @@ VisDelta owns:
 npm install visdelta@0.2.0 d3
 ```
 
-`0.2.0` is a release candidate in this checkout and is not yet published under
-the new npm name. Use the repository build until the VisDelta package is
-released.
-
-Arquero remains a conditional dependency for the current transform backend:
+`0.2.0` is the first-release candidate in this checkout. Arquero is an optional
+peer used only when a chart declares a transform such as `.where()`, `.sort()`,
+`.breakdown()`, or `.rollup()`:
 
 ```sh
 npm install arquero@8
 ```
 
-It is needed when states use transforms such as `.where()`, `.sort()`,
-`.breakdown()`, or `.rollup()`. Plain already-shaped data and transitions do
-not require it.
+VisDelta expects tidy input. Data cleaning and reshaping belong before the
+library.
+
+## Chart types
+
+| Import | Use |
+| --- | --- |
+| `visdelta/area` | Ordered magnitude and composition |
+| `visdelta/bar` | Categorical comparison |
+| `visdelta/line` | Ordered trends |
+| `visdelta/point` | Relationships between quantities |
+| `visdelta/unit` | Countable items in `grid`, `bar`, or `beeswarm` layouts |
+
+The chart modules are peers. Each owns its builder, compiler, marks, axes,
+matching, and transition rules. Core has no branches for built-in chart types.
+
+```js
+base.where({ region: "North" })     // remove other rows
+base.highlight({ region: "North" }) // keep rows; change attention
+base.focus({ region: "North" })     // keep rows; move the camera
+```
+
+Every visual mapping is explicit. VisDelta can supply presentation defaults,
+but it never decides that a data field should mean x, y, color, size, or detail.
 
 ## Public entries
 
 | Entry | Responsibility |
 | --- | --- |
-| `visdelta` | Visualization grammar, delta, transition, and plugin registration |
-| `visdelta/core` | DOM-free normalization and semantic delta |
-| `visdelta/area` | Focused immutable area authoring |
-| `visdelta/bar` | Focused immutable bar authoring |
-| `visdelta/point` | Focused immutable point authoring |
-| `visdelta/line` | Focused immutable line authoring |
-| `visdelta/transition` | Pair initialization, seek, play, pause, resize, and destroy |
-| `visdelta/plugins` | Chart-module building blocks and plain-spec registration |
+| `visdelta` | All built-in builders plus the core API |
+| `visdelta/core` | State normalization, data types, camera math, and `delta()` |
+| `visdelta/transition` | `transition()`, seek, play, pause, resize, and destroy |
+| `visdelta/area`, `/bar`, `/line`, `/point`, `/unit` | Focused chart modules |
+| `visdelta/plugins` | Define and register independent chart modules |
+| `visdelta/chart-style` | Structural chart-style modules |
 | `visdelta/browser` | Browser-global dependency adapter |
-| `visdelta/composition` | Low-level adapter contract for control packages |
+| `visdelta/style.css` | Required chart styles |
 
-`visdelta/composition` is for integration packages, not ordinary chart
-authoring.
+## Design rules
 
-Focused chart builders carry their own lazy chart module. For example,
-`visdelta/point` works with `visdelta/transition` without importing the complete
-entry or registering Point globally. An external chart package can follow the
-same contract.
+- Every frame is true: marks, scales, ticks, grid lines, and titles agree.
+- Exit marks before changing the scale; change the scale before entering marks.
+- Reverse playback uses the same frames backward.
+- `focus()` is a camera move, never a data filter.
+- Core stays chart-agnostic; chart-specific behavior stays in its module.
+- Public terminology uses plain English and has no greenfield compatibility aliases.
+
+See the [design principles](docs/language-framework.md), [API
+reference](docs/reference.md), and the [five live labs](docs/examples.md).
 
 ## Development
 
 ```sh
-npm install
-npm test
+npm ci
+npm run check
+npm run build
+npm run docs:check
 npm run test:browser
 ```
 
-Build and serve the canonical documentation and editable bar transition lab:
+Run the docs locally:
 
 ```sh
-npm run docs:build
-python3 -m http.server 5511
+npm run docs:dev
 ```
 
-Then open `http://127.0.0.1:5511/docs/.vitepress/dist/`.
-
-Documentation starts at [docs/index.md](docs/index.md), with the complete
-interactive API map in [docs/reference.md](docs/reference.md) and the current
-ownership boundary in [docs/modular-architecture.md](docs/modular-architecture.md).
-
-## Current limits
-
-- Endpoint chart types must match; bar-to-line transitions are not supported.
-- Bar has the richest semantic transition coverage.
-- Arquero still executes authored transforms.
+See [CONTRIBUTING.md](CONTRIBUTING.md) before adding a chart type. Generated
+`dist/`, VitePress output, test results, and screenshots are not source files.
 
 Released under the MIT License.

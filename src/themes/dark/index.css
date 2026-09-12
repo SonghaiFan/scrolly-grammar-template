@@ -1,9 +1,4 @@
-/* VisDelta — Dark / Architecture Theme
-   Blueprint aesthetic: near-black ground, single accent color, zero rounding.
-   Figure card = sharp-edged panel with a top accent line (no glass, no shadow).
-   Step card   = bare minimal — just a left accent rule, transparent bg.
-   Data palette is monochromatic: tints of the single primary blue.
-   See DESIGN.md for rationale.                                             */
+/* VisDelta dark chart theme. */
 
 :root {
   color-scheme: dark;
@@ -51,13 +46,6 @@
   --vd-figure-border:   1px solid var(--vd-color-border);
   --vd-figure-shadow:   none;
 
-  /* — Step card: near-invisible — text reads directly on the chart — */
-  --vd-step-bg:          rgba(11, 15, 20, 0.82);
-  --vd-step-bg-active:   rgba(11, 15, 20, 0.94);
-  --vd-step-blur:        0px;
-  --vd-step-radius:      0px;
-  --vd-step-border:      0px solid transparent;
-  --vd-step-shadow:      none;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -78,29 +66,5 @@ body { color-scheme: dark; }
   font-size: clamp(0.85rem, 1.5vw, 1.05rem);
 }
 
-/* ── Step card — floatToText: plain text, left accent rule ──────────────── */
-.vd-step h2 { letter-spacing: 0.01em; }
-
-/* ── Step card — textOverVis: near-opaque dark panel, no border ─────────── */
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step-card {
-  border-left: 3px solid transparent;
-}
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step.is-active .vd-step-card {
-  border-left-color: var(--vd-accent);
-}
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-transition-inspector {
-  background: rgba(11, 15, 20, 0.88);
-}
-
 /* Tooltip */
 .vd-tooltip { background: rgba(200, 215, 228, 0.97); color: #0c0f13; }
-
-/* Progress bar */
-.vd-progress { background: rgba(79, 163, 212, 0.12); }
-
-/* Code panel */
-.vd-code-panel pre { background: #08090d; border-color: var(--vd-color-border); color: var(--vd-fg); }
-
-/* Nav dots */
-.vd-nav button { border-color: var(--vd-color-primary); }
-.vd-nav button.is-active { background: var(--vd-color-primary); }

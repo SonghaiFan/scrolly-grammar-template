@@ -420,7 +420,7 @@ test('line add and remove are the same transition in reverse', async ({ page }) 
       radius: Number(document.querySelector('#add circle[data-key="Q7"]')?.getAttribute('r')),
       path: document.querySelector('#add path.vd-line')?.getAttribute('d')
     };
-    add.progress(0.8);
+    add.progress(0.9);
     const afterLine = {
       radius: Number(document.querySelector('#add circle[data-key="Q7"]')?.getAttribute('r')),
       path: document.querySelector('#add path.vd-line')?.getAttribute('d')
@@ -498,8 +498,8 @@ test('line filter and restore are the same transition in reverse', async ({ page
     isolated.progress(1);
     return {
       frames,
-      pointIsLeaving: removalFrame(0.25),
-      lineIsRetracting: removalFrame(0.35),
+      pointIsLeaving: removalFrame(0.1),
+      lineIsRetracting: removalFrame(0.25),
       isolated: {
         paths: document.querySelectorAll('#isolated path.vd-line').length,
         points: document.querySelectorAll('#isolated circle.vd-line-point').length

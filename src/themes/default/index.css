@@ -1,7 +1,4 @@
-/* VisDelta default theme
-   Quiet editorial presentation for charts used inside narrative pages.
-   The base stylesheet owns component selectors; this file changes tokens and
-   story chrome only so chart axes, grids, labels, and legends have one source. */
+/* VisDelta default chart theme. */
 
 :root {
   color-scheme: light;
@@ -50,16 +47,9 @@
   --vd-figure-border: 1px solid var(--vd-color-border);
   --vd-figure-shadow: none;
 
-  --vd-step-bg: rgba(255, 255, 255, 0.96);
-  --vd-step-bg-active: #ffffff;
-  --vd-step-blur: 0px;
-  --vd-step-radius: 3px;
-  --vd-step-border: 1px solid var(--vd-color-border);
-  --vd-step-shadow: none;
 }
 
-body,
-.vd-intro {
+body {
   background: var(--vd-color-bg);
 }
 
@@ -71,39 +61,4 @@ body,
   color: var(--vd-fg);
   font-weight: 650;
   letter-spacing: -0.018em;
-}
-
-.vd-step-card {
-  border-left-color: transparent;
-}
-
-.vd-step.is-active .vd-step-card {
-  border-left-color: var(--vd-accent);
-}
-
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step-card {
-  border-left: 3px solid transparent;
-}
-
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step.is-active .vd-step-card {
-  border-left-color: var(--vd-accent);
-}
-
-.demo-toolbar {
-  background: color-mix(in srgb, var(--vd-color-bg) 92%, transparent);
-  border-bottom: 1px solid var(--vd-color-border);
-  box-shadow: none;
-}
-
-.vd-progress {
-  background: color-mix(in srgb, var(--vd-color-primary) 10%, transparent);
-}
-
-.vd-nav button {
-  border-color: var(--vd-color-primary);
-  border-radius: 2px;
-}
-
-.vd-nav button.is-active {
-  background: var(--vd-color-primary);
 }

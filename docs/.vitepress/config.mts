@@ -25,7 +25,7 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'VisDelta',
     nav: [
-      { text: 'Language map', link: '/language-framework' },
+      { text: 'Principles', link: '/language-framework' },
       { text: 'Guide', link: '/getting-started' },
       { text: 'API Reference', link: '/reference' },
       { text: 'Bar Lab', link: '/transition-lab' },
@@ -44,9 +44,8 @@ export default defineConfig({
         text: 'Start',
         items: [
           { text: 'Overview', link: '/' },
-          { text: 'Language framework', link: '/language-framework' },
+          { text: 'Design principles', link: '/language-framework' },
           { text: 'Getting started', link: '/getting-started' },
-          { text: 'Mental model', link: '/concepts' },
           { text: 'Interactive reference', link: '/reference' },
           { text: 'Bar transition lab', link: '/transition-lab' },
           { text: 'Point transition lab', link: '/point-lab' },
@@ -57,31 +56,19 @@ export default defineConfig({
         ]
       },
       {
-        text: 'Authoring language',
+        text: 'Language',
         items: [
           { text: 'Chart types', link: '/chart-types' },
           { text: 'Chart style', link: '/chart-style' },
-          { text: 'Data sources', link: '/data-sources-and-transforms' },
-          { text: 'Transform grammar', link: '/data-transforms' },
-          { text: 'Color guide', link: '/color-guide' }
-        ]
-      },
-      {
-        text: 'Animation and runtime',
-        items: [
-          { text: 'Visualization transitions', link: '/visualization-transitions' },
-          { text: 'Differences and steps', link: '/scenes-and-transitions' },
-          { text: 'Transition runtime', link: '/runtime-api' },
-          { text: 'Transition performance', link: '/transition-performance' }
+          { text: 'Data and transforms', link: '/data-sources-and-transforms' },
+          { text: 'Transition runtime', link: '/runtime-api' }
         ]
       },
       {
         text: 'Integration',
         items: [
-          { text: 'Modules and bundle boundaries', link: '/modular-architecture' },
-          { text: 'Plugins', link: '/extending-with-plugins' },
-          { text: 'CDN users', link: '/for-cdn-users' },
-          { text: 'Contributors', link: '/for-developers' }
+          { text: 'Add a chart type', link: '/extending-with-plugins' },
+          { text: 'Use a CDN', link: '/for-cdn-users' }
         ]
       }
     ],

@@ -129,9 +129,6 @@ export const chartStylePresets = Object.freeze({
   dark: darkChartStyle
 });
 
-/** Backward-compatible internal name for the default presentation module. */
-export const CHART_STYLE = d3ChartStyle;
-
 export function chartStyle(deps: { chartStyle?: ChartStyleModule } = {}): ChartStyleModule {
   return deps.chartStyle || d3ChartStyle;
 }

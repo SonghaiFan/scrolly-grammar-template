@@ -406,7 +406,7 @@ test('area filter preserves connected cells, gaps, and the no-isolated-area rule
       Q3: coordinates(observation('#adjacent', 'Q3')),
       Q4: coordinates(observation('#adjacent', 'Q4'))
     };
-    adjacent.progress(0.5);
+    adjacent.progress(0.25);
     const middle = {
       Q3: coordinates(observation('#adjacent', 'Q3')),
       Q4: coordinates(observation('#adjacent', 'Q4'))

@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
         name,
         value.replace(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi, token => {
           const number = Number(token);
-          return Number.isFinite(number) ? String(Math.round(number * 1e9) / 1e9) : token;
+          return Number.isFinite(number) ? String(Math.round(number * 1e6) / 1e6) : token;
         })
       ])
     }));

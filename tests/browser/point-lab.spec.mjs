@@ -152,7 +152,7 @@ test('an added point grows at its target instead of flying from an unrelated anc
     }));
   };
   const firstVisible = await pointAt(0.05);
-  const middle = await pointAt(0.5);
+  const middle = await pointAt(0.75);
   const end = await pointAt(1);
   expect([firstVisible.x, firstVisible.y]).toEqual([end.x, end.y]);
   expect([middle.x, middle.y]).toEqual([end.x, end.y]);

@@ -20,11 +20,3 @@ for (const width of [1100, 390]) {
     expect(errors).toEqual([]);
   });
 }
-
-test('the former standalone lab redirects to the canonical in-doc lab', async ({ page }) => {
-  await page.goto('/examples/transition/#sort');
-  await expect(page).toHaveURL(/\/docs\/\.vitepress\/dist\/transition-lab\.html#sort$/);
-  await expect(page.locator('#status')).toHaveText('Ready');
-  await expect(page.locator('#scenario')).toHaveValue('sort');
-    await expect(page.locator('#scenario option')).toHaveCount(13);
-});

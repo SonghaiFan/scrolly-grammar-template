@@ -1,7 +1,7 @@
 # Getting started
 
 VisDelta declares immutable chart states and creates a seekable transition
-between two states of the same chart type. Scroll is only one possible control.
+between two states of the same chart type. The application supplies progress.
 
 ## Install
 
@@ -63,4 +63,4 @@ change.destroy();
 button, gesture, route, timer, or scroll adapter can provide that value.
 
 Continue with the [interactive reference](/reference), [chart types](/chart-types),
-and [module boundaries](/modular-architecture).
+and [design rules](/language-framework).

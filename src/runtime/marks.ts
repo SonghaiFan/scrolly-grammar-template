@@ -32,9 +32,9 @@ export function createMarkHelpers(context: RenderContext = {}) {
 //     (no adjacent red+green pair in the hue-maximised assignment order).
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Story-level color registry: field → (key → color string).
-// Set once per story so the same semantic key always maps to the same color
-// regardless of which subset of categories appears in a given scene.
+// Chart-instance color registry: field → (key → color string).
+// Set once per transition so the same semantic key always maps to the same
+// color regardless of which subset of categories appears in a frame.
 
 // Tableau 10 — widely-adopted, perceptually balanced categorical palette.
 const DEFAULT_PALETTE = [
@@ -205,7 +205,6 @@ function fadeLayers(scene, activeMark, transition = null, d3 = null) {
     if (mark === activeMark) return;
     layer.interrupt().transition(resolvedTransition.base).style('opacity', 0);
   });
-  scene.textLayer.interrupt().transition(resolvedTransition.base).style('opacity', activeMark === 'text' ? 1 : 0);
 }
 
 function staggerDelay(spec, datum, index, override) {
@@ -257,13 +256,6 @@ function applyPlotClip(chart, enabled) {
   const id = `vd-mark-clip-${chart.scene.clipIdentity}`;
   ensureClipRect(chart.scene, id, { x: 0, y: 0, width: chart.innerWidth, height: chart.innerHeight });
   chart.g.attr('clip-path', `url(#${id})`);
-}
-
-function drawTextBoard(scene, spec) {
-  const items = Array.isArray(spec.text) ? spec.text : [spec.text || ''];
-  scene.textLayer
-    .attr('x', 0).attr('y', 0).attr('width', scene.width).attr('height', scene.height)
-    .html(`<div class="vd-text-board"><ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`);
 }
 
 function drawUnsupported(chart, spec, availableTypes = []) {
@@ -339,7 +331,7 @@ function colorScale(rows, channel, d3) {
   if (channel.hue || channel.luminance) return compositeColorScale(channel, d3);
   if (!channel.field) return () => themeColor(DEFAULT_LUMINANCE_BASE);
   if (channel.type === 'quantitative') return luminanceColorScale(rows, channel, d3);
-  // Use story-level registry for consistent key→color mapping across scenes.
+  // Use the transition registry for consistent key→color mapping across frames.
   const fieldRegistry = !channel.range && context.colors?.get(channel.field);
   if (fieldRegistry) {
     const fallback = themeColor(DEFAULT_LUMINANCE_BASE);
@@ -750,7 +742,7 @@ function categoricalRange(domain) {
   const resolved = DEFAULT_PALETTE.map((entry) => themeColor(entry));
   // Sequential slot assignment: Nth category → series-N. Consistent with the
   // stacked/grouped bar chart's explicit 'var(--vd-series-N)' range and with
-  // the story-level registry, so fallback scenes never get mismatched colors.
+  // the transition registry, so fallback frames never get mismatched colors.
   return domain.map((_, i) => resolved[i % resolved.length]);
 }
 
@@ -851,8 +843,8 @@ function tooltipHtml(row, tooltipSpec) {
     .join('<br>');
 }
 
-return { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive };
+return { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive };
 }
 
-// Context-free utilities and compatibility imports retain their old signatures.
-export const { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawTextBoard, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive } = createMarkHelpers();
+// Context-free utilities are shared by chart modules through dependency injection.
+export const { pickCategoricalColors, themeValue, transitionSpec, effectiveTransitionSpec, easeFor, activeMarkLayer, fadeLayers, staggerDelay, drawPath, fadeNonBarShapes, fadeNonLineShapes, fadeNonPointShapes, fadeNonUnitShapes, applyPlotClip, drawUnsupported, bandOrLinear, quantitativeScale, position, niceExtent, quantitativeDomain, channelDomain, colorScale, drawXAxis, drawYAxis, drawGrid, updateGrid, drawLegend, bindTooltip, showTooltip, moveTooltip, hideTooltip, markAxisInactive } = createMarkHelpers();

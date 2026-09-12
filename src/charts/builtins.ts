@@ -1,5 +1,5 @@
 import type { ChartModule } from './module.js';
-// Generated from src/charts/*/plugin.ts.
+// Generated from chart folders containing plugin.ts and module.ts.
 // Run scripts/sync-chart-manifest.mjs after adding or removing a chart-type folder.
 import { chartModule as area } from "./area/module.js";
 import { chartModule as bar } from "./bar/module.js";

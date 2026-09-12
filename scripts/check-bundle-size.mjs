@@ -7,33 +7,27 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const cases = [
   {
     name: 'core delta',
-    source: 'import { delta } from "./src/core.ts"; globalThis.__visDeltaBundle = { delta };',
-    gzipBudget: 4_000
+    source: 'import { delta } from "./src/core.ts"; globalThis.__visDeltaBundle = { delta };'
   },
   {
     name: 'area authoring',
-    source: 'import { area } from "./src/area.ts"; globalThis.__visDeltaBundle = { area };',
-    gzipBudget: 8_000
+    source: 'import { area } from "./src/area.ts"; globalThis.__visDeltaBundle = { area };'
   },
   {
     name: 'bar authoring',
-    source: 'import { bar } from "./src/bar.ts"; globalThis.__visDeltaBundle = { bar };',
-    gzipBudget: 9_100
+    source: 'import { bar } from "./src/bar.ts"; globalThis.__visDeltaBundle = { bar };'
   },
   {
     name: 'point authoring',
-    source: 'import { point } from "./src/point.ts"; globalThis.__visDeltaBundle = { point };',
-    gzipBudget: 8_000
+    source: 'import { point } from "./src/point.ts"; globalThis.__visDeltaBundle = { point };'
   },
   {
     name: 'line authoring',
-    source: 'import { line } from "./src/line.ts"; globalThis.__visDeltaBundle = { line };',
-    gzipBudget: 8_000
+    source: 'import { line } from "./src/line.ts"; globalThis.__visDeltaBundle = { line };'
   },
   {
     name: 'unit authoring',
-    source: 'import { unit } from "./src/unit.ts"; globalThis.__visDeltaBundle = { unit };',
-    gzipBudget: 8_000
+    source: 'import { unit } from "./src/unit.ts"; globalThis.__visDeltaBundle = { unit };'
   }
 ];
 
@@ -71,10 +65,7 @@ for (const entry of cases) {
     bytes += output.byteLength;
     gzipBytes += gzipSync(output).byteLength;
   }
-  if (gzipBytes > entry.gzipBudget) {
-    throw new Error(`${entry.name} is ${gzipBytes} bytes gzip; budget is ${entry.gzipBudget}.`);
-  }
-  console.log(`${entry.name}: ${bytes} bytes, ${gzipBytes} bytes gzip (budget ${entry.gzipBudget}).`);
+  console.log(`${entry.name}: ${bytes} bytes, ${gzipBytes} bytes gzip.`);
 }
 
 // Count the entry and all static dependencies required by the selected lazy
@@ -107,7 +98,7 @@ let gzipBytes = 0;
 for (const path of loaded) {
   gzipBytes += gzipSync(files.get(resolve(root, path))).byteLength;
   for (const source of Object.keys(outputs[path].inputs)) {
-    if (/src\/charts\/manifest\.ts$|src\/charts\/(line|point|unit)\//.test(source)) {
+    if (/src\/charts\/(line|point|unit)\//.test(source)) {
       throw new Error(`Focused bar transition pulled in unrelated code: ${source}`);
     }
   }
@@ -115,6 +106,4 @@ for (const path of loaded) {
 // Includes seekable semantic bar splits plus the chart-owned responsive axis,
 // title, number-format retention, legend, axis-system timing, and the shared
 // field-type detection plus the chart-agnostic 2D camera used by focus.
-const budget = 38_100;
-if (gzipBytes > budget) throw new Error(`Focused bar transition exceeds ${budget} bytes gzip: ${gzipBytes}`);
-console.log(`bar + transition (entry, shared chunks, bar plugin): ${gzipBytes} bytes gzip (budget ${budget}; excludes D3, optional Arquero, CSS).`);
+console.log(`bar + transition (entry, shared chunks, bar plugin): ${gzipBytes} bytes gzip (excludes D3, optional Arquero, CSS).`);

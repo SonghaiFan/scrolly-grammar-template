@@ -1,844 +1,123 @@
 # Chart types
 
-VisDelta includes five chart types: `area`, `bar`, `line`, `point`, and `unit`. Their
-methods can be chained like a sentence. Call `.toSpec()` when you need the plain
-JavaScript object behind a chart state.
+VisDelta ships five peer chart modules. Import a focused module when an
+application uses one chart type:
 
 ```js
-import { area, bar, line, point, unit } from "visdelta";
+import { line } from "visdelta/line";
 
-area("dataset")    // → AreaState
-bar("dataset")     // → BarState
-line("dataset")    // → LineState
-point("dataset")   // → PointState
-unit("dataset")    // → UnitState
+const chart = line(rows)
+  .x("date", { type: "temporal" })
+  .y("close")
+  .key("date");
 ```
 
-All five extend the same `ChartState` base, so most data mapping, filtering,
-and styling methods work identically across chart types.
-This page documents the shared methods first, then each chart type's specific
-methods, defaults, and example progressions.
+Every chain creates a new immutable state. `.toSpec()` returns a detached plain
+object.
 
-See [Chart style](./chart-style.md) for the shared presentation vocabulary and
-the justified axis, grid, margin, and mark differences between chart types.
-That layer is a runtime module: pass `chartStyle` to switch structural style
-without adding presentation metadata to the visualization state.
+## Shared grammar
 
-> **Every change makes a new state.** The original stays untouched, so you can
-> make several versions from one `base` chart and move between them safely.
+These methods are available on every chart state:
 
-## Shared methods (all chart types)
-
-### `.data(name)`
-
-Switches the bound dataset (rarely needed mid-chain — usually set by the
-factory: `bar("weatherDays")`).
-
-### `.x(field, options?)` / `.y(field, options?)`
-
-Bind the x/y encoding channel. `field` may be:
-
-- a **string** field name — `"decade"` (auto-titled via `titleize`, e.g.
-  `"hot_days"` → `"Hot days"`)
-- a **channel object** — `{ field: "decade", title: "Decade", type: "ordinal" }`
-  for full control
-
-`options` merges into the channel: `{ title, type, scale, … }`.
-
-Default channel `type` differs per chart type (documented in each chart's section
-below) — e.g. bar's `.x()` defaults to `"nominal"`, point's `.x()`/`.y()`
-default to `"quantitative"`.
-
-```js
-bar("rows").x("decade")                                  // { field: "decade", title: "Decade", type: "nominal" }
-bar("rows").x({ field: "decade", title: "By Decade" })   // explicit override
-bar("rows").y("count", "Total count")                    // shorthand: string 2nd arg → { title }
-```
-
-<SyntaxPlayground initial="measure" compact />
-
-### `.channel(name, field, options?)`
-
-Sets a visual property by name. Use this lower-level method when a chart has no
-direct method such as `.x()`, `.y()`, or `.color()` for that property.
-
-```js
-bar("rows").channel("opacity", "confidence", { type: "quantitative" })
-```
-
-### `.color(valueOrField, options?)`
-
-Three forms:
-
-```js
-.color("#b05d3b")                  // literal value → { value: "#b05d3b" }
-.color("type")                     // field encoding → { field: "type", type: "nominal" }
-.color({ field: "type", domain: ["Hot days", "Cold days"], range: [...] })
-```
-
-VisDelta also supports **composite hue + luminance** color encodings —
-useful for showing two dimensions (e.g. category *and* time period) through
-one color channel:
-
-```js
-.color({
-  hue:       { value: "#b05d3b" },                       // fixed hue, or { field, domain, range }
-  luminance: { field: "period", domain: ["early", "middle", "recent"], lightness: [18, 0, -18] }
-})
-```
-
-### `.size(field, options?)`
-
-Binds a quantitative size channel (point radius, mark scale, …):
-
-```js
-point("rows").size("population")
-```
-
-### `.key(fields)`
-
-Tells VisDelta how to **match the same item** between two chart states. Use the
-field or fields that uniquely name the thing a reader is following. A single
-field becomes a string; multiple fields stay an array:
-
-```js
-.key("decade")               // → key: "decade"
-.key(["decade", "type"])     // → key: ["decade", "type"]
-```
-
-See [Concepts → Matching items](./concepts.md#matching-items-with-key) for
-why this matters and how to choose a good key.
-
-### `.tooltip(items)`
-
-Configures hover tooltips. Accepts a single field, an array, mixing strings
-and objects:
-
-```js
-.tooltip("count")                                    // → [{ field: "count", title: "Count" }]
-.tooltip(["decade", "count"])
-.tooltip([{ field: "count", title: "Total Days" }, "period"])
-```
-
-String items are auto-titled; object items pass through as-is (`{ field,
-title, format, … }`).
-
-### `.sort(field, order?)`
-
-Sorting changes the rendered row/category order, not the automatic color mapping or legend order. Automatic domains are inferred from the tidy source after chart-state aggregation, excluding sort, filter, and limit. Explicit color `domain` and `range` still take precedence; declaring a different color mapping can intentionally change colors during a sort transition.
-
-Appends a `{ sort: { field, order } }` transform. `order` is `"ascending"`
-(default) or `"descending"`. Multiple `.sort()` calls accumulate in the
-transform pipeline, applied in order.
-
-```js
-bar("rows").x("decade").y("count").sort("year")
-bar("rows").sort("count", "descending")
-```
-
-### `.transition(timing)`
-
-Overrides transition timing for this view. `timing` merges into the spec's
-`transition` block. Bar, Point, Line, and Area marks move together by default.
-Unit uses a light, bounded per-mark delay because it has no y-axis and at most
-one x-axis. Add `stagger` when a different order carries meaning, or use
-`stagger: 0` to make Unit marks move together:
-
-```js
-.transition({ duration: 1200, ease: "cubicInOut", stagger: { step: 40, max: 600 } })
-```
-
-### `.where(selector)`
-
-Keep matching rows and remove the others. Bar accumulates per-field constraints
-(see its section below); point, line, and unit compile the selector to the same
-row-filter operation. `.filter()` is not a public builder method. For low-level
-filtering, use `{ filter: ... }` entries in a raw view spec.
-
-`selector` shapes:
-
-```js
-.where({ type: "Hot days" })                           // shorthand: single field-equals
-.where({ field: "type", equal: "Hot days" })           // explicit selector object
-.where(null)                                            // clear the filter (bar only — see below)
-```
-
-<SyntaxPlayground initial="filter" compact />
-
-### `.focus(selector)`
-
-Move one two-dimensional camera around the visual bounds of the matching
-subset. Every row, mark identity, and complete scale domain stays unchanged.
-Area, Bar, Line, Point, and Unit all fit x and y together with one uniform zoom,
-so shapes keep their proportions. Marks outside the view move beyond the plot
-clip; they do not exit.
-
-On a categorical axis, matching marks set the camera bounds while the complete
-ordered domain remains intact. Categories between non-adjacent matches may stay
-visible. Focus never rebuilds a discontinuous band domain. The fit itself is a
-plain camera transform with no hidden padding policy.
-
-```js
-.focus({ region: "North" })
-.focus("datum.year >= 2023")
-```
-
-<SyntaxPlayground initial="focus" compact />
-
-### `.highlight(selector, options?)`
-
-Keeps all rows rendered but visually de-emphasizes (fades) the non-matching
-marks. All five built-in chart types render this selection consistently:
-
-```js
-.highlight({ type: "Cold days" })                       // default fade opacity
-.highlight({ type: "Cold days" }, { opacity: 0.15 })    // custom faded opacity
-```
-
-<SyntaxPlayground initial="highlight" compact />
-
-Internally this sets `state.selection = { mode: "highlight", filter: selector,
-opacity? }` and infers a `selection` scene.
-
-### `.axis(config)`
-
-Low-level axis setter. It controls scales, axis settings, orientation, and the
-order of x/y transition steps. Most of the time `.flip()` is simpler:
-
-```js
-.axis({ y: { scale: { type: "log" } } })
-.axis({ flip: true, order: ["y", "x"], duration: 500 })
-```
-
----
-
-## Area — `area(dataset)`
-
-An area chart describes a band across an ordered x field. It is not merely a
-Line with fill: its geometry always has a lower boundary `y0` and an upper
-boundary `y1`. X defaults to nominal and y to quantitative.
-
-```js
-const sales = area(rows).x("period").y("sales").key("period");
-```
-
-### `.baseline(value)`
-
-Sets the lower boundary for an ordinary area. The default is `0`.
-
-```js
-sales.baseline(20)
-```
-
-### `.breakdown(field, options?)`
-
-Turns each x total into stacked parts. Stacking changes geometry; color remains
-an explicit mapping. Positive and negative values stack on opposite sides of
-the baseline.
-
-```js
-const stacked = area(rows)
-  .x("period")
-  .y("sales")
-  .key(["period", "region"])
-  .breakdown("region", {
-    color: ["#1c6ae4", "#fa4d1d"]
-  });
-```
-
-Use `.breakdown("region")` without color for one uninterrupted theme-accent
-fill. Use `.color("region")` or the `color` option when parts should carry
-distinct hues; Area does not invent separation with a default border.
-
-### `.rollup(options?)`
-
-Combines the parts into one total at each x position. It uses `sum` by default.
-
-```js
-const total = stacked.rollup();
-const average = stacked.rollup({ op: "mean" });
-```
-
-Total → stacked is the canonical direction. Stacked → total evaluates the same
-cached frames backward.
-
-### `.curve(value)`
-
-Shape both the upper and lower Area boundaries with an exact D3 curve export
-name. This is the same grammar used by Line:
-
-```js
-.curve("curveLinear")
-.curve("curveMonotoneX")
-.curve("curveNatural")
-.curve("curveStep")
-```
-
-The default is `curveLinear`. VisDelta does not rename or remap D3 curves.
-`curveBundle` is rejected for Area because D3 defines it for Line only; it does
-not implement the Area curve interface. Every other curve name in the Line
-curve reference is supported. A curve change matches the rendered SVG geometry
-rather than interpolating unrelated numbers from the two path strings.
-
-### How Area adds and removes observations
-
-Area matches observations with `.key()` before moving either boundary. A new
-observation starts at its target x position with zero thickness: `y1` initially
-equals `y0`, then grows into its authored value. This is the same for an
-observation in the middle, at the start, or at the end.
-
-Restore and Add use this same rule; their only difference is where the new key
-appears. Filter and Remove evaluate the corresponding frames backward, so an
-exiting value keeps its x position and flattens into the baseline. In a stacked
-Area, a part flattens into its own lower boundary. VisDelta does not interpolate
-unrelated numbers from two SVG `d` strings, because that can reorder polygon
-vertices and make the Area cross itself.
-
-### `.connect(value)`
-
-Choose whether a filter may bridge over removed observations:
-
-```js
-.connect("adjacent") // default: keep separate connected stretches around the gap
-.connect("across")   // explicitly join the surviving observations into one band
-```
-
-This has the same continuity meaning as Line. With the default `"adjacent"`,
-removing observations from the middle produces separate connected stretches at
-their original x positions. It does not crop the remaining values together or
-invent a filled connection across data that is no longer present.
-
-For an ordinal x axis, every observation owns a cell made from the available
-half-interval on either side. An interior observation owns both halves. The
-first observation in a connected stretch owns only the right half, and the last
-owns only the left half. A stretch must contain at least two observations. One
-isolated ordinal observation has no connection and therefore draws no Line and
-no Area.
-
-<SyntaxPlayground initial="area" compact />
-
-See the [Area transition lab](/area-lab) for the executable matrix.
-
----
-
-## Bar — `bar(dataset)`
-
-A categorical bar chart. Defaults: `mark: "bar"`, `.x()` type `"nominal"`,
-`.y()` type `"quantitative"`.
-
-```js
-const base = bar("weatherDays").x("decade").y("count").sort("year");
-```
-
-### `.where(selector)` on Bar
-
-Bar follows the shared rule: `.where()` only changes which rows remain. Its one
-convenience is accumulating constraints across fields:
-
-- **Accumulates constraints per field**: calling `.where({ period: "recent" })`
-  after `.where({ type: "Hot days" })` keeps both constraints (each new
-  selector replaces only the constraint on the *same* field).
-- **`.where(null)`** clears all constraints.
-
-```js
-base.where({ type: "Hot days" })                          // first selection
-base.where({ type: "Hot days", period: "recent" })        // adds a second constraint
-base.where({ type: "Cold days" })                         // swaps only the `type` constraint
-base.where(null)                                           // clears everything
-```
-
-Filtering never rewrites `.key()` or an axis title. Declare those explicitly
-with `.key()`, `.x()`, `.y()`, or `.axis()`.
-
-For a plain filter without bar's extra authoring bookkeeping, supply a raw
-view spec with `transform: [{ filter: ... }]`. It still contributes to the
-endpoint delta and selection inference.
-
-### `.flip(options?)`
-
-Swaps the bars from vertical to horizontal. By default it changes y first, then
-x. Each step keeps the scale, axis, and marks together so they never disagree.
-
-```js
-.flip()
-.flip({ domain: ["Cold days", "Hot days"] })               // pin the flipped axis's domain
-.flip({ order: ["x", "y"] })                              // change x first, then y
-.flip({ duration: 600, stagger: { step: 30, max: 300 } })
-```
-
-`options`:
-| Key | Effect |
-|---|---|
-| `domain` / `scale.domain` | Fixes the domain of the flipped scale |
-| `scale` | Merges into the axis scale config |
-| `order` | x/y step order, default `["y", "x"]` |
-| `duration` / `stagger` | Timing for each step |
-
-<SyntaxPlayground initial="flip" compact />
-
-### `.breakdown(segment?, options?)`
-
-Splits one total bar per category into **segments** using another field. This is
-the direct one-total → stacked/grouped-detail operation.
-
-This changes geometry and grain only. It does not implicitly encode the
-segment field with color: add `.color("type")` or pass an explicit `color`
-option when color carries meaning. Without a color declaration, all segments
-use one theme-accent fill and no legend is drawn. The compiled spec keeps
-the grouping field in `encoding.detail`, independently of `encoding.color`.
-
-The stacked split transition establishes the final segment geometry first. A
-1px contrast-aware seam draws outward from each internal boundary, then the
-segment fills reveal over the fading aggregate bar. The seam derives its
-visible contrast from the pixels behind it, so it remains legible over black or
-explicitly encoded colors. It is transition scaffolding, not a data encoding:
-it is absent from both endpoints and cannot replace an explicit color encoding.
-
-```js
-base.breakdown()                  // geometry only; one fill, no legend
-base.breakdown("type").color("type") // explicitly encode the segment field
-base.breakdown("type", { layout: "grouped", op: "mean" })
-base.breakdown("type", { color: TEMPERATURE_HUE, tooltip: [...] })
-```
-
-`options`:
-| Key | Default | Effect |
-|---|---|---|
-| `category` | current x field | Field that stays on the category axis |
-| `value` | current y field, else `"count"` | Measure being aggregated |
-| `by` | `[category, segment]` | Aggregation grouping fields |
-| `layout` | `"stacked"` | `"stacked"` or `"grouped"` |
-| `op` | `"sum"` | Aggregation operator: `sum`, `mean`, `count`, `min`, `max`, `median` |
-| `title` | titleized `value`, or `false` to skip retitling | Y-axis title |
-| `color` | — | Color encoding for segments |
-| `tooltip` | — | Tooltip config |
-
-<SyntaxPlayground initial="split" compact />
-
-### `.rollup(groupby?, options?)`
-
-The inverse of `.breakdown()`: combines multiple rows or segments into
-**fewer total bars**.
-
-```js
-base.rollup("decade", { title: "Average days", op: "mean" })
-base.rollup(["decade", "period"])
-base.rollup({ by: "decade", value: "count", as: "total", op: "sum", color: "#b05d3b" })
-```
-
-`options` (or the 2nd positional argument as an options object):
-| Key | Default | Effect |
-|---|---|---|
-| `groupby` / `by` | current x field | Grouping field(s) |
-| `value` | current y field, else `"count"` | Field being aggregated |
-| `as` | `value` | Output field name |
-| `op` | `"sum"` | Aggregation operator |
-| `title` | — | Y-axis title override |
-| `color` | — | Re-applies `.color()` on the result |
-
-### `.segment(fieldOrConfig?, config?)`
-
-Lower-level detail primitive behind `.breakdown()` for tidy observations.
-Most stories should prefer `.breakdown()`/`.rollup()`; use `.segment()` only
-when a chart module needs direct detail configuration. Prepare wide data before
-it enters VisDelta.
-
-```js
-base.segment("type")
-base.segment({ segment: "type", value: "count", layout: "stacked" })
-```
-
-### `.layout(layout, options?)`
-
-Switches between `"stacked"` and `"grouped"` segment layouts. It is only useful
-after `.breakdown()` or `.segment()`. Set transition order and timing here when
-the layout change needs more than one x/y step.
-
-```js
-base.breakdown("type").layout("grouped")
-base.breakdown("type").layout("grouped", { duration: 500 })
-```
-
-### Transition order
-
-There is no separate animation-language method. Put `order`, `duration`, and
-`stagger` on the chart change that needs them. This keeps the code readable:
-
-```js
-base.flip({ order: ["x", "y"], duration: 700 })
-base.breakdown("type").layout("grouped", {
-  order: ["y", "x"],
-  stagger: { step: 40 }
-})
-```
-
-### Bar state family
-
-```js
-const base = bar("weatherDays").x("decade").y("count").sort("year");
-
-const states = {
-  baseline: base.where({ type: "Hot days" }),
-  selection: base.where({ type: "Hot days", period: "recent" }),
-  flip: base.where({ type: "Hot days", period: "recent" }).flip(),
-  split: base.breakdown("type"),
-  highlight: base.breakdown("type").highlight({ type: "Cold days" }),
-  grouped: base.breakdown("type").layout("grouped").flip(),
-  rollup: base.rollup("decade", { title: "Average days", op: "mean" })
-};
-
-const pair = await transition(states.baseline, states.selection, { target, d3, aq });
-```
-
----
-
-## Line — `line(dataset)`
-
-A line chart for trends over an ordered axis. Defaults: `mark: "line"`,
-`.x()` type `"nominal"`, `.y()` type `"quantitative"`.
-
-```js
-const base = line("weather").x("decade").y("hot_days").key("decade");
-```
-
-<SyntaxPlayground initial="line" compact />
-
-### `.curve(value)`
-
-Use the exact name exported by D3. VisDelta does not rename D3 curves. The
-default is `"curveLinear"`, matching `d3.line()`.
-
-```js
-.curve("curveLinear")
-.curve("curveMonotoneX")
-.curve("curveStep")
-```
-
-| Family | Supported D3 names |
+| Method | Meaning |
 | --- | --- |
-| Linear | `curveLinear`, `curveLinearClosed` |
-| Step | `curveStep`, `curveStepBefore`, `curveStepAfter` |
-| Monotone | `curveMonotoneX`, `curveMonotoneY` |
-| Basis | `curveBasis`, `curveBasisOpen`, `curveBasisClosed` |
-| Bump | `curveBumpX`, `curveBumpY` |
-| Cardinal | `curveCardinal`, `curveCardinalOpen`, `curveCardinalClosed` |
-| Catmull–Rom | `curveCatmullRom`, `curveCatmullRomOpen`, `curveCatmullRomClosed` |
-| Other | `curveNatural`, `curveBundle` |
+| `.data(source)` | Use tidy inline rows, `{ values }`, a CSV/JSON URL, or a named source |
+| `.x(field, options?)`, `.y(...)` | Map fields to position |
+| `.channel(name, field, options?)` | Declare another channel |
+| `.color(valueOrField, options?)` | Declare a literal or data-driven color |
+| `.size(field, options?)` | Declare a quantitative size mapping |
+| `.key(fieldOrFields)` | Match the same item between states |
+| `.tooltip(items)` | Declare tooltip fields |
+| `.sort(field, order?)` | Sort the current tidy rows |
+| `.where(selector)` | Keep matching rows; other marks exit |
+| `.highlight(selector, options?)` | Keep all rows; change attention |
+| `.focus(selector)` | Keep all rows; fit the camera around matching marks |
+| `.axis(config)` | Change the coordinate view or axis order |
+| `.transition(timing)` | Set duration, easing, or explicit stagger |
 
-These are serializable names, not function values: use
-`.curve("curveNatural")`, not `.curve(d3.curveNatural)`. Open and closed curves
-retain D3's behavior, including their treatment of the first and last points.
+Visual mappings are never inferred. For example, `.breakdown("region")`
+declares detail but does not silently add `.color("region")`.
 
-When the curve changes, VisDelta does not interpolate the numbers in the SVG
-`d` string by position. For example, `curveLinear` and `curveStep` contain
-different path commands, so that approach can join unrelated coordinates and
-make the line fold backward. The Line module instead takes matching points
-along the two rendered paths, moves each pair together, and preserves the exact
-authored path at progress `0` and `1`. This path matching is owned by Line; the
-Core and other chart types do not load it.
+## Area
 
-### How Line chooses a path transition
+`area()` shows magnitude over an ordered dimension and supports stacked detail.
 
-`.key()` identifies observations inside the path, not only the visible point
-circles. Line chooses the simplest plan that describes the actual change:
-
-| What changed | Line transition |
+| Method | Meaning |
 | --- | --- |
-| Same observations, new positions | **Move points** by key |
-| New or restored observations | **Add points**: move the line first, then show each point |
-| Removed or filtered observations | **Remove points**: hide each point, then retract the same line path |
-| A fixed-size key window moves forward or backward | **Add and remove points** at opposite window edges |
-| D3 curve name changes | **Change curve** by matching the rendered shapes |
-| No reliable keyed relationship | **Match shape** as a visual fallback |
+| `.baseline(number)` | Set the ordinary area baseline |
+| `.curve(d3CurveName)` | Use an exact D3 curve export supported by `d3.area()` |
+| `.connect("adjacent" | "across")` | Preserve gaps or connect across filtered observations |
+| `.breakdown(field, options?)` | Split a total into stacked layers |
+| `.rollup(options?)` | Combine stacked layers into a total |
 
-The selected plan appears above the live output in the Line Lab. These rules
-belong to the Line chart module; they are not built into VisDelta Core.
+Area owns `y0`/`y1` geometry. Its divider appears only during a detail
+transition; endpoints have no default border.
 
-Add is the canonical direction for a change in observation membership. Remove
-does not use a separately tuned exit effect: it evaluates the same Add frames at
-`1 - progress`. Filter/Restore follows the same rule, including gaps created by
-the default `connect("adjacent")` behavior.
+## Bar
 
-A moving time window combines those same two behaviors: one edge removes an
-observation while the other edge adds one. Shared observations move by key.
-There is no separate time-window transition underneath this composition.
+`bar()` compares categories through a shared quantitative baseline.
 
-### `.connect(value)`
-
-Choose what happens when `.where()` removes observations from inside a line:
-
-```js
-.connect("adjacent") // default: preserve a visible gap
-.connect("across")   // explicitly join the remaining observations
-```
-
-`"adjacent"` only connects observations that were neighbours in the unfiltered
-lineage. `"across"` treats the surviving observations as a new continuous
-sequence. A connected stretch needs at least two observations; an isolated
-observation keeps its point mark but does not form a line path. Line and Area
-use the same shared rule. This is a chart-layer rule, not a Core transition rule.
-
-### `.strokeWidth(value)` / `.pointSize(value)`
-
-Stroke width in pixels, and the radius of circles drawn at data points.
-
-```js
-.strokeWidth(3).pointSize(4)
-```
-
-### `.flip(options?)`
-
-Swaps x/y axes.
-
-```js
-.flip()
-.flip({ x: { scale: { type: "log" } }, order: ["x", "y"] })
-```
-
-`options`: `x`/`y` (per-axis settings), `order` (default `["x", "y"]`),
-`duration`, and `stagger`.
-
-### `.breakdown(field, options?)`
-
-Splits a single line into **multiple series** — one line per unique value of
-`field`.
-
-```js
-base.breakdown("period")
-base.breakdown("period", { color: ["#b05d3b", "#888", "#536a9e"] })   // explicit range
-base.breakdown("period", { color: PERIOD_LUMINANCE_COLOR })            // composite color config
-```
-
-### `.rollup(options?)`
-
-The inverse: combines multiple series into a **single line**. Rows are grouped
-by the x field and the y field is summed by default. Use `op` to choose another
-supported aggregate, `as` to name its output field, or `color` for a constant
-line color.
-
-```js
-base.breakdown("period").rollup()
-base.breakdown("period").rollup({ op: "mean", color: "#536a9e" })
-```
-
-For the reverse change, VisDelta uses one shared path in opposite directions.
-The split cuts the total line into colored pieces, moves those pieces to their
-series positions, then connects each series. Merge disconnects, moves, and
-joins the same pieces back into the total.
-
-### Line state family
-
-```js
-const base = line("weather").x("decade").y("hot_days").key("decade");
-const cold = base.y("cold_days").color(COLD_COLOR);
-
-const states = [
-  base,
-  base.where({ period: "recent" }),
-  base.axis({ y: { scale: { type: "log" } } }),
-  cold,
-  cold.breakdown("period"),
-  cold.breakdown("period").rollup()
-];
-```
-
----
-
-## Point — `point(dataset)`
-
-A scatterplot for reading correlation. Defaults: `mark: "point"`, `.x()`/`.y()`
-type `"quantitative"`, a light two-direction grid, open axes, and edge-aligned
-axis titles that show increasing direction.
-
-```js
-const base = point("weather").x("tmin").y("tmax").key("decade");
-```
-
-<SyntaxPlayground initial="point" compact />
-
-Try the complete editable [Point transition lab](/point-lab), which covers
-position, filtering, highlighting, color, size, data, flip, and summary/detail
-transitions.
-
-An added observation appears at its target position with radius zero, then
-grows in place. It does not fly in from an unrelated point or group centroid.
-
-### `.pointSize(value)` / `.radius(value)`
-
-Set the circle size (`radius` is an alias for `pointSize`).
-
-```js
-.pointSize(6)
-```
-
-### `.flip(options?)`
-
-Swaps x/y coordinates. It accepts the same `x`, `y`, `order`, `duration`, and
-`stagger` options as line's `.flip()`.
-
-### `.rollup(groupby, options?)`
-
-Aggregates individual points into **summary circles** — e.g. one circle per
-period instead of one per year. Circle size changes only when `size` declares
-which aggregate value controls it.
-
-```js
-base.rollup("period")
-base.rollup(["period", "region"], {
-  x: { op: "mean" },           // aggregation config for this chart type
-  y: { op: "mean" },
-  size: { op: "count", range: [6, 36] }
-})
-```
-
-`options`: `key` (how summary points are matched, defaults from `groupby`),
-`x`/`y` (per-axis aggregation config), and `size` (the aggregate value mapped
-to circle radius). For example, `size: { op: "count", range: [6, 36] }`
-means “count the observations in each summary and map that count to a radius
-between 6 and 36.” Without `size`, summary circles keep a constant radius.
-
-### `.breakdown(detail?, options?)`
-
-The inverse of `.rollup()` — reveals **finer-grained detail** within an
-aggregated view (e.g. expand period-level circles into year-level points
-while preserving the higher-level match).
-
-```js
-base.rollup("period").breakdown("year")
-base.breakdown({ detail: "year", key: "period" })
-```
-
-Summary and detail states keep the same parent field in both directions. A
-detail point therefore gathers into its own summary circle, and the reverse
-transition scatters it back out from that same circle.
-
-The shared transition has two plain-language steps: **Set the view**, then
-**Move the points**. Reveal detail first moves the axes, scales, and summary
-circles together into the detail view; only then do the summaries spread into
-their detail points while that view stays fixed. Combine is exactly the same
-path backward: points gather under the fixed detail view, then the summary
-circles and axes move together into the summary view. The axes never move on
-their own while stationary marks temporarily imply the wrong values.
-
-### Point state family
-
-```js
-const base = point("weather").x("tmin").y("tmax").key("decade");
-
-const states = [
-  base,
-  base.where({ period: "recent" }),
-  base.x("hot_days").y("cold_days"),
-  base.x("hot_days").y("cold_days").rollup("period"),
-  base.x("hot_days").y("cold_days").rollup("period").breakdown("decade")
-];
-```
-
----
-
-## Unit — `unit(dataset)`
-
-A Unit chart represents quantity with countable, equal marks. Each data row is
-one unit by default; `.value("count")` expands a row into repeated units. Unit is
-appropriate when the reader should see “how many things,” not only compare an
-abstract measure.
-
-```js
-const base = unit(rows)
-  .value("count")
-  .key("id")
-  .layout("grid", { columns: 10, radius: 5 });
-```
-
-<SyntaxPlayground initial="unit" compact />
-
-<SyntaxPlayground mode="unit-lab" initial="bar" />
-
-### `.value(field, options?)`
-
-Use a numeric field as the number of units created for each row. Counts are
-rounded to whole units; zero creates no unit. `maxUnits` is a total rendering
-safety cap.
-
-```js
-.value("count")
-.value("count", { maxUnits: 100 })
-```
-
-### `.group(field)`
-
-Declare the category that owns each unit. This changes meaning only: it does
-not silently change layout or color.
-
-```js
-.group("team")
-.group("team").color("team")
-```
-
-### `.layout(name, options?)`
-
-Choose how the same keyed units are arranged.
-
-```js
-.layout("grid", { columns: 10, radius: 5 })
-.group("team").layout("bar", { columns: 3 })
-.x("year").layout("beeswarm")
-```
-
-| Layout | Meaning |
+| Method | Meaning |
 | --- | --- |
-| `grid` | One ungrouped grid; `columns` controls row wrapping |
-| `bar` | One unit bar per `.group()` category |
-| `beeswarm` | Use dodge placement to avoid collisions around mapped `.x()` positions |
+| `.flip(options?)` | Switch horizontal and vertical orientation |
+| `.breakdown(field?, options?)` | Split totals into detail |
+| `.rollup(groupby?, options?)` | Combine detail into totals |
+| `.segment(fieldOrConfig?, config?)` | Configure segmented bars explicitly |
+| `.layout("simple" | "grouped" | "stacked", options?)` | Change bar layout |
 
-`bar` requires `.group()`. `beeswarm` requires `.x()`.
+Bar owns baseline-preserving enter/exit, grouped and stacked geometry, and
+reversible split/merge paths.
 
-### `.columns(value)` / `.radius(value)`
+## Line
 
-Convenience methods for layout columns and the constant unit radius. They do
-not map size to data: every unit remains equal.
+`line()` shows an ordered trend. `.key()` identifies observations inside the
+SVG path, not only separate point elements.
 
-```js
-.columns(10).radius(5)
-```
+| Method | Meaning |
+| --- | --- |
+| `.curve(d3CurveName)` | Use any exact D3 line-curve export |
+| `.connect("adjacent" | "across")` | Keep honest gaps or connect across them |
+| `.strokeWidth(number)` | Set line width |
+| `.pointSize(number)` | Set point radius |
+| `.flip(options?)` | Swap the position mappings in an explicit order |
+| `.breakdown(field, options?)` | Split one line into series |
+| `.rollup(options?)` | Combine series into one line |
 
-### Unit state family
+Adding an observation extends the line before revealing its point. Removing or
+filtering runs the same frames backward: the point leaves before the segment
+retracts.
 
-```js
-const base = unit(rows).value("count").key("id");
+## Point
 
-const states = [
-  base.layout("grid"),
-  base.where({ period: "recent" }),
-  base.group("team").layout("bar"),
-  base.x("year").layout("beeswarm")
-];
-```
+`point()` shows the relationship between two quantities with compact Cartesian
+axes.
 
-Unit intentionally has no `.rollup()` or `.breakdown()`. Added units enter from
-radius zero; removed units shrink to zero; surviving keys move between layouts.
-There is no summary mark and therefore no split/merge mechanic.
+| Method | Meaning |
+| --- | --- |
+| `.pointSize(number)`, `.radius(number)` | Set a constant point radius |
+| `.flip(options?)` | Swap x and y in an explicit order |
+| `.rollup(groupby, options?)` | Combine details into summary points |
+| `.breakdown(detail?, options?)` | Reveal detailed points |
 
-When positions or layouts change, matching keys always preserve identity,
-regardless of travel distance. Only units without a matching key are assigned
-to the remaining open slots by the shortest total travel. The transition first
-sets the target view, then moves units; short trips begin before long trips.
-Reversing the transition plays the same staged frames backward instead of
-computing a second motion rule.
+An ordinary entering point grows at its target position. Summary/detail motion
+may use a declared parent position because that movement carries meaning.
 
----
+## Unit
 
-## Choosing a chart type
+`unit()` turns counts or rows into individually matched circles.
 
-| If you want to show… | Reach for |
-|---|---|
-| Comparisons across categories | `bar` |
-| Trends over an ordered axis (time, sequence) | `line` |
-| Magnitude or composition over an ordered axis | `area` |
-| Relationships between two quantities | `point` |
-| Concrete counts as countable objects ("32 of these") | `unit` |
+| Method | Meaning |
+| --- | --- |
+| `.value(field, { maxUnits? })` | Expand a count field into units |
+| `.group(field)` | Declare categorical membership without choosing color |
+| `.layout("grid" | "bar" | "beeswarm", options?)` | Arrange the same units |
+| `.columns(number)` | Set grid or unit-bar columns |
+| `.radius(number)` | Set requested unit radius |
 
-All five share the same authoring vocabulary (`.x`, `.y`, `.color`, `.key`,
-`.where`, `.highlight`, `.axis`, …), so trying the same data with another chart
-type is mostly a matter of
-swapping the factory call and adjusting chart-specific methods.
+`bar` centers each unit stack on its category tick. `beeswarm` uses a
+non-overlapping placement along x. Layout changes preserve matching keys;
+remaining unmatched units use a global minimum-travel assignment. Unit layout
+changes use a short bounded per-mark stagger unless the author overrides it.
+
+The [interactive reference](/reference) covers exact runtime signatures. Each
+lab shows the chart-owned transition rules with real data.

@@ -1,13 +1,12 @@
 # Contributing
 
-VisDelta keeps the public surface small. Before adding API, prefer making an
-existing chart type, compiler helper, or plugin capability clearer.
+VisDelta keeps Core chart-agnostic and treats every chart type as a peer module.
+Before adding a shared abstraction, prove that at least two chart modules need
+the same semantic concept.
 
-## Local Checks
+## Local checks
 
-Use Node 20+ for development/release tooling (CI uses Node 22). Playwright is a
-development dependency, not part of the published runtime. Node 18 consumers
-are checked separately by installing the built tarball and testing imports/types.
+Use Node 20+ for development tooling. The package supports Node 18 consumers.
 
 ```sh
 npm ci
@@ -16,45 +15,48 @@ npm test
 npm run release:check
 ```
 
-`npm test` runs syntax checks, builds `dist/`, and compiles the built-in chart
-chart types through the registry.
-`npm test` also checks size budgets, documentation paths/versions and unit tests.
-`npm run release:check` additionally runs real-browser behavior tests, executes
-the documentation's CDN HTML against the candidate tarball, and verifies installed
-consumer imports/types. Local Chrome can be selected with `VISDELTA_CHROME_PATH`.
+`npm test` checks TypeScript, generated chart inventory, distribution files,
+examples, documentation, package shape, smoke behavior, and Node tests.
+`npm run release:check` also runs real-browser tests and validates an installed
+package consumer. Bundle size is measured, but the first release is not blocked
+by a fixed gzip target.
 
-`npm run clean:check` copies current non-ignored Git workspace files into a
-temporary directory, omits dist/dependencies, runs `npm ci` and the full release
-gate on its own HTTP port, then removes only that temporary copy. It requires a
-Git checkout and installed Chrome/Playwright Chromium. It does not publish or
-change the current checkout's dependencies.
+`npm run clean:check` performs the release gate in a temporary copy of the
+tracked workspace. It does not publish or modify the current checkout.
 
-For release changes, update `CHANGELOG.md` in the same pull request.
+## Add a chart type
 
-## Chart types
+An official chart type lives in `src/charts/<name>/`. It owns:
 
-Each chart type lives under `src/charts/<chart-type>/` and exposes exactly one
-`plugin.ts` (compiled to `plugin.js`):
+- immutable authoring state and chart-specific public methods;
+- compilation from that state to a plain view spec;
+- geometry, matching, axes, rendering, and transition planning;
+- a `plugin.ts` implementation and a lazy `module.ts` loader;
+- focused unit tests, a real-browser lab, and concise documentation.
 
-```js
-export const plugin = defineChartType({
-  key,
-  createRenderer,
-  createSpecCompiler,
-  scenes,
-  stateOperations
-});
-```
+Core must not import the chart or branch on its name. Do not add aliases, empty
+hook bags, silent data encoding, or chart-specific switches to make registration
+appear generic.
 
-After adding or removing a chart-type folder, run:
+After adding or removing a built-in chart folder, run:
 
 ```sh
 node scripts/sync-chart-manifest.mjs
 ```
 
-Also update the lazy loader map in `src/runtime/chart-registry.ts`; the manifest
-check requires the eager and lazy inventories to agree. Keep focused loading
-independent of unrelated chart types, and cover that boundary in browser tests.
+Then add the focused package entry and update `docs/chart-types.md` plus
+`docs/reference.md`. A focused-module browser test must show that unrelated
+chart implementations are not loaded.
 
-Do not add alias keys, empty hook bags, or mark-specific switch statements in
-the transition runtime. Capabilities belong to the plugin.
+## Transition review
+
+For every new transition, verify all of these:
+
+1. Every intermediate frame is a truthful chart state.
+2. Marks move with the scale, ticks, labels, and grid lines.
+3. Exit completes before reframing; reframing completes before enter.
+4. Reverse visits the same cached frames in the opposite order.
+5. Explicit keys keep identity; chart-owned fallback matching is deterministic.
+6. Style defaults do not silently introduce a data encoding.
+
+Update `CHANGELOG.md` for release-facing changes.

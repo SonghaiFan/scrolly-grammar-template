@@ -18,7 +18,7 @@ test('a builder-carried chart module works without global registration', async (
   expect(result).toEqual({ loads: 1, circles: 1, x: 160 });
 });
 
-test('selected bar transition loads no Story runtime or unrelated chart types', async ({ page }) => {
+test('selected bar transition loads no unrelated chart types', async ({ page }) => {
   const modules = [];
   page.on('request', request => {
     const url = new URL(request.url());

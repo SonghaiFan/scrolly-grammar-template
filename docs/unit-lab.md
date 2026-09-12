@@ -15,7 +15,7 @@ The public grammar separates meaning from arrangement:
 - `.group("team")` declares which categorical group owns each unit;
 - `.layout("bar")` arranges those groups as unit bars;
 - `.layout("grid")` makes one overall grid;
-- `.x("year").layout("beeswarm")` uses dodge placement around mapped positions without
+- `.x("year").layout("beeswarm")` places units around mapped positions without
   overlaps.
 
 That separation is deliberate. `.group()` never silently changes layout or

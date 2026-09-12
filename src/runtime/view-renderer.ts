@@ -2,7 +2,7 @@
 import { applyTransforms } from '../data/transforms.js';
 import { resolveMarkRendererKey } from '../charts/index.js';
 import { serializeViewSpec, specState } from '../spec-meta.js';
-import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effectiveTransitionSpec, fadeLayers, transitionSpec } from './marks.js';
+import { activeMarkLayer, applyPlotClip, drawUnsupported, effectiveTransitionSpec, fadeLayers, transitionSpec } from './marks.js';
 
 import { domainTransforms, viewRows } from './data.js';
 import { resolveSpecDataTypes } from '../data/types.js';
@@ -34,22 +34,15 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
 
   scene.empty.style("display", "none");
 
-  if (viewSpec.mark === "text") {
-    clearSeekSequence(scene);
-    fadeLayers(scene, "text", null, d3);
-    drawTextBoard(scene, viewSpec);
-    return;
-  }
-
   const { sceneTransition, effectiveViewSpec } = compileEffectiveView(viewSpec, stepTransition);
   const transitionSource = compileTransitionSource(
     options.previousViewSpec,
     options.previousTransition
   );
 
-  if (scene.virtualRenderTimer) {
-    window.clearTimeout(scene.virtualRenderTimer);
-    scene.virtualRenderTimer = null;
+  if (scene.phaseTimer) {
+    window.clearTimeout(scene.phaseTimer);
+    scene.phaseTimer = null;
   }
 
   const seekableStep = Boolean(options.seekable);
@@ -126,7 +119,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     scene.empty.style("display", "grid").style('opacity', 0).text("No rows after transforms.")
       .transition(emptyTransition.base).style('opacity', 1);
     fadeLayers(scene, null, emptyTransition, d3);
-    for (const layer of [scene.grid, scene.xAxis, scene.yAxis, scene.xLabel, scene.yLabel, scene.legend, scene.unitLabel]) {
+    for (const layer of [scene.grid, scene.xAxis, scene.yAxis, scene.xLabel, scene.yLabel, scene.legend]) {
       layer.transition(emptyTransition.base).style('opacity', 0);
     }
     if (seekable) {
@@ -187,16 +180,10 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   chart.g = activeMarkLayer(scene, rendererKey, chart.transition);
   applyPlotClip(chart, true);
 
-  if (rendererKey !== "unit") {
-    scene.unitLabel.transition(chart.transition.base).style("opacity", 0);
-  }
-
   const renderer = chartType?.renderer;
   if (renderer) renderer(chart, rows, renderSpec, tooltip, d3);
   else drawUnsupported(chart, renderSpec, chartTypes.types());
   reflectCamera(scene, chart.camera);
-
-  if (rendererKey === "unit") hideUnitMetaLabel(scene);
 
   applySceneTransitions(chart, rows, renderSpec);
   if (seekable) {
@@ -388,7 +375,7 @@ function prepareSeekSourceState(node: any, viewConfig: AnyRecord, datasets: AnyR
 }
 
 
-function virtualRenderDelay(phaseOrSpec: AnyRecord = {}) {
+function phaseDuration(phaseOrSpec: AnyRecord = {}) {
   const spec = phaseOrSpec.spec || phaseOrSpec;
   const plannedDuration = Number(phaseOrSpec.transitionPlanDuration);
   if (Number.isFinite(plannedDuration)) return Math.max(1, plannedDuration);
@@ -417,7 +404,7 @@ function clearSeekSequence(scene) {
 }
 
 function createSeekSequence(phases = []) {
-  const durations = phases.map((phase) => virtualRenderDelay(phase));
+  const durations = phases.map((phase) => phaseDuration(phase));
   const total = Math.max(1, durations.reduce((sum, duration) => sum + duration, 0));
   let cursor = 0;
   return {
@@ -451,10 +438,10 @@ function renderPhaseSequence(scene, phases = [], index = 0) {
   );
 
   if (index >= phases.length - 1) return;
-  scene.virtualRenderTimer = window.setTimeout(() => {
-    scene.virtualRenderTimer = null;
+  scene.phaseTimer = window.setTimeout(() => {
+    scene.phaseTimer = null;
     renderPhaseSequence(scene, phases, index + 1);
-  }, virtualRenderDelay(config));
+  }, phaseDuration(config));
 }
 
 function renderSeekPhase(scene, phaseIndex) {
@@ -497,10 +484,6 @@ function applySeekSequence(scene, progress, direction = 1) {
     direction
   );
   return true;
-}
-
-function hideUnitMetaLabel(scene) {
-  scene.unitLabel.interrupt().text("").style("opacity", 0);
 }
 
 }

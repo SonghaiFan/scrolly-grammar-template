@@ -236,8 +236,6 @@ export interface ViewSpec {
   [field: string]: unknown;
 }
 
-// ─── Story ───────────────────────────────────────────────────────────────────
-
 // ─── Bar-specific ─────────────────────────────────────────────────────────────
 
 export type BarLayout = 'simple' | 'grouped' | 'stacked';

@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('VitePress reference loads the real seekable transition', async ({ page }) => {
-  await expect(page).toHaveTitle(/Interactive reference.*VisDelta/);
+  await expect(page).toHaveTitle(/API reference.*VisDelta/);
   await expect(page.locator('#VPSidebarNav').getByRole('link', { name: 'Chart types', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Search/ })).toBeVisible();
   const workbench = page.locator('.transition-workbench');
@@ -95,19 +95,13 @@ test('reference stays usable at a narrow viewport', async ({ page }) => {
   await expect(page.getByRole('slider', { name: 'Transition progress', exact: true })).toBeEnabled();
 });
 
-test('language map is the status source of truth with inline live grammar', async ({ page }) => {
+test('design principles document the implemented language and core boundary', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/language-framework.html');
-  await expect(page).toHaveTitle(/Language framework and roadmap.*VisDelta/);
-  await expect(page.getByRole('heading', { name: 'Grammar map' })).toBeVisible();
-  await expect(page.getByText('Available', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Developing', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Research', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Transition such as bar → line')).toBeVisible();
-
-  const firstPlayground = page.locator('.syntax-playground').first();
-  await firstPlayground.scrollIntoViewIfNeeded();
-  await expect(firstPlayground.locator('.playground-status')).toHaveText('Ready');
-  expect(await firstPlayground.locator('rect.vd-bar').count()).toBeGreaterThan(0);
+  await expect(page).toHaveTitle(/Language and implementation rules.*VisDelta/);
+  await expect(page.getByRole('heading', { name: 'Rules that guide implementation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Every frame is true/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Core knows no chart types/ })).toBeVisible();
+  await expect(page.locator('.syntax-playground')).toHaveCount(0);
 });
 
 test('examples are inline editors rather than source-file references', async ({ page }) => {

@@ -88,8 +88,7 @@ const requiredFiles = [
   "dist/visdelta.css",
   "dist/themes/default.css",
   "dist/themes/dark.css",
-  "dist/themes/paper.css",
-  "dist/charts/manifest.js"
+  "dist/themes/paper.css"
 ];
 const forbiddenDistPatterns = [
   /(^|\/)examples\//,

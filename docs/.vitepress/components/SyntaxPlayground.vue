@@ -84,9 +84,7 @@ return { from: total, to: detailed };`
   .y("sales")
   .key("category");
 
-const horizontal = vertical.flip({
-  order: ["x", "y"]
-});
+const horizontal = vertical.flip();
 
 return { from: vertical, to: horizontal };`
   },
@@ -399,7 +397,7 @@ function showError(cause) {
 
 function readLineTransition(root) {
   const names = [...new Set(
-    [...root.querySelectorAll('path.sl-line[data-line-transition]')]
+    [...root.querySelectorAll('path.vd-line[data-line-transition]')]
       .map(node => node.getAttribute('data-line-transition'))
       .filter(name => name && name !== 'draw-line' && name !== 'remove-line')
   )];

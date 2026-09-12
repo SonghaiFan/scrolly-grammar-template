@@ -24,7 +24,7 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
   const styleKey = String(options.chartStyle?.key || 'd3').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
   root.className = `vd-transition-root vd-style-${styleKey}`;
   root.dataset.chartStyle = styleKey;
-  const shell = renderChartShell(root, {}, 'main');
+  const shell = renderChartShell(root, 'main');
   const node = shell.views.main as any;
   const config = {
     height: options.height ?? from.height ?? to.height ?? 500,
@@ -39,7 +39,7 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
     const scene = node.__visDeltaScene;
     if (scene) {
       clearSceneTransitionProgress(scene, { finish: false });
-      if (scene.virtualRenderTimer) window.clearTimeout(scene.virtualRenderTimer);
+      if (scene.phaseTimer) window.clearTimeout(scene.phaseTimer);
     }
     d3.select(node).selectAll('*').interrupt().interrupt(VISDELTA_TRANSITION_NAME);
     node.replaceChildren();

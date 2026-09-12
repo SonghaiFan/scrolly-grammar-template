@@ -28,8 +28,6 @@ export function getScene(node, viewConfig, d3) {
     xLabel: svg.append('text').attr('class', 'vd-axis-label vd-x-label'),
     yLabel: svg.append('text').attr('class', 'vd-axis-label vd-y-label'),
     legend: svg.append('g').attr('class', 'vd-legend'),
-    unitLabel: svg.append('text').attr('class', 'vd-unit-label'),
-    textLayer: svg.append('foreignObject').attr('class', 'vd-text-layer'),
     markLayers: new Map(),
     previousSpec: null,
     width,
@@ -62,8 +60,6 @@ export function resetSceneToEmptySource(scene) {
   scene.axisLayer?.interrupt().selectAll('*').remove();
   scene.detailLayer?.interrupt().selectAll('*').remove();
   scene.markLayers?.forEach((layer) => { layer.interrupt().selectAll('*').remove(); });
-  scene.unitLabel.interrupt().text('').style('opacity', 0);
-  scene.textLayer.interrupt().html('').style('opacity', 0);
   scene.previousSpec = null;
 }
 

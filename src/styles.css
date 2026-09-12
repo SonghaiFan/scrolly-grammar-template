@@ -338,10 +338,3 @@
   --vd-figure-radius: 0;
   --vd-figure-shadow: none;
 }
-
-.vd-text-board {
-  min-height: 420px;
-  display: grid;
-  place-items: center;
-  padding: 34px;
-}

@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const chartsDir = join(root, "src", "charts");
-const manifestPath = join(chartsDir, "manifest.ts");
 const builtinsPath = join(chartsDir, "builtins.ts");
 
 const entries = await readdir(chartsDir);
@@ -24,37 +23,18 @@ for (const entry of entries) {
 
 chartTypes.sort();
 
-const expected = manifestSource(chartTypes);
-const actual = await readFile(manifestPath, "utf8");
 const expectedBuiltins = builtinsSource(chartTypes);
 const actualBuiltins = await readFile(builtinsPath, "utf8");
 
-if (actual !== expected || actualBuiltins !== expectedBuiltins) {
-  throw new Error("Chart manifests are stale. Run node scripts/sync-chart-manifest.mjs.");
+if (actualBuiltins !== expectedBuiltins) {
+  throw new Error("The built-in chart inventory is stale. Run node scripts/sync-chart-manifest.mjs.");
 }
 
-console.log(`Chart manifest covers ${chartTypes.length} chart types.`);
+console.log(`Built-in inventory covers ${chartTypes.length} chart types.`);
 
 const registrySource = await readFile(join(root, 'src/runtime/chart-registry.ts'), 'utf8');
 if (/from\s+['"][^'"]*\/charts\/[^'"]+\//.test(registrySource)) {
   throw new Error('The chart registry must not import a concrete chart type.');
-}
-
-function manifestSource(names) {
-  const importLines = names.map((name) => `import * as ${identifier(name)} from "./${name}/plugin.js";`);
-  const moduleLines = names.map((name) => `  ${identifier(name)}`);
-  return `${[
-    "import type { ChartPlugin } from '../types/index.js';",
-    "// Generated from src/charts/*/plugin.ts.",
-    "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart-type folder.",
-    ...importLines,
-    "",
-    "// eslint-disable-next-line @typescript-eslint/no-explicit-any",
-    "export const chartModules: Array<{ plugin: ChartPlugin<any> }> = [",
-    `${moduleLines.join(",\n")}`,
-    "];",
-    ""
-  ].join("\n")}`;
 }
 
 function identifier(name) {
@@ -66,7 +46,7 @@ function builtinsSource(names) {
   const moduleLines = names.map((name) => `  ${identifier(name)}`);
   return `${[
     "import type { ChartModule } from './module.js';",
-    "// Generated from src/charts/*/plugin.ts.",
+    "// Generated from chart folders containing plugin.ts and module.ts.",
     "// Run scripts/sync-chart-manifest.mjs after adding or removing a chart-type folder.",
     ...importLines,
     "",

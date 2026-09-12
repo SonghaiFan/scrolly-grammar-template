@@ -304,9 +304,9 @@ test('grid reflow stages the view, preserves keyed identity, and uses the same p
   expect(result.steps).toBe('view marks');
 });
 
-test('Unit regroup is one staged transition evaluated in opposite directions', async ({ page }) => {
+test('Unit regroup preserves keyed identity and endpoints in both authored directions', async ({ page }) => {
   await page.goto('/tests/fixtures/isolated.html');
-  const sameFrame = await page.evaluate(async () => {
+  const result = await page.evaluate(async () => {
     const [{ unit }, { transition }] = await Promise.all([
       import('/dist/unit.js'),
       import('/dist/transition-entry.js')
@@ -325,17 +325,37 @@ test('Unit regroup is one staged transition evaluated in opposite directions', a
     const reverseHost = document.body.appendChild(document.createElement('div'));
     const forward = await transition(byTeam, byRegion, { target: forwardHost, d3, aq, height: 320 });
     const reverse = await transition(byRegion, byTeam, { target: reverseHost, d3, aq, height: 320 });
-    forward.progress(0.41);
-    reverse.progress(0.59);
     const frame = host => [...host.querySelectorAll('circle.vd-unit')].map(node => ({
+      key: node.dataset.key,
+      sourceKey: node.dataset.sourceKey,
+      matchedBy: node.dataset.matchedBy,
       cx: Number(node.getAttribute('cx')).toFixed(3),
       cy: Number(node.getAttribute('cy')).toFixed(3),
       r: Number(node.getAttribute('r')).toFixed(3),
       fill: node.getAttribute('fill'),
       opacity: node.style.opacity
     })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-    return JSON.stringify(frame(forwardHost)) === JSON.stringify(frame(reverseHost));
+    const identity = host => [...host.querySelectorAll('circle.vd-unit')].map(node => ({
+      key: node.dataset.key,
+      sourceKey: node.dataset.sourceKey,
+      matchedBy: node.dataset.matchedBy
+    }));
+    forward.progress(0.41);
+    reverse.progress(0.59);
+    const forwardIdentity = identity(forwardHost);
+    const reverseIdentity = identity(reverseHost);
+    forward.progress(1);
+    reverse.progress(0);
+    const regionEndpointMatches = JSON.stringify(frame(forwardHost)) === JSON.stringify(frame(reverseHost));
+    forward.progress(0);
+    reverse.progress(1);
+    const teamEndpointMatches = JSON.stringify(frame(forwardHost)) === JSON.stringify(frame(reverseHost));
+    return { regionEndpointMatches, teamEndpointMatches, forwardIdentity, reverseIdentity };
   });
 
-  expect(sameFrame).toBe(true);
+  expect(result.regionEndpointMatches).toBe(true);
+  expect(result.teamEndpointMatches).toBe(true);
+  for (const identity of [result.forwardIdentity, result.reverseIdentity]) {
+    expect(identity.every(item => item.key === item.sourceKey && item.matchedBy === 'key')).toBe(true);
+  }
 });

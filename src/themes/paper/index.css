@@ -1,9 +1,4 @@
-/* VisDelta — Paper / Magazine Theme
-   Ink on newsprint. Serif editorial voice, cream-toned page, minimal chrome.
-   Figure card = print graphic: simple rule border, no shadow, no radius.
-   Step card   = pure text on paper — no card background, just a top rule and
-                 a bold left column rule for the active step.
-   See DESIGN.md for rationale.                                             */
+/* VisDelta paper chart theme. */
 
 :root {
   color-scheme: light;
@@ -52,18 +47,10 @@
   --vd-figure-border:   1px solid var(--vd-color-border);
   --vd-figure-shadow:   none;
 
-  /* — Step card: cream newsprint card, no rounding, column rule border — */
-  --vd-step-bg:          rgba(244, 237, 224, 0.92);
-  --vd-step-bg-active:   rgba(254, 252, 245, 0.98);
-  --vd-step-blur:        0px;
-  --vd-step-radius:      0px;
-  --vd-step-border:      1px solid var(--vd-color-border);
-  --vd-step-shadow:      none;
 }
 
 /* ── Page background: newsprint paper ─────────────────────────────────────── */
 body { background: var(--vd-color-bg); }
-.vd-intro { background: var(--vd-color-bg); }
 
 /* ── Figure (chart) card: bordered print graphic — no shadow, no rounding — */
 .vd-figure {
@@ -80,38 +67,3 @@ body { background: var(--vd-color-bg); }
   font-style: italic;             /* italic titles — magazine masthead style   */
   letter-spacing: 0;
 }
-
-/* ── Step card — floatToText: plain text, left column rule only ─────────── */
-.vd-step-card {
-  border-left-color: transparent;
-}
-.vd-step.is-active .vd-step-card {
-  border-left-color: var(--vd-accent);
-}
-.vd-step h2 {
-  font-family: var(--vd-type-family);
-  font-style: italic;
-  font-weight: 700;
-}
-.vd-step p { font-family: var(--vd-type-family); }
-
-/* ── Step card — textOverVis: cream newsprint card, sharp edges ──────────── */
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step-card {
-  border-left: 3px solid transparent;
-}
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step.is-active .vd-step-card {
-  border-left-color: var(--vd-accent);
-}
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-transition-inspector {
-  background: rgba(254, 252, 245, 0.95);
-  border-color: var(--vd-color-border);
-}
-
-/* ── The ::before separator line between step cards ─────────────────────── */
-:is(.vd-layering-text-over-vis, .vd-layout-preset-text-over-vis) .vd-step-card::before {
-  background: var(--vd-color-border);
-}
-
-/* Progress */
-.vd-progress { background: rgba(139, 26, 10, 0.10); }
-.vd-progress-fill { background: var(--vd-accent); }

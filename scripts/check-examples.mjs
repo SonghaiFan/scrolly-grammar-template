@@ -1,20 +1,15 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { dirname, join, normalize } from 'node:path';
+import { readdir, stat } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const examplesDir = join(root, 'examples');
-const exampleDir = join(root, 'examples', 'transition');
-const html = await readFile(join(exampleDir, 'index.html'), 'utf8');
-
-await assertLocalAssets(html, exampleDir);
-assertPublicImports(html);
 const labs = await discoverLabs(examplesDir);
 assertLab(labs.get('bar'), 'bar', 13);
 assertLab(labs.get('point'), 'point', 13);
 assertLab(labs.get('line'), 'line', 16);
 assertLab(labs.get('area'), 'area', 14);
-assertLab(labs.get('unit'), 'unit', 14);
+assertLab(labs.get('unit'), 'unit', 13);
 
 console.log('Area, bar, line, point, and unit example invariants ok.');
 
@@ -33,30 +28,6 @@ async function discoverLabs(directory) {
     labs.set(module.chart, module);
   }
   return labs;
-}
-
-async function assertLocalAssets(source, baseDir) {
-  const attrs = [...source.matchAll(/\s(?:href|src)="([^"]+)"/g)]
-    .map(match => match[1])
-    .filter(value => value && !/^(?:https?:|\?|#)/.test(value))
-    // Compatibility launchers may point at generated documentation, which is
-    // intentionally absent in a clean checkout until `docs:check` runs.
-    .filter(value => !value.includes('docs/.vitepress/dist/'));
-  const moduleImports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)]
-    .map(match => match[1])
-    .filter(value => value.startsWith('.'));
-
-  for (const value of [...attrs, ...moduleImports]) {
-    const path = normalize(join(baseDir, value.split('#')[0].split('?')[0]));
-    const info = await stat(path).catch(() => null);
-    if (!info?.isFile()) throw new Error(`Example asset does not exist: ${value}`);
-  }
-}
-
-function assertPublicImports(source) {
-  const imports = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)].map(match => match[1]);
-  const privateImport = imports.find(value => value.includes('/src/'));
-  if (privateImport) throw new Error(`Example imports private source: ${privateImport}`);
 }
 
 function assertLab(module, chart, expectedCount) {

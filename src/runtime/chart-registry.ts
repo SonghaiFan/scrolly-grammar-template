@@ -3,7 +3,7 @@ import type { ChartModule } from '../charts/module.js';
 import type { ChartDeps, ChartType, ChartPlugin, ViewSpec } from '../types/index.js';
 import { CHART_RUNTIME_DEPS } from './chart-deps.js';
 
-// Explicit registrations are shared for compatibility. Each transition takes a
+// Explicit registrations are shared process-wide. Each transition takes a
 // registry snapshot so a later registration cannot change its compiled frames.
 export const chartRegistry = createChartTypeRegistry();
 const factories = new Map<string, { chartType: ChartType<any>; plugin: ChartPlugin<any> }>();

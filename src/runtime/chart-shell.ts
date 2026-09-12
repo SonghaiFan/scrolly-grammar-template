@@ -1,5 +1,4 @@
-import type { AnyRecord } from '../types/index.js';
-export function renderChartShell(target: Element, spec: AnyRecord, viewId = "main") {
+export function renderChartShell(target: Element, viewId = "main") {
   target.className = ["vd-chart-root", target.className].filter(Boolean).join(" ");
 
   const figure = document.createElement("figure");
@@ -23,13 +22,9 @@ export function renderChartShell(target: Element, spec: AnyRecord, viewId = "mai
 
   return {
     root: target,
-    story: null,
     figure,
     figureTitle: figure.querySelector(".vd-figure-title"),
     markName: figure.querySelector(".vd-mark-name"),
-    steps: [],
-    navButtons: [],
-    progressFill: null,
     views: { [viewId]: view },
     tooltip
   };

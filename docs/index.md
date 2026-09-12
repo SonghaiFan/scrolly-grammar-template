@@ -10,7 +10,7 @@ hero:
       text: Start building
       link: /getting-started
     - theme: alt
-      text: Explore the language map
+      text: Read the design rules
       link: /language-framework
 
 features:
@@ -20,8 +20,8 @@ features:
     details: Compare data, mappings, matching keys, filters, axes, layout, and detail.
   - title: Scrubbable movement
     details: Play by time or show any exact frame with a progress value from 0 to 1.
-  - title: Any control
-    details: Buttons, scroll, sliders, gestures, routes, and timers can control the same transition.
+  - title: External control
+    details: Buttons, sliders, gestures, routes, timers, or scroll can provide the same normalized progress value.
   - title: Chart-owned behavior
     details: Each chart module owns its marks and transitions while the core stays chart-agnostic.
   - title: Small building blocks
@@ -72,6 +72,6 @@ animations, and inspect their computed differences.
   <div><strong>Plugins</strong><p>Add another chart type while keeping the same state, difference, transition, and control model.</p></div>
 </div>
 
-Start with the [language framework and roadmap](/language-framework) for the
-grammar map and implementation status. Continue to the [interactive API
-reference](/reference) for detailed runtime contracts.
+Start with the [design rules](/language-framework) for the language and module
+boundaries. Continue to the [interactive API reference](/reference) for exact
+runtime contracts.

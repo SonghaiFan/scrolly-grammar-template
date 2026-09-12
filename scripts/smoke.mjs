@@ -1,4 +1,4 @@
-import { chartModules } from '../dist/charts/manifest.js';
+import { builtInChartModules } from '../dist/charts/builtins.js';
 import {
   createChartTypeRegistry,
   createSpecCompilerRegistry,
@@ -33,6 +33,7 @@ const publicApi = [
   'visualizationSpec'
 ];
 
+const chartModules = await Promise.all(builtInChartModules.map((module) => module.load()));
 const registry = createChartTypeRegistry();
 registerChartModules(registry, chartModules, {});
 const compilerKeys = Object.keys(createSpecCompilerRegistry(chartModules)).sort();

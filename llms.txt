@@ -1,50 +1,63 @@
 # VisDelta machine-readable guide
 
-VisDelta is a declarative visualization-transition library.
+VisDelta declares chart states and computes seekable transitions between two
+states of the same chart type.
 
 Canonical model:
 
-Visualization -> Delta -> Transition -> Progress -> Frame
-
-The core library owns chart-state declarations, same-type differences, chart
-rendering, and seekable transition controllers.
-
-Primary imports:
-
-```js
-import { bar } from "visdelta/bar";
-import { transition } from "visdelta/transition";
-import { delta } from "visdelta/core";
-```
+Data -> Transform -> Chart state -> Difference -> Transition -> Frame -> Control
 
 Minimal usage:
 
 ```js
+import * as d3 from "d3";
+import { bar } from "visdelta/bar";
+import { transition } from "visdelta/transition";
+
 const from = bar(rows).x("category").y("revenue").key("category");
 const to = from.y("profit");
 const change = await transition(from, to, { target: "#chart", d3 });
 change.progress(0.5);
-change.play({ duration: 800 });
-change.destroy();
 ```
+
+Rules:
+
+- Input data is tidy. Data cleaning is outside the library.
+- Every visual encoding is explicit.
+- `.where()` changes membership, `.highlight()` changes attention, and
+  `.focus()` changes only the camera.
+- Every frame keeps marks, scale, axes, ticks, labels, and grid lines coherent.
+- Exit marks before scale change; scale before enter. Reverse reuses the frames.
+- Core is chart-agnostic. Area, Bar, Line, Point, and Unit own their behavior.
+- Unit layouts are `grid`, `bar`, and `beeswarm`; matching minimizes travel after
+  preserving explicit keys.
 
 Public package entries:
 
-- visdelta
-- visdelta/core
-- visdelta/bar
-- visdelta/transition
-- visdelta/plugins
-- visdelta/browser
-- visdelta/composition (driver-package adapter, not beginner API)
+- `visdelta`
+- `visdelta/core`
+- `visdelta/area`
+- `visdelta/bar`
+- `visdelta/line`
+- `visdelta/point`
+- `visdelta/unit`
+- `visdelta/transition`
+- `visdelta/plugins`
+- `visdelta/chart-style`
+- `visdelta/browser`
+- `visdelta/style.css`
+- `visdelta/themes/default.css`
+- `visdelta/themes/dark.css`
+- `visdelta/themes/paper.css`
 
-D3 is required by the renderer. Arquero is currently required only when a
-declared transform pipeline is evaluated.
+D3 is required for rendering. Arquero is optional and only needed for a declared
+transform pipeline.
 
 Source-of-truth docs:
 
-- docs/reference.md
-- docs/language-framework.md
-- docs/modular-architecture.md
-- docs/visualization-transitions.md
-- docs/data-transforms.md
+- `docs/language-framework.md`
+- `docs/reference.md`
+- `docs/chart-types.md`
+- `docs/data-sources-and-transforms.md`
+- `docs/runtime-api.md`
+- `docs/extending-with-plugins.md`
