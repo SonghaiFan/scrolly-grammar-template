@@ -139,7 +139,10 @@ bar("rows").sort("count", "descending")
 ### `.transition(timing)`
 
 Overrides transition timing for this view. `timing` merges into the spec's
-`transition` block:
+`transition` block. Bar, Point, Line, and Area marks move together by default.
+Unit uses a light, bounded per-mark delay because it has no y-axis and at most
+one x-axis. Add `stagger` when a different order carries meaning, or use
+`stagger: 0` to make Unit marks move together:
 
 ```js
 .transition({ duration: 1200, ease: "cubicInOut", stagger: { step: 40, max: 600 } })
@@ -164,9 +167,16 @@ filtering, use `{ filter: ... }` entries in a raw view spec.
 
 ### `.focus(selector)`
 
-Keep every row, but fit the visible positional range around the matching subset.
-Bar focuses its category axis, Line focuses its x-axis, and Point focuses both
-positional axes. Marks outside the view are clipped; they do not exit the data.
+Move one two-dimensional camera around the visual bounds of the matching
+subset. Every row, mark identity, and complete scale domain stays unchanged.
+Area, Bar, Line, Point, and Unit all fit x and y together with one uniform zoom,
+so shapes keep their proportions. Marks outside the view move beyond the plot
+clip; they do not exit.
+
+On a categorical axis, matching marks set the camera bounds while the complete
+ordered domain remains intact. Categories between non-adjacent matches may stay
+visible. Focus never rebuilds a discontinuous band domain. The fit itself is a
+plain camera transform with no hidden padding policy.
 
 ```js
 .focus({ region: "North" })
@@ -177,9 +187,8 @@ positional axes. Marks outside the view are clipped; they do not exit the data.
 
 ### `.highlight(selector, options?)`
 
-On **bar, line, and point**, keeps all rows rendered but visually de-emphasizes
-(fades) the non-matching ones. Unit currently stores highlight metadata but does
-not render selective opacity; do not rely on it for that chart type:
+Keeps all rows rendered but visually de-emphasizes (fades) the non-matching
+marks. All five built-in chart types render this selection consistently:
 
 ```js
 .highlight({ type: "Cold days" })                       // default fade opacity
@@ -237,9 +246,9 @@ const stacked = area(rows)
   });
 ```
 
-Use `.breakdown("region")` without color for one theme-accent fill separated by
-a thin boundary. Use `.color("region")` or the `color` option when parts should carry
-distinct hues.
+Use `.breakdown("region")` without color for one uninterrupted theme-accent
+fill. Use `.color("region")` or the `color` option when parts should carry
+distinct hues; Area does not invent separation with a default border.
 
 ### `.rollup(options?)`
 
@@ -382,8 +391,8 @@ The stacked split transition establishes the final segment geometry first. A
 1px contrast-aware seam draws outward from each internal boundary, then the
 segment fills reveal over the fading aggregate bar. The seam derives its
 visible contrast from the pixels behind it, so it remains legible over black or
-explicitly encoded colors. With no color encoding, the seams distinguish the
-otherwise-black segments.
+explicitly encoded colors. It is transition scaffolding, not a data encoding:
+it is absent from both endpoints and cannot replace an explicit color encoding.
 
 ```js
 base.breakdown()                  // geometry only; one fill, no legend
@@ -773,18 +782,16 @@ Choose how the same keyed units are arranged.
 ```js
 .layout("grid", { columns: 10, radius: 5 })
 .group("team").layout("bar", { columns: 3 })
-.x("year").layout("timeline")
-.x("year").layout("dodge")
+.x("year").layout("beeswarm")
 ```
 
 | Layout | Meaning |
 | --- | --- |
 | `grid` | One ungrouped grid; `columns` controls row wrapping |
 | `bar` | One unit bar per `.group()` category |
-| `timeline` | Stack units at their mapped `.x()` positions |
-| `dodge` | Avoid collisions around mapped `.x()` positions |
+| `beeswarm` | Use dodge placement to avoid collisions around mapped `.x()` positions |
 
-`bar` requires `.group()`. `timeline` and `dodge` require `.x()`.
+`bar` requires `.group()`. `beeswarm` requires `.x()`.
 
 ### `.columns(value)` / `.radius(value)`
 
@@ -804,8 +811,7 @@ const states = [
   base.layout("grid"),
   base.where({ period: "recent" }),
   base.group("team").layout("bar"),
-  base.x("year").layout("timeline"),
-  base.x("year").layout("dodge")
+  base.x("year").layout("beeswarm")
 ];
 ```
 

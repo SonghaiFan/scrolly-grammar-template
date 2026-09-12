@@ -2,6 +2,7 @@ import type { SpecCompiler, ViewSpec } from '../../types/index.js';
 import {
   cloneEncoding,
   compileFilter,
+  compileFocus,
   compileHighlight,
   copyDefined,
   identitySpec,
@@ -18,6 +19,7 @@ export function createUnitSpecCompiler(_context: AnyRecord = {}): SpecCompiler {
     base: compileUnitBase,
     operations: {
       filter: compileFilter,
+      focus: compileFocus,
       highlight: compileHighlight,
       layout: compileUnitLayout,
       unitLayout: compileUnitLayout,

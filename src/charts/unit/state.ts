@@ -3,11 +3,13 @@ import { matchesFilter } from '../../data/filter.js';
 import { diffViewStates } from '../../grammar/diff.js';
 import { specObjectKey, specState, specTransition, specUnit } from '../../spec-meta.js';
 import { defaultTransition } from '../../timing.js';
-import { clearUnitAxes, drawUnitXAxis } from './axes.js';
 
-const UNIT_LAYOUT_ORDER = ['grid', 'bar', 'timeline', 'dodge'];
+const UNIT_LAYOUT_ORDER = ['grid', 'bar', 'beeswarm'];
 const VIEW_STAGE_RATIO = 0.28;
 const TRAVEL_STAGE_RATIO = 0.18;
+const MOVE_ACROSS_STAGE_RATIO = 0.24;
+const FALL_STAGGER_RATIO = 0.10;
+const FALL_STAGE_RATIO = 0.38;
 
 export function expandUnits(rows, spec, d3) {
   const unit = specUnit(spec) || {};
@@ -44,27 +46,8 @@ export function unitLayout(units, chart, spec, deps) {
   const groupKey = unit.group || null;
   const xKey = xChannel?.field;
 
-  if (layout === 'timeline') {
-    if (!xKey) throw new Error('Unit timeline layout requires an x field.');
-    const stackByX = stackIndex(units, (d) => d.__row[xKey]);
-    const stackHeight = maxStackDepth(units, stackByX);
-    const radius = fitRadius(chart, requestedRadius, {
-      columns: Math.max(uniqueCount(units, (d) => d.__row[xKey]), 1),
-      rows: Math.max(stackHeight, 1)
-    });
-    const cell = radius * 2.45;
-    const x = unitXScale(units, xChannel, [radius, chart.innerWidth - radius], { bandOrLinear, d3 });
-    const base = chart.innerHeight - radius;
-    drawUnitXAxis(chart, x, { ...xChannel, title: xChannel.title || xKey }, d3, deps);
-    return {
-      name: 'timeline', axes: true, r: radius,
-      x: (d) => position(x, d.__row[xKey]),
-      y: (d) => base - stackByX(d) * cell
-    };
-  }
-
-  if (layout === 'dodge') {
-    if (!xKey) throw new Error('Unit dodge layout requires an x field.');
+  if (layout === 'beeswarm') {
+    if (!xKey) throw new Error('Unit beeswarm layout requires an x field.');
     let radius = fitRadius(chart, requestedRadius, {
       columns: Math.max(uniqueCount(units, (d) => d.__row[xKey]), 1), rows: 1
     });
@@ -72,9 +55,9 @@ export function unitLayout(units, chart, spec, deps) {
     let placed = dodgeForHeight(units, radius, chart.innerHeight, (d) => position(x, d.__row[xKey]));
     radius = placed.radius;
     const yByKey = new Map(placed.map((circle) => [circle.data.__unitKey, circle.y]));
-    drawUnitXAxis(chart, x, { ...xChannel, title: xChannel.title || xKey }, d3, deps);
     return {
-      name: 'dodge', axes: true, r: radius,
+      name: 'beeswarm', axes: true, r: radius,
+      axis: { scale: x, channel: { ...xChannel, title: xChannel.title || xKey } },
       x: (d) => position(x, d.__row[xKey]),
       y: (d) => chart.innerHeight - radius - yByKey.get(d.__unitKey)
     };
@@ -89,9 +72,9 @@ export function unitLayout(units, chart, spec, deps) {
     const cell = radius * 2.45;
     const groupColumns = Math.max(1, Math.min(columns, Math.floor(groupScale.bandwidth() / cell) || 1));
     const stackByGroup = stackIndex(units, (d) => d.__row[groupKey]);
-    drawUnitXAxis(chart, groupScale, { field: groupKey, title: groupKey, type: 'nominal' }, d3, deps);
     return {
       name: 'bar', axes: true, r: radius, groupField: groupKey,
+      axis: { scale: groupScale, channel: { field: groupKey, title: groupKey, type: 'nominal' } },
       x: (d) => groupScale(d.__row[groupKey]) + (stackByGroup(d) % groupColumns) * cell + radius,
       y: (d) => chart.innerHeight - radius - Math.floor(stackByGroup(d) / groupColumns) * cell
     };
@@ -102,11 +85,10 @@ export function unitLayout(units, chart, spec, deps) {
   const rowsNeeded = Math.ceil(units.length / columns);
   const radius = fitRadius(chart, requestedRadius, { columns, rows: rowsNeeded });
   const cell = radius * 2.45;
-  clearUnitAxes(chart, d3, deps);
   const startX = Math.max(0, (chart.innerWidth - columns * cell) / 2);
   const startY = Math.max(0, (chart.innerHeight - rowsNeeded * cell) / 2);
   return {
-    name: 'grid', axes: false, r: radius,
+    name: 'grid', axes: false, axis: null, r: radius,
     x: (_, i) => startX + (i % columns) * cell + radius,
     y: (_, i) => startY + Math.floor(i / columns) * cell + radius
   };
@@ -246,13 +228,22 @@ export function resolveUnitTransitionPlan(previousSpec, nextSpec) {
     totalDuration: timing.duration
   };
   if (!positionChanged) return plan;
+  const nextLayout = specUnit(nextSpec)?.layout || 'grid';
+  const fallsToAxis = ['bar', 'beeswarm'].includes(nextLayout);
   return {
     ...plan,
     match: { mode: 'key-first-travel', reason: 'same-key-first-then-closest-unmatched-unit' },
-    steps: [
-      { part: 'view', changes: ['scale', 'axis'] },
-      { part: 'marks', changes: ['marks', 'exit', 'enter'] }
-    ]
+    ...(fallsToAxis ? { motion: { mode: 'move-across-then-fall' } } : {}),
+    steps: fallsToAxis
+      ? [
+          { part: 'view', changes: ['scale', 'axis'] },
+          { part: 'move-across', changes: ['marks.x'] },
+          { part: 'fall', changes: ['marks.y', 'exit', 'enter'] }
+        ]
+      : [
+          { part: 'view', changes: ['scale', 'axis'] },
+          { part: 'marks', changes: ['marks', 'exit', 'enter'] }
+        ]
   };
 }
 
@@ -267,6 +258,14 @@ export function canonicalUnitTransitionPair(previousSpec, nextSpec) {
 export function unitStageTiming(chart) {
   if (chart.transitionPlan?.match?.mode !== 'key-first-travel') return null;
   const total = Math.max(1, Number(chart.transition.duration) || 900);
+  if (chart.transitionPlan?.motion?.mode === 'move-across-then-fall') {
+    return {
+      viewDuration: total * VIEW_STAGE_RATIO,
+      moveAcrossDuration: total * MOVE_ACROSS_STAGE_RATIO,
+      travelDelay: total * FALL_STAGGER_RATIO,
+      markDuration: total * FALL_STAGE_RATIO
+    };
+  }
   return {
     viewDuration: total * VIEW_STAGE_RATIO,
     travelDelay: total * TRAVEL_STAGE_RATIO,
@@ -320,10 +319,6 @@ function stackIndex(values, group) {
     indexes.set(value.__unitKey, index);
   });
   return (value) => indexes.get(value.__unitKey) || 0;
-}
-
-function maxStackDepth(values, stackByValue) {
-  return values.reduce((max, value) => Math.max(max, stackByValue(value) + 1), 0);
 }
 
 function uniqueCount(values, key) {

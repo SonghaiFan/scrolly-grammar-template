@@ -1,6 +1,6 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { BaseChart } from '../base.js';
-import { focusedScale, viewSelection } from '../focus.js';
+import { cameraScale, cameraSize, focusCamera, pointBounds, viewSelection } from '../../focus.js';
 import { matchesFilter } from '../../data/filter.js';
 import { applyTransforms } from '../../data/transforms.js';
 import { specState } from '../../spec-meta.js';
@@ -24,7 +24,6 @@ class PointChart extends BaseChart {
       drawYAxis,
       fadeNonPointShapes,
       bandOrLinear,
-      niceExtent,
       position,
       quantitativeDomain,
       quantitativeScale,
@@ -47,18 +46,34 @@ class PointChart extends BaseChart {
     const t = movesPoints
       ? chart.transition.base.ease(d3.easeCubicOut)
       : chart.transition.base;
-    const focusDeps = { bandOrLinear, d3, niceExtent, position };
-    const x = selection?.mode === 'focus'
-      ? focusedScale(viewRows, viewEnc.x, [0, chart.innerWidth], selection, focusDeps)
-      : bandOrLinear(viewRows, viewEnc.x, [0, chart.innerWidth], d3);
-    const y = selection?.mode === 'focus'
-      ? focusedScale(viewRows, viewEnc.y, [chart.innerHeight, 0], selection, focusDeps)
-      : bandOrLinear(viewRows, viewEnc.y, [chart.innerHeight, 0], d3);
+    const baseX = bandOrLinear(viewRows, viewEnc.x, [0, chart.innerWidth], d3);
+    const baseY = bandOrLinear(viewRows, viewEnc.y, [chart.innerHeight, 0], d3);
     const color = colorScale(domainRows, enc.color, d3);
     const fallbackRadius = Number.isFinite(Number(spec.size))
       ? Number(spec.size)
       : defaultPointRadius(rows.length);
-    const radius = radiusScale(domainRows, enc.size, fallbackRadius, d3, quantitativeDomain);
+    const baseRadius = radiusScale(domainRows, enc.size, fallbackRadius, d3, quantitativeDomain);
+    const camera = focusCamera(
+      viewRows.map((row) => ({
+        datum: row,
+        bounds: pointBounds(
+          position(baseX, row[viewEnc.x?.field]),
+          position(baseY, row[viewEnc.y?.field]),
+          baseRadius(row)
+        )
+      })),
+      selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const x = cameraScale(baseX, camera, 'x');
+    const y = cameraScale(baseY, camera, 'y');
+    const radius = (row) => cameraSize(baseRadius(row), camera);
+    chart.camera = camera;
+    const markDelay = camera.bounds
+      ? () => 0
+      : (row, index) => staggerDelay(spec, row, index);
+    const scaleMarkDelay = (row, index) =>
+      (chart.transition.exitDuration || 0) + markDelay(row, index);
     const opacity = (row) => pointSelectionOpacity(row, spec, themeValue('--sl-dim-opacity', 0.22));
     const key = pointKeyAccessor(spec, enc.x?.field || enc.y?.field);
 
@@ -126,11 +141,11 @@ class PointChart extends BaseChart {
           .attr('r', 0)
           .attr('fill', (d) => color(d))
           .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', themeValue('--sl-point-stroke-width', 1.5))
+          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
           .style('opacity', 0)
           .call(bindTooltip, spec, tooltip)
-          .transition(t)
-          .delay((d, i) => staggerDelay(spec, d, i))
+          .transition(chart.transition.enter || t)
+          .delay((d, i) => (chart.transition.enterDelay || 0) + markDelay(d, i))
           .attr('cx', (d) => chartPosition(d).x)
           .attr('cy', (d) => chartPosition(d).y)
           .attr('r', (d) => radius(d))
@@ -139,19 +154,23 @@ class PointChart extends BaseChart {
           .call(applyPointIdentity, key)
           .call(bindTooltip, spec, tooltip)
           .transition(t)
-          .delay((d, i) => staggerDelay(spec, d, i))
+          .delay(scaleMarkDelay)
           .attr('cx', (d) => chartPosition(d).x)
           .attr('cy', (d) => chartPosition(d).y)
           .attr('r', (d) => radius(d))
           .attr('fill', (d) => color(d))
+          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
           .style('opacity', (d) => opacity(d)),
         (exit) => {
           const leaving = exit
-            .transition(t)
-            .delay((d, i) => staggerDelay(spec, d, i))
+            .transition(chart.transition.exit || t)
+            .delay(markDelay)
             .style('opacity', 0)
-            .attr('cx', (d) => exitAnchor(d).x)
-            .attr('cy', (d) => exitAnchor(d).y);
+          if (!chart.transition.exitFirst) {
+            leaving
+              .attr('cx', (d) => exitAnchor(d).x)
+              .attr('cy', (d) => exitAnchor(d).y);
+          }
           if (blendMotion) leaving.attrTween('r', blendMotion.parentRadiusTween);
           else leaving.attr('r', 0);
           return leaving.remove();

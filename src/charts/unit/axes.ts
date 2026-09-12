@@ -2,7 +2,7 @@
 import { chartStyle, responsiveTickCount } from '../style.js';
 
 /** Unit-owned axes for layouts that explicitly map or group horizontal position. */
-export function drawUnitXAxis(chart, x, channel, d3, deps) {
+export function drawUnitXAxis(chart, x, channel, d3, deps, options = {}) {
   const transition = chart.transition.base;
   const style = chartStyle(deps);
   const rule = style.charts.unit;
@@ -19,7 +19,8 @@ export function drawUnitXAxis(chart, x, channel, d3, deps) {
     transition,
     {
       tickCount: responsiveTickCount(chart.innerWidth, style.tickSpacing.x),
-      tickFormat: channel?.format
+      tickFormat: channel?.format,
+      position: options.position
     }
   );
   deps.drawYAxis(chart, null, null, d3, transition);

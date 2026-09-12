@@ -96,10 +96,10 @@ a new chart state and leaves the previous state untouched.
 | `.tooltip(items)` | Declare tooltip fields | `encoding.tooltip` |
 | `.sort(field, order?)` | Append a sort transform | `transform[]` |
 | `.where(selector)` | Keep matching rows and remove the others | filter transform |
-| `.focus(selector)` | Keep every row and fit the visible range to a subset | selection state |
+| `.focus(selector)` | Keep every row and fit one 2D scale camera around a subset | selection state |
 | `.highlight(selector, options?)` | De-emphasize nonmatching marks | selection state |
 | `.axis(config)` | Configure scales, axes, orientation, or transition order | axis state |
-| `.transition(timing)` | Configure duration, easing, and stagger | transition metadata |
+| `.transition(timing)` | Configure duration, easing, and optional per-mark stagger | transition metadata |
 | `.toSpec()` | Return the plain JavaScript object behind the chart state | `ViewSpec` |
 
 ### Data source forms
@@ -171,7 +171,7 @@ Chart-specific methods are `.pointSize()`, `.radius()`, `.flip()`,
 One mark per unit or count. Chart-specific methods are `.value()`, `.columns()`,
 `.radius()`, `.group()`, and `.layout()`.
 
-Supported layouts are `grid`, `bar`, `timeline`, and `dodge`. Group and layout
+Supported layouts are `grid`, `bar`, and `beeswarm`. Group and layout
 are separate: `.group("category").layout("bar")` creates categorical unit bars.
 Unit does not expose `.rollup()` or `.breakdown()`.
 

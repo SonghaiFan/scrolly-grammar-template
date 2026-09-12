@@ -1,7 +1,9 @@
 # Unit transition lab
 
-These thirteen editable scenarios define the first complete transition matrix
-for VisDelta's Unit module.
+These thirteen editable scenarios use the 150-observation Iris dataset to define
+the first complete transition matrix for VisDelta's Unit module. Each flower is
+one row and one unit. The added `flowerId` field gives every observation a stable
+identity, including the two flowers whose measurements are otherwise identical.
 
 A Unit chart treats quantity as **countable, equal marks**. With raw observation
 data, each row is one unit. With `.value("count")`, each row creates that many
@@ -13,8 +15,7 @@ The public grammar separates meaning from arrangement:
 - `.group("team")` declares which categorical group owns each unit;
 - `.layout("bar")` arranges those groups as unit bars;
 - `.layout("grid")` makes one overall grid;
-- `.x("year").layout("timeline")` stacks units at mapped positions;
-- `.x("year").layout("dodge")` places units around mapped positions without
+- `.x("year").layout("beeswarm")` uses dodge placement around mapped positions without
   overlaps.
 
 That separation is deliberate. `.group()` never silently changes layout or
@@ -29,17 +30,41 @@ const byTeam = unit(rows)
   .color("team");
 ```
 
+The lab therefore does not call `.value()`: it does not turn a measurement into
+a count. Sepal and petal measurements are used only when a scenario explicitly
+maps one of them to position, and species is mapped to color only when `.color()`
+appears in the example.
+
 Unit does not have `.rollup()` or `.breakdown()`. It never replaces many units
 with one summary mark, so there is no split/merge mechanic. Count changes use
 ordinary unit Enter/Stay/Exit: surviving unit keys move, added units grow from
 radius zero, and removed units shrink to radius zero.
 
+`.focus()` uses the same Core camera as every other chart type. Unit contributes
+only each circle's visual bounds; Core applies one 2D pan and zoom while all 150
+unit identities remain present.
+
 Layout changes follow one reversible path: **Set view → move units**. Matching
 always keeps the same key first, however far that unit needs to travel. Only
 source and target units that cannot be paired by key are matched to open slots
 using the shortest total travel. Short trips start before long trips to reduce
-visual overlap. The opposite transition evaluates these exact frames backward:
-units move first, then the old view returns.
+visual overlap. The opposite transition preserves those keyed assignments and
+reverses the phase order: units move first, then the old view returns.
+
+Bar and beeswarm layouts make that path more specific: **Set view →
+move across → fall**. Every existing unit first reaches its truthful x position
+while keeping its old height. It then falls into the bar or non-overlapping
+swarm.
+Downward travel uses a short bounce; upward travel settles without pretending
+that gravity points upward. Reverse playback preserves the same keyed route and
+reverses the phase order, but chooses easing from the actual screen direction:
+down can bounce; up never does.
+
+Unit transitions use a light per-mark delay by default. Layout changes order
+marks by travel distance, so short moves start first; other Unit changes use
+data order with a 4 ms step capped at 100 ms. Write
+`.transition({ stagger: 0 })` when every unit should move together, or provide
+an explicit `stagger` object to replace the Unit default.
 
 <SyntaxPlayground mode="unit-lab" initial="bar" />
 

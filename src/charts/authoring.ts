@@ -124,7 +124,7 @@ export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
     return this.with({ selection: selectorFrom(selector) } as Partial<S>, 'selection');
   }
 
-  /** Keep every row, but fit the visible coordinate range to a subset. */
+  /** Fit one camera around selected marks without changing rows or mark identity. */
   focus(selector: string | Record<string, unknown> | FilterSpec): this {
     return this.with({
       selection: {

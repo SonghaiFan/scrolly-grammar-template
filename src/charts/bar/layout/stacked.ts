@@ -1,12 +1,12 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
-import { focusedScale, viewSelection } from '../../focus.js';
+import { cameraScale, cameraSize, focusCamera, rectBounds, viewSelection } from '../../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey } from './index.js';
 import { specState } from '../../../spec-meta.js';
 import { drawBarAxes } from '../axes.js';
 
 export function createStackedBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, themeValue } = deps;
+  const { bindTooltip, channelDomain, colorScale, position, themeValue } = deps;
 
   return function renderStackedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -30,14 +30,23 @@ export function createStackedBarRenderer(deps, kit) {
     const stackBaseExit = kit.baselineExitPlan(chart, 'stack-base');
 
     const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
-    const categoryScale = selection?.mode === 'focus'
-      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
-      : d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
     const stackedRows = stackBarRows(rows, categoryField, segmentField, valueField, segments);
     const domainStackedRows = stackBarRows(domainRows, categoryField, segmentField, valueField, segments);
     const stackDomain = stackedValueDomain(domainStackedRows, measureChannel, d3);
-    const measureScale = d3.scaleLinear().domain(stackDomain)
+    const baseCategoryScale = d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
+    const baseMeasureScale = d3.scaleLinear().domain(stackDomain)
       .range(horizontal ? [0, chart.innerWidth] : [chart.innerHeight, 0]).nice();
+    const baseX = horizontal ? baseMeasureScale : baseCategoryScale;
+    const baseY = horizontal ? baseCategoryScale : baseMeasureScale;
+    const baseGeom = { x: baseX, y: baseY, categoryField, valueField, chart, horizontal };
+    const baseGeometry = stackedSegmentGeometry(baseGeom);
+    const camera = focusCamera(
+      stackedRows.map((row) => ({ datum: row, bounds: geometryBounds(baseGeometry, row) })),
+      selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const categoryScale = cameraScale(baseCategoryScale, camera, horizontal ? 'y' : 'x');
+    const measureScale = cameraScale(baseMeasureScale, camera, horizontal ? 'x' : 'y');
     const x = horizontal ? measureScale : categoryScale;
     const y = horizontal ? categoryScale : measureScale;
     const geom = { x, y, categoryField, valueField, chart, horizontal };
@@ -47,6 +56,7 @@ export function createStackedBarRenderer(deps, kit) {
     const geometry = stackedSegmentGeometryContract(geom, splitLineage, stackBaseEnter, stackBaseExit, kit.sourceBaselineExit);
 
     chart.scales = { x, y, color, orientation: rendererOrientation };
+    chart.camera = camera;
     chart.channels = enc;
     chart.position = {
       x: (d) => horizontal ? x((d.__stack0 + d.__stack1) / 2) : position(x, d[categoryField]),
@@ -62,7 +72,7 @@ export function createStackedBarRenderer(deps, kit) {
       chart, rows: stackedRows, spec, tooltip, d3, bindTooltip, key,
       category: (d) => d[categoryField],
       className: 'sl-bar sl-bar-segment sl-bar-stacked',
-      orientation: rendererOrientation, rx: themeValue('--sl-bar-radius', 3),
+      orientation: rendererOrientation, rx: cameraSize(themeValue('--sl-bar-radius', 3), camera),
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, steps, geometry
     });
@@ -70,7 +80,7 @@ export function createStackedBarRenderer(deps, kit) {
     const seamRows = stackedInternalSeams(stackedRows, categoryField);
     kit.renderBarSeams({
       chart,
-      path: stackedSeamPath(seamRows, geom),
+      path: splitLineage ? stackedSeamPath(seamRows, geom) : '',
       startPath: stackedSeamPath(seamRows, geom, true),
       draw: Boolean(splitLineage)
     });
@@ -213,4 +223,9 @@ function stackedValueDomain(rows, measureChannel = {}, d3) {
   const min = Math.min(0, d3.min(values) ?? 0);
   const max = Math.max(0, d3.max(values) ?? 1);
   return min === max ? [0, max || 1] : [min, max];
+}
+
+function geometryBounds(geometry, datum) {
+  const value = (property) => typeof property === 'function' ? property(datum) : property;
+  return rectBounds(value(geometry.x), value(geometry.y), value(geometry.width), value(geometry.height));
 }

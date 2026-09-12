@@ -37,7 +37,7 @@ matcher handles both changes; there is no separate time-window transition.
 
 Filter and focus are deliberately separate. Filter removes observations; when
 it removes observations from the middle, the default `connect("adjacent")`
-keeps a gap. Focus keeps all observations and the full line, changes the x view,
+keeps a gap. Focus keeps all observations and the full line, fits one 2D camera,
 and clips what falls outside it. Line and Area share the same connected-stretch
 rule: a stretch needs at least two observations. An isolated Line observation
 keeps its point mark but does not create a line path.

@@ -4,20 +4,25 @@ export const DEFAULT_TIMING: TimingDefaults = {
   transition: {
     duration: 900,
     ease: 'cubicInOut',
-    stagger: { step: 10, max: 120 }
-  },
-  scene: {
-    stagger: { step: 12, max: 160 }
+    // Matched marks, scales, axes, and grid share one clock by default.
+    // A chart may add an explicit per-mark delay only when its operation has
+    // a meaningful order.
+    stagger: 0
   },
   step: {
     minDuration: 180
   },
   unit: {
     axisDurationMultiplier: 1.35,
-    xRatio: 0.42,
-    stagger: { step: 10, max: 90 },
-    xStagger: { step: 7, max: 126 }
+    xRatio: 0.42
   }
+};
+
+/** Defaults applied only after an author explicitly enables per-mark delay. */
+export const DEFAULT_MARK_DELAY: Required<StaggerSpec> = {
+  step: 10,
+  max: 120,
+  by: ''
 };
 
 export function defaultTransition(overrides: Partial<TransitionSpec> = {}): Required<TransitionSpec> {
@@ -25,9 +30,9 @@ export function defaultTransition(overrides: Partial<TransitionSpec> = {}): Requ
     ? overrides.stagger as Partial<StaggerSpec>
     : {};
   const stagger: StaggerSpec | number =
-    overrides.stagger == null || typeof overrides.stagger === 'object'
-      ? { ...(DEFAULT_TIMING.transition.stagger as StaggerSpec), ...staggerPatch }
-      : overrides.stagger;
+    typeof overrides.stagger === 'object'
+      ? { ...DEFAULT_MARK_DELAY, ...staggerPatch }
+      : overrides.stagger ?? 0;
 
   return {
     ...DEFAULT_TIMING.transition,

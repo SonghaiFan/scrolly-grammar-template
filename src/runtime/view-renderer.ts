@@ -156,13 +156,23 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   scene.svg
     .attr('class', `sl-chart sl-chart-${rendererKey}`)
     .attr('data-chart-type', rendererKey);
+  const previousSource = previousSpec ? viewRows(previousSpec.data, datasets) : [];
+  const previousRows = previousSpec
+    ? applyTransforms(previousSource, previousSpec.transform || [], aq)
+    : [];
+  const observationChange = observationMembershipChange(previousSpec, renderSpec, previousRows, rows);
+  const chartTransition = observationTransition(
+    transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 } as AnyRecord),
+    observationChange,
+    { d3, scrollDriven }
+  );
   const chart: AnyRecord = {
     scene,
     type: rendererKey,
     width,
     height,
     margin,
-    transition: transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 } as AnyRecord),
+    transition: chartTransition,
     transitionPlan: chartType?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
     sceneTransition,
     scrollDriven,
@@ -187,6 +197,7 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   const renderer = chartType?.renderer;
   if (renderer) renderer(chart, rows, renderSpec, tooltip, d3);
   else drawUnsupported(chart, renderSpec, chartTypes.types());
+  reflectCamera(scene, chart.camera);
 
   if (rendererKey === "unit") hideUnitMetaLabel(scene);
 
@@ -197,6 +208,64 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     });
   }
   scene.previousSpec = renderSpec;
+}
+
+/**
+ * A row-preserving change may remove observations without changing what a
+ * remaining observation means. Keep the old coordinate system while those
+ * marks leave, then move the shared view. Aggregation and reshaping have their
+ * own chart-specific visual order and deliberately do not take this path.
+ */
+function observationMembershipChange(previousSpec, nextSpec, previousRows, nextRows) {
+  if (!previousSpec || previousSpec.mark !== nextSpec?.mark) return { exit: false, enter: false };
+  if ((previousSpec.transform || []).some((transform) => transform?.aggregate) ||
+      (nextSpec.transform || []).some((transform) => transform?.aggregate)) return { exit: false, enter: false };
+  return {
+    exit: previousRows.length > nextRows.length,
+    enter: nextRows.length > previousRows.length
+  };
+}
+
+/**
+ * Membership changes have one visual order: exiting marks leave in the
+ * old view; then the scale moves; then entering marks appear in the new view.
+ * A one-way add or remove simply omits the unused third.
+ */
+function observationTransition(transition, change, { d3, scrollDriven }) {
+  if (!change.exit && !change.enter) return transition;
+  const totalDuration = Math.max(1, Number(transition.duration) || 900);
+  const parts = 1 + Number(change.exit) + Number(change.enter);
+  const partDuration = Math.max(1, Math.floor(totalDuration / parts));
+  const exitDuration = change.exit ? partDuration : 0;
+  const enterDuration = change.enter ? partDuration : 0;
+  const scaleDuration = Math.max(1, totalDuration - exitDuration - enterDuration);
+  const ease = transition.base.ease();
+  const create = (duration, delay = 0) => {
+    const next = scrollDriven
+      ? d3.transition(VISDELTA_TRANSITION_NAME)
+      : d3.transition();
+    return next.duration(duration).delay(delay).ease(ease);
+  };
+  return {
+    ...transition,
+    base: create(scaleDuration, exitDuration),
+    ...(change.exit ? { exit: create(exitDuration) } : {}),
+    ...(change.enter ? { enter: create(enterDuration, exitDuration + scaleDuration) } : {}),
+    exitFirst: change.exit,
+    enterLast: change.enter,
+    exitDuration,
+    scaleDuration,
+    enterDuration,
+    enterDelay: exitDuration + scaleDuration
+  };
+}
+
+function reflectCamera(scene: AnyRecord, camera: AnyRecord | null | undefined) {
+  const value = camera || { k: 1, x: 0, y: 0 };
+  scene.svg
+    .attr('data-camera-k', Number(value.k) || 1)
+    .attr('data-camera-x', Number(value.x) || 0)
+    .attr('data-camera-y', Number(value.y) || 0);
 }
 
 function fitMargins(width, height, margin) {
@@ -414,7 +483,7 @@ function renderVirtualScrollPhase(scene, phaseIndex) {
   );
 }
 
-function applyVirtualScrollSequence(scene, progress) {
+function applyVirtualScrollSequence(scene, progress, direction = 1) {
   const sequence = scene.virtualScrollSequence;
   if (!sequence?.phases?.length) return false;
 
@@ -427,7 +496,10 @@ function applyVirtualScrollSequence(scene, progress) {
   const span = Math.max(0.001, phase.end - phase.start);
 
   renderVirtualScrollPhase(scene, Math.max(0, phaseIndex));
-  scene.transitionProgress?.progress(clamp((bounded - phase.start) / span, 0, 1));
+  scene.transitionProgress?.progress(
+    clamp((bounded - phase.start) / span, 0, 1),
+    direction
+  );
   return true;
 }
 

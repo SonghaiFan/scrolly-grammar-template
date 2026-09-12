@@ -77,7 +77,7 @@ test('area split and merge are the same cached transition in reverse', async ({ 
     const split = await transition(total, detail, options('#split'));
     const merge = await transition(detail, total, options('#merge'));
     const geometry = selector => [...document.querySelectorAll(
-      `${selector} path.sl-area, ${selector} path.sl-area-edge, ${selector} path.sl-area-divider`
+      `${selector} path.sl-area, ${selector} path.sl-area-divider`
     )]
       .map(node => ({
         className: node.getAttribute('class'),
@@ -100,7 +100,34 @@ test('area split and merge are the same cached transition in reverse', async ({ 
   for (const frame of frames) expect(frame.merge).toEqual(frame.split);
 });
 
-test('area edge titles align to the plot frame and stay clear of y-axis ticks', async ({ page }) => {
+test('area focus fits selected cells with one camera without removing area cells', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/area-lab.html#focus');
+  await ready(page);
+  const count = await page.locator('#chart path.sl-area').count();
+  await page.locator('#end').click();
+  await expect(page.locator('#chart path.sl-area')).toHaveCount(count);
+  const fit = await page.locator('#chart svg').evaluate(svg => {
+    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
+    const selected = [...svg.querySelectorAll('path.sl-area')]
+      .filter(node => Number(node.__data__?.row?.year) === 2009)
+      .map(node => node.getBBox());
+    const bounds = {
+      x0: Math.min(...selected.map(box => box.x)),
+      y0: Math.min(...selected.map(box => box.y)),
+      x1: Math.max(...selected.map(box => box.x + box.width)),
+      y1: Math.max(...selected.map(box => box.y + box.height))
+    };
+    return {
+      bounds,
+      width: Number(plot?.getAttribute('width')),
+      height: Number(plot?.getAttribute('height'))
+    };
+  });
+  expect((fit.bounds.x0 + fit.bounds.x1) / 2).toBeCloseTo(fit.width / 2, 1);
+  expect((fit.bounds.y0 + fit.bounds.y1) / 2).toBeCloseTo(fit.height / 2, 1);
+});
+
+test('area axis titles align to the plot frame and stay clear of y-axis ticks', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/area-lab.html#merge');
   await ready(page);
 
@@ -131,17 +158,27 @@ test('area edge titles align to the plot frame and stay clear of y-axis ticks', 
   }
 });
 
-test('area split draws a thin contrast divider on the cached split timeline', async ({ page }) => {
+test('area is borderless by default at endpoints and during ordinary transitions', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/area-lab.html#highlight');
+  await ready(page);
+  for (const progress of [0, 0.5, 1]) {
+    await page.locator('#progress').fill(String(progress));
+    await expect(page.locator('#chart path.sl-area-edge')).toHaveCount(0);
+    const strokes = await page.locator('#chart path.sl-area-cell')
+      .evaluateAll(nodes => nodes.map(node => getComputedStyle(node).stroke));
+    expect(strokes.every(stroke => stroke === 'none')).toBe(true);
+  }
+});
+
+test('area split draws a thin contrast divider only between endpoints', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/area-lab.html#split');
   await ready(page);
   const read = async progress => {
     await page.locator('#progress').fill(String(progress));
     return page.locator('#chart').evaluate(chart => {
       const node = chart.querySelector('path.sl-area-divider');
-      const edgeOpacity = [...chart.querySelectorAll(
-        'path.sl-area-edge:not([data-layer-key="__area__"])'
-      )].map(edge => Number(getComputedStyle(edge).opacity));
-      if (!node) return { count: 0, length: 0, offset: 0, width: '', blend: '', edgeOpacity };
+      const borderCount = chart.querySelectorAll('path.sl-area-edge').length;
+      if (!node) return { count: 0, length: 0, offset: 0, width: '', blend: '', borderCount };
       const style = getComputedStyle(node);
       return {
         count: chart.querySelectorAll('path.sl-area-divider').length,
@@ -149,25 +186,34 @@ test('area split draws a thin contrast divider on the cached split timeline', as
         offset: Number(node.getAttribute('stroke-dashoffset')),
         width: style.strokeWidth,
         blend: style.mixBlendMode,
-        edgeOpacity
+        opacity: Number(style.opacity),
+        borderCount
       };
     });
   };
   const result = {
+    start: await read(0),
     drawing: await read(0.16),
     cut: await read(0.32),
-    after: await read(0.5)
+    after: await read(0.5),
+    end: await read(1)
   };
 
+  expect(result.start.count).toBe(0);
   expect(result.drawing.count).toBe(4);
   expect(result.drawing.offset).toBeGreaterThan(0);
   expect(result.drawing.offset).toBeLessThan(result.drawing.length);
+  expect(result.drawing.opacity).toBeGreaterThan(0);
   expect(result.cut.offset).toBeCloseTo(0, 3);
+  expect(result.cut.opacity).toBeCloseTo(1, 3);
   expect(result.after.offset).toBeCloseTo(0, 3);
+  expect(result.after.opacity).toBeGreaterThan(0);
+  expect(result.after.opacity).toBeLessThan(1);
+  expect(result.end.count).toBe(0);
   expect(result.drawing.width).toBe('1px');
   expect(result.drawing.blend).toBe('difference');
-  expect(result.drawing.edgeOpacity.every(opacity => opacity === 0)).toBe(true);
-  expect(result.after.edgeOpacity.some(opacity => opacity > 0)).toBe(true);
+  expect([result.start, result.drawing, result.cut, result.after, result.end]
+    .every(frame => frame.borderCount === 0)).toBe(true);
 });
 
 test('area divider marks only internal same-direction stack boundaries', async ({ page }) => {
@@ -191,12 +237,16 @@ test('area divider marks only internal same-direction stack boundaries', async (
       target: document.body.appendChild(document.createElement('div')),
       d3, aq, height: 360
     });
-    change.progress(1);
+    change.progress(0.5);
     return [...document.querySelectorAll('path.sl-area-divider')]
-      .map(node => node.getAttribute('data-layer-key'));
+      .map(node => ({
+        layer: node.getAttribute('data-layer-key'),
+        opacity: Number(getComputedStyle(node).opacity)
+      }));
   });
 
-  expect(layers).toEqual(['positive-a']);
+  expect(layers.map(({ layer }) => layer)).toEqual(['positive-a']);
+  expect(layers.every(({ opacity }) => opacity > 0 && opacity < 1)).toBe(true);
 });
 
 test('area restore, prepend, and append keep both boundaries in observation order', async ({ page }) => {
@@ -282,7 +332,7 @@ test('area add/remove and restore/filter reuse the same frames backward', async 
     const restore = await transition(filtered, base, options('#restore'));
     const filter = await transition(base, filtered, options('#filter'));
     const geometry = selector => ({
-        paths: [...document.querySelectorAll(`${selector} path.sl-area, ${selector} path.sl-area-edge`)]
+        paths: [...document.querySelectorAll(`${selector} path.sl-area`)]
           .map(node => ({
             className: node.getAttribute('class'),
             key: node.getAttribute('data-key'),
@@ -465,7 +515,7 @@ test('stacked area uses cumulative boundaries and explicit color', async ({ page
   await ready(page);
   await page.locator('#end').click();
   await expect(page.locator('#chart path.sl-area-cell')).toHaveCount(190);
-  await expect(page.locator('#chart path.sl-area-edge')).toHaveCount(190);
+  await expect(page.locator('#chart path.sl-area-edge')).toHaveCount(0);
   await expect(page.locator('#chart .sl-legend-item')).toHaveCount(5);
   const paths = await page.locator('#chart path.sl-area-cell').evaluateAll(nodes => nodes.map(node => ({
     key: node.getAttribute('data-key'),

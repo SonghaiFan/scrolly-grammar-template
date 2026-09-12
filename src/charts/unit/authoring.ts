@@ -11,7 +11,7 @@ export interface UnitViewState extends ViewSpec {
   unit?: Record<string, unknown>;
 }
 
-export const UNIT_LAYOUTS = ['grid', 'bar', 'timeline', 'dodge'] as const;
+export const UNIT_LAYOUTS = ['grid', 'bar', 'beeswarm'] as const;
 export type UnitLayout = typeof UNIT_LAYOUTS[number];
 
 export interface UnitLayoutOptions {

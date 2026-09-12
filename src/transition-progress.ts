@@ -4,6 +4,7 @@ const STARTED = 3;
 const RUNNING = 4;
 const ENDING = 5;
 const ENDED = 6;
+const REVERSE_EASE = '__visDeltaReverseEase';
 
 export const VISDELTA_TRANSITION_NAME = '__visDeltaTransition';
 
@@ -49,9 +50,9 @@ function createProgressController(nodes, { transitionId = null, transitionName =
     compile() {
       return compilePropertyTracks(items, minTime, span);
     },
-    progress(value) {
+    progress(value, direction = 1) {
       const elapsed = clamp(value, 0, 1) * span;
-      items.forEach((item) => scrubSchedule(item, elapsed, minTime));
+      items.forEach((item) => scrubSchedule(item, elapsed, minTime, direction));
     },
     destroy({ finish = false } = {}) {
       items.forEach((item) => {
@@ -86,14 +87,14 @@ function collectSchedules(nodes, { transitionId, transitionName } = {}) {
   return items;
 }
 
-function scrubSchedule(item, elapsed, minTime) {
+function scrubSchedule(item, elapsed, minTime, direction = 1) {
   if (item.finished) return;
   const start = item.time - minTime + item.delay;
   const duration = item.duration || 1;
   const local = clamp((elapsed - start) / duration, 0, 1);
   if (elapsed < start && !item.started) return;
   initializeSchedule(item);
-  const eased = item.ease(local);
+  const eased = easeForDirection(item.ease, direction)(local);
   item.tweens.forEach((tween) => tween.call(item.node, eased));
 }
 
@@ -119,7 +120,7 @@ function compilePropertyTracks(items, minTime, span) {
   const nodes = new Map();
   const propertyChanges = [];
 
-  const sample = (elapsed) => {
+  const sample = (elapsed, direction = 1) => {
     for (const propertyChange of propertyChanges) {
       // A later step owns a property only once its start has been reached.
       // Before the first start, evaluate its t=0 value. This resets delayed
@@ -129,7 +130,10 @@ function compilePropertyTracks(items, minTime, span) {
       const local = segment.duration > 0
         ? clamp((elapsed - segment.start) / segment.duration, 0, 1)
         : elapsed >= segment.start ? 1 : 0;
-      segment.apply.call(propertyChange.node, segment.ease(local));
+      segment.apply.call(
+        propertyChange.node,
+        easeForDirection(segment.ease, direction)(local)
+      );
     }
   };
 
@@ -153,7 +157,24 @@ function compilePropertyTracks(items, minTime, span) {
     }
   }
   sample(0);
-  return { progress(value) { sample(clamp(value, 0, 1) * span); } };
+  return {
+    progress(value, direction = 1) {
+      sample(clamp(value, 0, 1) * span, direction);
+    }
+  };
+}
+
+/** Attach a reverse-playback ease without giving Core any chart semantics. */
+export function directionalEase(forward, reverse) {
+  const ease = (progress) => forward(progress);
+  Object.defineProperty(ease, REVERSE_EASE, { value: reverse });
+  return ease;
+}
+
+function easeForDirection(ease, direction) {
+  return direction < 0 && typeof ease?.[REVERSE_EASE] === 'function'
+    ? ease[REVERSE_EASE]
+    : ease;
 }
 
 function finishSchedule(item) {

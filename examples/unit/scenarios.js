@@ -1,31 +1,37 @@
-const base = `const rows = [
-  { id: "A1", team: "Alpha", region: "North", year: 2021, count: 8 },
-  { id: "A2", team: "Alpha", region: "South", year: 2022, count: 5 },
-  { id: "B1", team: "Beta", region: "North", year: 2023, count: 10 },
-  { id: "B2", team: "Beta", region: "South", year: 2024, count: 7 },
-  { id: "C1", team: "Gamma", region: "North", year: 2025, count: 6 },
-  { id: "C2", team: "Gamma", region: "South", year: 2026, count: 9 }
-];
+// Keep these pairs aligned with tests/browser/unit-lab.spec.mjs.
+const base = `const DATA_URL = "./data/iris.csv";
+const rows = await d3.csv(DATA_URL, d3.autoType);
 
-const base = unit(rows)
-  .value("count", { maxUnits: 100 })
-  .key("id")
-  .layout("grid", { columns: 10, radius: 6 })
-  .tooltip(["team", "region", "year", "count"]);`;
+const flowers = unit(rows)
+  .key("flowerId")
+  .layout("grid", { columns: 15, radius: 6 })
+  .tooltip(["flowerId", "species", "sepalLength", "sepalWidth", "petalLength", "petalWidth"]);`;
 
-const withNewUnits = `${base}
+const withHeldOutFlowers = `${base}
 
-const withDelta = base.data([
-  ...rows,
-  { id: "D1", team: "Delta", region: "North", year: 2027, count: 7 }
-]);`;
+const first140 = flowers.data(rows.slice(0, -10));`;
+
+const speciesColors = `["#4c78a8", "#f58518", "#54a24b"]`;
 
 const bars = `${base}
 
-const byTeam = base
-  .group("team")
-  .layout("bar", { columns: 3 })
-  .color("team");`;
+const colored = flowers.color("species", {
+  title: "Species",
+  range: ${speciesColors}
+});
+const bySpecies = colored
+  .group("species")
+  .layout("bar", { columns: 10 });`;
+
+const positioned = `${base}
+
+const colored = flowers.color("species", {
+  title: "Species",
+  range: ${speciesColors}
+});
+const byPetalLength = colored
+  .x("petalLength", { title: "Petal length (cm)" })
+  .layout("beeswarm");`;
 
 function sample(id, label, description, setup, from, to) {
   return { id, label, description, code: `${setup}\n\nconst from = ${from};\nconst to = ${to};\n\nreturn { from, to };` };
@@ -37,17 +43,17 @@ export async function loadChart() {
 }
 
 export const scenarios = [
-  sample('value', '01 · Change counts', 'Keep unit identity while counts add or remove repeated marks.', base, 'base', 'base.data(rows.map((row, index) => ({ ...row, count: row.count + (index % 2 ? -2 : 3) })))'),
-  sample('add', '02 · Add units', 'Add a new keyed row and grow its units into the grid.', withNewUnits, 'base', 'withDelta'),
-  sample('remove', '03 · Remove units', 'Shrink the same added units away without merging them into a summary mark.', withNewUnits, 'withDelta', 'base'),
-  sample('filter', '04 · Filter units', 'Remove the South observations and reflow the surviving units.', base, 'base', 'base.where({ region: "North" })'),
-  sample('highlight', '05 · Highlight units', 'Keep every unit and dim the category outside the selected region.', base, 'base', 'base.highlight({ region: "North" }, { opacity: 0.12 })'),
-  sample('color', '06 · Map color', 'Use color to show team while position stays in one grid.', base, 'base', 'base.color("team")'),
-  sample('columns', '07 · Change grid columns', 'Reflow the grid while every matching key keeps its identity.', base, 'base', 'base.layout("grid", { columns: 6, radius: 6 })'),
-  sample('radius', '08 · Change unit size', 'Change the size of every equal unit without mapping size to data.', base, 'base', 'base.radius(9)'),
-  sample('bar', '09 · Make unit bars', 'Group by team, then position equal units as categorical bars.', bars, 'base', 'byTeam'),
-  sample('regroup', '10 · Change the category', 'Set the region view, keep every matching key, then move the units.', bars, 'byTeam', 'base.group("region").layout("bar", { columns: 3 }).color("region")'),
-  sample('timeline', '11 · Position on a timeline', 'Stack units at the ordered year positions.', base, 'base', 'base.x("year", { title: "Year", type: "ordinal" }).layout("timeline")'),
-  sample('dodge', '12 · Dodge along a position', 'Use collision-free vertical placement around each year position.', base, 'base', 'base.x("year", { title: "Year" }).layout("dodge")'),
-  sample('grid', '13 · Return to one grid', 'Move categorical unit bars back into one ungrouped grid.', bars, 'byTeam', 'base')
+  sample('all', '01 · Show all flowers', 'Start with the 50 setosa flowers, then add the other 100 observations as equal units.', base, 'flowers.where({ species: "setosa" })', 'flowers'),
+  sample('add', '02 · Add observations', 'Add the final ten virginica observations while every existing flower keeps its identity.', withHeldOutFlowers, 'first140', 'flowers'),
+  sample('remove', '03 · Remove observations', 'Remove those same ten flowers in the exact reverse of Add.', withHeldOutFlowers, 'flowers', 'first140'),
+  sample('filter', '04 · Filter observations', 'Keep setosa and versicolor flowers, then reflow the surviving units.', base, 'flowers', 'flowers.where({ field: "species", oneOf: ["setosa", "versicolor"] })'),
+  sample('highlight', '05 · Highlight a species', 'Keep every flower visible and dim the species outside setosa.', base, 'flowers', 'flowers.highlight({ species: "setosa" }, { opacity: 0.12 })'),
+  sample('color', '06 · Map species to color', 'Explicitly map the three Iris species to color while position stays in one grid.', base, 'flowers', `flowers.color("species", { title: "Species", range: ${speciesColors} })`),
+  sample('columns', '07 · Change grid columns', 'Reflow all 150 keyed flowers into a wider grid.', base, 'flowers', 'flowers.layout("grid", { columns: 20, radius: 6 })'),
+  sample('radius', '08 · Change unit size', 'Change the size of every equal flower unit without mapping size to a data field.', base, 'flowers', 'flowers.radius(8)'),
+  sample('bar', '09 · Group flowers by species', 'Arrange the same 150 flowers as three explicitly colored unit bars.', bars, 'colored', 'bySpecies'),
+  sample('measure', '10 · Change the measured position', 'Move every flower from its petal-length position to its sepal-length position.', positioned, 'byPetalLength', 'colored.x("sepalLength", { title: "Sepal length (cm)" }).layout("beeswarm")'),
+  sample('beeswarm', '11 · Beeswarm by petal length', 'Move flowers across to their measured petal lengths, then use dodge placement to form a non-overlapping swarm.', positioned, 'colored', 'byPetalLength'),
+  sample('grid', '12 · Return to one grid', 'Move the three species bars back into one grid while every flower keeps its identity.', bars, 'bySpecies', 'colored.layout("grid", { columns: 15, radius: 6 })'),
+  sample('focus', '13 · Focus one flower', 'Keep all 150 flowers and use the shared 2D camera to fit one selected unit to the plot.', base, 'flowers', 'flowers.focus({ flowerId: "iris-001" })')
 ];

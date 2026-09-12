@@ -229,6 +229,32 @@ test('delayed property changes can jump back before their start without retainin
   expect(result.a).toEqual(result.b);
 });
 
+test('matched bars share one clock unless the author explicitly adds per-mark delay', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const changedAt = (change, selector, progress) => {
+      change.progress(0);
+      const start = geometry(selector);
+      change.progress(progress);
+      const frame = geometry(selector);
+      return frame.map((mark, index) => Math.abs(mark.y - start[index].y) > 1e-4);
+    };
+    const synced = await sl.transition(base, base.y('other'), options('#cached'));
+    const explicitStart = base.transition({
+      duration: 900,
+      ease: 'linear',
+      stagger: { step: 250, max: 500 }
+    });
+    const delayed = await sl.transition(explicitStart, explicitStart.y('other'), options('#reference'));
+    return {
+      synced: changedAt(synced, '#cached', 0.1),
+      delayed: changedAt(delayed, '#reference', 0.1)
+    };
+  });
+
+  expect(result.synced).toEqual([true, true, true]);
+  expect(result.delayed).toEqual([true, false, false]);
+});
+
 test('successive steps on the same property initialize from preceding endpoints', async ({ page }) => {
   const frames = await page.evaluate(async () => {
     const { createSceneTransitionProgress } = await import('/dist/transition-progress.js');
@@ -245,6 +271,30 @@ test('successive steps on the same property initialize from preceding endpoints'
     });
   });
   expect(frames).toEqual([20, 5, 30, 10, 0, 2]);
+});
+
+test('compiled property tracks can use a direction-aware ease', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { createSceneTransitionProgress, directionalEase } = await import('/dist/transition-progress.js');
+    const root = d3.select('#cached').append('svg');
+    const rect = root.append('rect').attr('x', 0);
+    rect.transition('direction-contract').duration(100)
+      .easeVarying(() => directionalEase(d3.easeLinear, value => value * value))
+      .attr('x', 100);
+    const schedules = createSceneTransitionProgress(
+      { node: root.node() },
+      { transitionName: 'direction-contract' }
+    );
+    const plan = schedules.compile();
+    schedules.destroy({ finish: false });
+    plan.progress(0.5, 1);
+    const forward = Number(rect.attr('x'));
+    plan.progress(0.5, -1);
+    const reverse = Number(rect.attr('x'));
+    return { forward, reverse };
+  });
+
+  expect(result).toEqual({ forward: 50, reverse: 25 });
 });
 
 test('resize recompiles changed theme at the same progress; inspection cannot mutate endpoints', async ({ page }) => {

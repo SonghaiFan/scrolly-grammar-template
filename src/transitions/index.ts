@@ -1,10 +1,7 @@
-import type { SelectionSpec, DetailSpec, AxisSpec, TransitionSpec, ViewSpec } from '../types/index.js';
-import { DEFAULT_TIMING } from '../timing.js';
+import type { SelectionSpec, DetailSpec, AxisSpec, ViewSpec } from '../types/index.js';
 import {
   serializeViewSpec,
-  specState,
-  specTransition,
-  withSpecMeta
+  specState
 } from '../spec-meta.js';
 import { compileViewWithCompiler } from '../charts/compile-view.js';
 import type { SpecCompilerEntry } from '../charts/index.js';
@@ -36,16 +33,6 @@ export function resolveSceneTransition(viewSpec: ViewSpec = {}, stepTransition: 
     axis: scene.includes('axis') ? (state.axis || null) : null,
     detail: scene.includes('detail') ? (state.detail || null) : null
   };
-}
-
-export function withSceneTransitionDefaults(viewSpec: ViewSpec, sceneTransition: SceneTransition): ViewSpec {
-  const transition: TransitionSpec = { ...specTransition(viewSpec) };
-
-  if ((hasScene(sceneTransition, 'mapping') || hasScene(sceneTransition, 'detail')) && transition.stagger == null) {
-    transition.stagger = { ...DEFAULT_TIMING.scene.stagger };
-  }
-
-  return withSpecMeta(viewSpec, { transition });
 }
 
 export function compileViewSpec(viewSpec: ViewSpec, sceneTransition: SceneTransition, compilerEntry?: SpecCompilerEntry): ViewSpec {

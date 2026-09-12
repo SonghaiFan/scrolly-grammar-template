@@ -18,7 +18,11 @@ export function drawBarAxes(chart, x, y, enc, d3, deps, horizontal, options = {}
     style.axisTitle(enc.x, 'right'),
     d3,
     xTransition,
-    { tickCount: xTickCount, tickFormat: enc.x?.format }
+    {
+      tickCount: xTickCount,
+      tickFormat: enc.x?.format,
+      position: horizontal ? undefined : y(0)
+    }
   );
   deps.drawYAxis(
     chart,
@@ -26,7 +30,11 @@ export function drawBarAxes(chart, x, y, enc, d3, deps, horizontal, options = {}
     horizontal ? enc.y?.title : style.axisTitle(enc.y, 'up'),
     d3,
     yTransition,
-    { tickCount: yTickCount, tickFormat: enc.y?.format }
+    {
+      tickCount: yTickCount,
+      tickFormat: enc.y?.format,
+      position: horizontal ? x(0) : undefined
+    }
   );
 
   if (rule.openXDomain) chart.scene.xAxis.select('.domain').style('opacity', 0);

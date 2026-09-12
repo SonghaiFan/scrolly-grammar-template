@@ -111,8 +111,9 @@ Selector operators: `equal`, `notEqual`, `oneOf` (array membership), `gte`,
 (all must pass). String expressions support a single comparison of the form
 `datum.<field> <op> <literal>` where `<op>` is one of `== === != !== >= > <= <`
 and `<literal>` is a quoted string, finite JSON number, boolean or null.
-Numeric range bounds must be numbers. Both equality spellings are strict;
-arithmetic, logical expressions and function calls are not supported.
+Range bounds may be finite numbers, valid `Date` values, or ISO date strings.
+Date values and ISO strings compare by time. Other equality comparisons remain
+strict; arithmetic, logical expressions and function calls are not supported.
 
 ### `timeUnit`
 

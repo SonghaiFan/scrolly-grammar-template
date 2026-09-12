@@ -42,5 +42,7 @@ export function delta(from: Visualization, to: Visualization): DiffResult {
 
 export { diffViewStates };
 export { detectDataTypes, resolveEncodingTypes } from './data/types.js';
+export { cameraPosition, cameraScale, cameraSize, fitCamera, focusCamera, pointBounds, rectBounds } from './focus.js';
+export type { FocusBounds, FocusCamera, FocusTarget, FocusViewport } from './focus.js';
 export type { ChannelType } from './types/index.js';
 export type { DiffResult, ViewSpec } from './types/index.js';

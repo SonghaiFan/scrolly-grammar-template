@@ -129,6 +129,24 @@ test('line filter keeps an internal gap while focus keeps every observation', as
   await page.locator('#end').click();
   await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(24);
   await expect(page.locator('#chart path.sl-line')).toHaveCount(1);
+  const fit = await page.locator('#chart svg').evaluate(svg => {
+    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
+    const points = [...svg.querySelectorAll('circle.sl-line-point')];
+    const selected = points.filter(node => Number(node.__data__?.close) >= 325);
+    const bounds = {
+      x0: Math.min(...selected.map(node => Number(node.getAttribute('cx')) - Number(node.getAttribute('r')))),
+      y0: Math.min(...selected.map(node => Number(node.getAttribute('cy')) - Number(node.getAttribute('r')))),
+      x1: Math.max(...selected.map(node => Number(node.getAttribute('cx')) + Number(node.getAttribute('r')))),
+      y1: Math.max(...selected.map(node => Number(node.getAttribute('cy')) + Number(node.getAttribute('r'))))
+    };
+    return {
+      bounds,
+      width: Number(plot?.getAttribute('width')),
+      height: Number(plot?.getAttribute('height'))
+    };
+  });
+  expect((fit.bounds.x0 + fit.bounds.x1) / 2).toBeCloseTo(fit.width / 2, 1);
+  expect((fit.bounds.y0 + fit.bounds.y1) / 2).toBeCloseTo(fit.height / 2, 1);
 });
 
 test('line lab names the authored observation direction', async ({ page }) => {

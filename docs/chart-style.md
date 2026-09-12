@@ -82,8 +82,8 @@ do not enter visualization specs or semantic deltas.
 | Bar | Categorical baseline, open quantitative axis, no grid | Slightly rounded bars with tight band padding | Stable header room; horizontal bars reserve more category-label space |
 | Point | Open x and y axes with a light two-direction grid | Outlined circles; ordinary enters grow at their target | Extra top room for legend and upward y title |
 | Line | Baseline x-axis, open y-axis, light horizontal grid | Thin line with small observation points | Compact Cartesian margins |
-| Area | Line-like axes and horizontal grid | Filled band with a thin top edge or authored layer divider | Compact Cartesian margins |
-| Unit | No axes for a plain grid; x-axis only for bar, timeline, and dodge layouts | Equal circles with a light surface stroke | Small, stable margins |
+| Area | Line-like axes and horizontal grid | Borderless filled band; transient divider only during detail transitions | Compact Cartesian margins |
+| Unit | No axes for a plain grid; x-axis only for bar and beeswarm layouts | Equal circles with a light surface stroke | Small, stable margins |
 
 These differences follow the reading task. A grid helps estimate Point
 coordinates and compare a changing Line or Area against a scale. It adds noise

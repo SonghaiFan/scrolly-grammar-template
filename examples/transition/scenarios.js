@@ -21,6 +21,9 @@ const base = bar(under10.filter(row => INITIAL_STATES.includes(row.state)))
   .y("population", { title: "Population", format: "~s" })
   .key(["state", "age"]);`;
 
+const populationFocus = `${population}
+const FOCUS_ANCHORS = ["NY", "PA"];`;
+
 const ageConstants = `const DATA_URL = "./data/us-population-state-age-tidy.csv";
 const AGE_BANDS = ["<10", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70-79", "≥80"];
 const AGE_COLORS = ["#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#e6f598", "#abdda4", "#66c2a5", "#3288bd"];`;
@@ -67,5 +70,5 @@ export const scenarios = [
   sample('layout', '10 · Stacked → grouped', 'For six named states, keep the age detail and change from stacked to side-by-side bars.', segmentedFeatured, 'detailed', 'detailed.layout("grouped")'),
   sample('grouped-split', '11 · Split into grouped ages', 'Move six state totals into side-by-side age-band detail.', segmentedFeatured, 'detailed.rollup()', 'detailed.layout("grouped")'),
   sample('grouped-merge', '12 · Merge grouped ages', 'Move the six-state grouped detail back into population totals.', segmentedFeatured, 'detailed.layout("grouped")', 'detailed.rollup()'),
-  sample('focus', '13 · Focus the view', 'Keep all 52 under-10 observations while fitting the category view around eight explicitly listed states.', population, 'under10', 'under10.focus({ field: "state", oneOf: FEATURE_STATES })')
+  sample('focus', '13 · Focus the view', 'Fit one camera around New York and Pennsylvania. Keep all 52 observations, the complete ordered state scale, and every state between the two anchors.', populationFocus, 'under10', 'under10.focus({ field: "state", oneOf: FOCUS_ANCHORS })')
 ];

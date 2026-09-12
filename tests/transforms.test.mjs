@@ -64,6 +64,18 @@ test('filters use conjunction and exclude missing numeric values', () => {
   assert.deepEqual(run([{ filter: 'datum.active === true' }], [{ active: true }, { active: false }]), [{ active: true }]);
 });
 
+test('filters compare Date values and ISO date strings by time', () => {
+  const rows = [
+    { id: 'a', date: new Date('2026-01-01') },
+    { id: 'b', date: new Date('2026-02-01') },
+    { id: 'c', date: '2026-03-01' }
+  ];
+  const filtered = applyTransforms(rows, [{
+    filter: { field: 'date', gte: '2026-02-01', lt: new Date('2026-04-01') }
+  }], aq);
+  assert.deepEqual(filtered.map(row => row.id), ['b', 'c']);
+});
+
 test('string selectors compile to real filters on all built-in chart types', () => {
   for (const factory of [bar, line, point, unit]) {
     const view = factory(rows).x('id').y('value').where('datum.value >= 2');

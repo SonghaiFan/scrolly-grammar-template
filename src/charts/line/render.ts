@@ -1,10 +1,11 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { BaseChart } from '../base.js';
+import { cameraScale, cameraSize, focusCamera, pointBounds } from '../../focus.js';
 import { matchesFilter } from '../../data/filter.js';
 import { d3Curve } from './curve.js';
 import { linePointKeyAccessor, lineSeriesKey } from './keys.js';
 import { matchLinePathFrames } from './path.js';
-import { connectedLineStretches, selectedLineXScale, lineRowsAtTotal, lineState } from './state.js';
+import { connectedLineStretches, lineRowsAtTotal, lineState } from './state.js';
 import { drawLineAxes } from './axes.js';
 
 export function createLineRenderer(deps) {
@@ -19,7 +20,6 @@ class LineChart extends BaseChart {
       colorScale,
       drawLegend,
       fadeNonLineShapes,
-      niceExtent,
       position,
       staggerDelay,
       themeValue
@@ -33,15 +33,23 @@ class LineChart extends BaseChart {
     const addsObservations = addedKeys.size > 0;
     const addsAndRemoves = addsObservations && removedKeys.size > 0;
     const totalDuration = Number(chart.transitionPlan?.timing?.duration) || 900;
-    const pointStart = addsObservations ? Math.round(totalDuration * 0.7) : totalDuration;
-    const lineDuration = addsObservations && !addsAndRemoves ? pointStart : totalDuration;
-    const pointDuration = Math.max(1, totalDuration - pointStart);
+    const scaleDuration = chart.transition.scaleDuration || totalDuration;
+    const enterWindow = chart.transition.enterLast
+      ? chart.transition.enterDuration
+      : totalDuration;
+    const pointStart = addsObservations ? Math.round(enterWindow * 0.7) : scaleDuration;
+    const lineDuration = addsObservations && !addsAndRemoves
+      ? (chart.transition.enterLast ? pointStart : Math.min(pointStart, scaleDuration))
+      : scaleDuration;
+    const pointDuration = Math.max(1, enterWindow - pointStart);
     // Geometry and axes move together first. New points use the remaining
     // time. Canonical reverse playback makes a removal do the exact opposite.
     // A mark-specific duration must not mutate the shared base transition.
     // Axis ticks, labels, and grid lines receive the same explicit duration
     // below so one scale change remains one synchronized chart-part change.
     const t = chart.transition.base;
+    const exitTransition = chart.transition.exit || t;
+    const enterTransition = chart.transition.enter || t;
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
     const plottedRows = state.detailPosition === 'total'
       ? lineRowsAtTotal(rows, enc.x?.field, enc.y?.field, state.detailParentOp)
@@ -52,10 +60,26 @@ class LineChart extends BaseChart {
     const filtersRows = Boolean(state.selection?.filter) &&
       state.selection?.mode !== 'focus' && state.selection?.mode !== 'highlight';
     const scaleRows = filtersRows ? lineageRows : plottedRows;
-    const x = selectedLineXScale(scaleRows, enc.x, chart, state.selection, {
-      bandOrLinear, d3, niceExtent, position
-    });
-    const y = bandOrLinear(scaleRows, enc.y, [chart.innerHeight, 0], d3);
+    const baseX = bandOrLinear(scaleRows, enc.x, [0, chart.innerWidth], d3);
+    const baseY = bandOrLinear(scaleRows, enc.y, [chart.innerHeight, 0], d3);
+    const authoredPointRadius = Number.isFinite(Number(spec.pointSize))
+      ? Number(spec.pointSize)
+      : themeValue('--sl-line-point-size', 4.5);
+    const camera = focusCamera(
+      plottedRows.map((row) => ({
+        datum: row,
+        bounds: pointBounds(
+          position(baseX, row[enc.x?.field]),
+          position(baseY, row[enc.y?.field]),
+          authoredPointRadius
+        )
+      })),
+      state.selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const x = cameraScale(baseX, camera, 'x');
+    const y = cameraScale(baseY, camera, 'y');
+    chart.camera = camera;
     const color = colorScale(domainRows, enc.color, d3);
     const key = linePointKeyAccessor(spec, enc.x?.field);
     const series = connectedLineStretches(
@@ -99,9 +123,8 @@ class LineChart extends BaseChart {
       x: position(x, row[enc.x.field]),
       y: position(y, row[enc.y.field])
     });
-    const pointRadius = Number.isFinite(Number(spec.pointSize))
-      ? Number(spec.pointSize)
-      : themeValue('--sl-line-point-size', 4.5);
+    const pointRadius = cameraSize(authoredPointRadius, camera);
+    const lineWidth = cameraSize(spec.strokeWidth || themeValue('--sl-line-width', 3), camera);
     const lineIsSplit = state.detailStage === 'segments';
     const visiblePointRadius = lineIsSplit ? 0 : pointRadius;
     const pointOpacity = (row) => lineSelectionOpacity(row, state.selection, themeValue('--sl-dim-opacity', 0.22));
@@ -127,7 +150,7 @@ class LineChart extends BaseChart {
             .attr('data-key', lineSeriesKey)
             .attr('fill', 'none')
             .attr('stroke', (d) => color(d.rows[0]))
-            .attr('stroke-width', spec.strokeWidth || themeValue('--sl-line-width', 3))
+            .attr('stroke-width', lineWidth)
             .attr('d', (d) => line(d.rows))
             .attr('data-line-transition', 'draw-line')
             .each(function(d) { this.__visDeltaLineFrame = pathFrame(d); })
@@ -137,7 +160,7 @@ class LineChart extends BaseChart {
             return entered.style('opacity', 0).transition(t).style('opacity', (d) => seriesOpacity(d));
           }
           return entered
-            .call((selection) => drawLinePath(selection, t, d3, addsObservations ? lineDuration : null))
+            .call((selection) => drawLinePath(selection, enterTransition, d3, addsObservations ? lineDuration : null))
             // Path drawing owns dash offset only. Selection owns opacity and is
             // applied last so a fresh endpoint cannot reset a dimmed series.
             .style('opacity', (d) => seriesOpacity(d));
@@ -151,10 +174,10 @@ class LineChart extends BaseChart {
           else if (!wasSplit) prepared.attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
           const moving = prepared
             .transition(t)
-            .duration(lineDuration)
+            .duration(scaleDuration)
             .style('opacity', (d) => seriesOpacity(d))
             .attr('stroke', (d) => color(d.rows[0]))
-            .attr('stroke-width', spec.strokeWidth || themeValue('--sl-line-width', 3))
+            .attr('stroke-width', lineWidth)
             .attrTween('d', function(d) {
               const targetFrame = pathFrame(d);
               const match = matchLinePathFrames(
@@ -174,8 +197,8 @@ class LineChart extends BaseChart {
           .attr('data-line-transition', 'remove-line')
           .attr('stroke-dasharray', null)
           .attr('stroke-dashoffset', null)
-          .transition(t)
-          .duration(lineDuration)
+          .transition(exitTransition)
+          .duration(chart.transition.exitFirst ? chart.transition.exitDuration : lineDuration)
           // During a filter restore, the disconnected source pieces stay put
           // while the missing connection is drawn over them. The clean target
           // frame removes these duplicate pieces at progress 1.
@@ -196,12 +219,12 @@ class LineChart extends BaseChart {
           .attr('data-scroll-radius', pointRadius)
           .attr('fill', (d) => color(d))
           .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', themeValue('--sl-point-stroke-width', 1.5))
+          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
           .call(bindTooltip, spec, tooltip)
-          .transition(t)
+          .transition(enterTransition)
           .delay((d, i) => addedKeys.has(String(key(d, i)))
-            ? pointStart
-            : 260 + staggerDelay(spec, d, i))
+            ? (chart.transition.enterDelay || 0) + pointStart
+            : (chart.transition.enterDelay || 0) + 260 + staggerDelay(spec, d, i))
           .duration((d, i) => addedKeys.has(String(key(d, i))) ? pointDuration : lineDuration)
           .style('opacity', (d) => visiblePointOpacity(d))
           .attr('cx', (d, i) => targetPoint(d, i).x)
@@ -211,18 +234,19 @@ class LineChart extends BaseChart {
           .attr('data-key', (d, i) => key(d, i))
           .call(bindTooltip, spec, tooltip)
           .transition(t)
-          .duration(lineDuration)
+          .duration(scaleDuration)
           .style('opacity', (d) => visiblePointOpacity(d))
           .attr('cx', (d) => position(x, d[enc.x.field]))
           .attr('cy', (d) => position(y, d[enc.y.field]))
           .attr('fill', (d) => color(d))
+          .attr('stroke-width', cameraSize(themeValue('--sl-point-stroke-width', 1.5), camera))
           .attr('data-scroll-radius', pointRadius)
           .attr('r', visiblePointRadius),
         (exit) => exit
-          .transition(t)
-          .duration((d, i) => removedKeys.has(String(key(d, i)))
-            ? pointDuration
-            : lineDuration)
+          .transition(exitTransition)
+          .duration((d, i) => chart.transition.exitFirst
+            ? chart.transition.exitDuration
+            : (removedKeys.has(String(key(d, i))) ? pointDuration : lineDuration))
           .style('opacity', function(d, i) {
             return removedKeys.has(String(key(d, i)))
               ? this.style.opacity || 1

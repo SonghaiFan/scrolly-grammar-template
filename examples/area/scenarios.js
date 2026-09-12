@@ -78,7 +78,7 @@ export const scenarios = [
   sample('highlight', '08 · Highlight one industry', 'Keep all five industry layers and dim every layer except Construction.', stacked, 'detailed', 'detailed.highlight({ industry: "Construction" }, { opacity: 0.12 })'),
   sample('color', '09 · Change fill color', 'Change a constant fill without changing manufacturing data or geometry.', base, 'base.color("#1c6ae4")', 'base.color("#fa4d1d")'),
   sample('baseline', '10 · Change baseline', 'Rebase the band at 500 thousand so the filled height shows unemployment above that level.', base, 'base', 'base.baseline(500)'),
-  sample('focus', '11 · Focus the view', 'Keep all manufacturing observations while fitting the date view around 2009.', base, 'base', 'base.focus({ field: "year", equal: 2009 })'),
+  sample('focus', '11 · Focus the view', 'Keep all manufacturing observations while fitting one 2D camera around the 2009 area cells.', base, 'base', 'base.focus({ field: "year", equal: 2009 })'),
   sample('split', '12 · Split into industry areas', 'Draw the internal boundaries through the combined total, then reveal five explicitly colored industries.', stacked, 'total', 'detailed'),
   sample('merge', '13 · Merge into a total', 'Hide the industry parts and erase the same boundaries in exact reverse.', stacked, 'detailed', 'total'),
   sample('curve', '14 · Change curve', 'Shape both manufacturing Area boundaries with exact D3 curve names.', base, 'base.curve("curveLinear")', 'base.curve("curveMonotoneX")')

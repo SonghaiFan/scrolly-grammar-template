@@ -3,8 +3,7 @@ import type { ChartTypeRegistry, SpecCompilerEntry } from '../charts/index.js';
 import { serializeViewSpec } from '../spec-meta.js';
 import {
   compileViewSpec,
-  resolveSceneTransition,
-  withSceneTransitionDefaults
+  resolveSceneTransition
 } from '../transitions/index.js';
 
 export interface StepTransition {
@@ -30,7 +29,7 @@ function compileEffectiveView(viewSpec: ViewSpec, stepTransition: StepTransition
   const authoredViewSpec = serializeViewSpec(viewSpec);
   const sceneTransition = resolveSceneTransition(authoredViewSpec, stepTransition, entry ?? chartTypes.get(viewSpec));
   const effectiveViewSpec = compileViewSpec(
-    withSceneTransitionDefaults(authoredViewSpec, sceneTransition),
+    authoredViewSpec,
     sceneTransition,
     entry
   );

@@ -25,17 +25,18 @@ filled band. Use Point when an isolated observation itself should stay visible.
 
 Color is explicit. `.breakdown("industry")` creates stack geometry but does not
 silently assign hues. Pass a color range to `.breakdown()`, or chain
-`.color("industry")`. Without a color mapping, every area is black and the thin
-boundary stroke keeps adjacent layers visible.
+`.color("industry")`. Area has no default border, so without a color mapping
+adjacent layers intentionally remain one visual fill.
 
 Split and merge are one transition evaluated in opposite directions. The
 single total stays behind the entering stacked layers. First, a one-pixel
 contrast divider is drawn along each internal cumulative boundary. It uses the
 same `mix-blend-mode: difference` rule as stacked Bar, so it reads against the
-area beneath it without choosing a fixed light or dark color. The layer edges
-and fills then appear over the total. Merge reuses those cached frames backward:
-the colors disappear and the divider erases itself. There is no separate merge
-effect.
+area beneath it without choosing a fixed light or dark color. The detailed
+fills then appear over the total. Merge reuses those cached frames backward:
+the colors disappear and the divider erases itself. The divider is absent from
+both endpoints and exists only while the transition explains the split or
+merge. There is no separate merge effect.
 
 Observation membership also has one rule. Restore and Add place each new keyed
 observation at its target x with zero thickness (`y1 = y0`), then grow it to its

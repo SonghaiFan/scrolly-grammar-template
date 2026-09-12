@@ -14,7 +14,7 @@ assertLab(labs.get('bar'), 'bar', 13);
 assertLab(labs.get('point'), 'point', 13);
 assertLab(labs.get('line'), 'line', 16);
 assertLab(labs.get('area'), 'area', 14);
-assertLab(labs.get('unit'), 'unit', 13);
+assertLab(labs.get('unit'), 'unit', 14);
 
 console.log('Area, bar, line, point, and unit example invariants ok.');
 

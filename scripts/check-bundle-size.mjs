@@ -18,7 +18,7 @@ const cases = [
   {
     name: 'bar authoring',
     source: 'import { bar } from "./src/bar.ts"; globalThis.__slBundle = { bar };',
-    gzipBudget: 9_000
+    gzipBudget: 9_100
   },
   {
     name: 'point authoring',
@@ -113,8 +113,8 @@ for (const path of loaded) {
   }
 }
 // Includes seekable semantic bar splits plus the chart-owned responsive axis,
-// title, number-format retention, margin, legend, axis-system timing, and the
-// shared field-type detection used by the focused runtime.
-const budget = 37_500;
+// title, number-format retention, legend, axis-system timing, and the shared
+// field-type detection plus the chart-agnostic 2D camera used by focus.
+const budget = 38_100;
 if (gzipBytes > budget) throw new Error(`Focused bar transition exceeds ${budget} bytes gzip: ${gzipBytes}`);
 console.log(`bar + transition (entry, shared chunks, bar plugin): ${gzipBytes} bytes gzip (budget ${budget}; excludes D3, optional Arquero, CSS).`);

@@ -113,8 +113,8 @@ Current and intended default policies are:
 | Stacked ↔ grouped | Ordered x and y steps for the destination layout | Available |
 | Split/merge with a stable scale | Enter/exit + marks; axis stays still | Available |
 | Point summary ↔ detail | Set the view with its summary marks, then move the points | Available |
-| Filter with automatic rescale | Exit first, then scale + axis + remaining marks | Developing |
-| Add data with automatic rescale | Scale + axis + existing marks, then enter | Developing |
+| Filter with automatic rescale | Exit first, then scale + axis + every remaining mark | Available |
+| Add data with automatic rescale | Scale + axis + every existing mark, then enter | Available |
 
 Forward and reverse evaluation must be deterministic. A separately authored
 reverse pair must show the same steps backward at `1 - p`; it must not choose a
@@ -161,8 +161,8 @@ effects; the transition planner decides how to show them.
 | Family | Public syntax | Status | Meaning |
 | --- | --- | --- | --- |
 | **Change data membership** | `.where()` | Available | Keep matching rows and remove the others across chart types |
-| **Change attention** | `.highlight()` | Partial | Keep every row; selective visual emphasis is available for bar, line, and point |
-| **Change the view** | `.focus()` | Partial | Keep every row; fit Bar categories, Line x, or Point x and y around a subset |
+| **Change attention** | `.highlight()` | Available | Keep every row; selectively de-emphasize nonmatching marks in every chart type |
+| **Change the view** | `.focus()` | Available | Keep every row and the full scale domain; fit the same 2D camera around selected marks in every chart type |
 | **Change a value or mapping** | change `.x()`, `.y()`, `.color()`, `.size()` | Available | Show the same items through another measure or visual property |
 | **Change detail** | `.breakdown()`, `.rollup()`, `.segment()` | Partial | Split into detail or combine into totals; bar has the richest path |
 | **Change layout or axis** | `.flip()`, `.axis()`, `.layout()` | Partial | Available across relevant chart types, with different rendering depth |
@@ -200,7 +200,7 @@ by the shape drawn in SVG.
 | `bar()` | Available | Categorical comparison, filtering, reversible split/merge, grouped/stacked layout | Cached frame data |
 | `line()` | Available | Ordered trends, keyed point/path changes, sliding windows, and staged reversible total/series changes | Reconstructs frames |
 | `point()` | Available | Quantitative relationships and reversible summary/detail changes | Cached frame data |
-| `unit()` | Available | Countable units, grids, categorical unit bars, timelines, dodge | Cached frame data |
+| `unit()` | Available | Countable units, grids, categorical unit bars, beeswarms | Cached frame data |
 | `area()` | Available | Ordered magnitude, explicit baseline, and reversible total/stacked composition | Cached frame data |
 | `rect()` / heatmap | Research | Candidate matrix and density chart type | Not implemented |
 | `arc()` | Research | Candidate part-to-whole chart type | Not implemented |
@@ -225,7 +225,7 @@ The research rows are a taxonomy of likely language space, not release promises.
 | `.progress(0…1)` | Available | Synchronously evaluate any normalized frame |
 | `.play({ duration, from, to })` | Available | Time-drive progress in either direction |
 | `.pause()`, `.resize()`, `.destroy()` | Available | Runtime lifecycle control |
-| `.transition({ duration, ease, stagger })` | Available | Endpoint transition metadata |
+| `.transition({ duration, ease, stagger })` | Available | Endpoint timing; marks stay synchronized unless stagger is explicit |
 | Cached frame data for line | Developing | Area, Bar, Point, and Unit use cached evaluation |
 | Transition such as bar → line | Unsupported | Both endpoints must currently use the same chart type |
 | Cross-type transition compiler | Research | Requires matching and geometry rules beyond the current contract |
@@ -269,7 +269,7 @@ closes these differences while new chart modules expose gaps in the ontology.
 | Same-type transition | Available | Available | Available | Available | Available |
 | Cached arbitrary-frame evaluation | Available | Available | Developing | Available | Available |
 | `.where()` row filtering | Available | Available | Available; internal gaps stay disconnected by default | Available | Available |
-| `.focus()` view fitting | Available on x | Available | Available on x | Available on x and y | Developing |
+| `.focus()` view fitting | Available in 2D | Available in 2D | Available in 2D | Available in 2D | Available in 2D |
 | Selective `.highlight()` rendering | Available by layer | Available | Available | Available | Available |
 | Detail changes | Total/stacked exact reverse | Split/merge | Cut, move, connect series/single | Set view, then move points; exact reverse | Not currently a primary change |
 | Axis/layout changes | Axis and D3 curves | Flip, grouped, stacked, ordered steps | Flip and axis | Flip and axis | Set view, keep keys, then minimize unmatched travel; exact reverse |

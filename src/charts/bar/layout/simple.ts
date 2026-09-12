@@ -1,11 +1,11 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
-import { focusedScale, viewSelection } from '../../focus.js';
+import { cameraScale, cameraSize, focusCamera, rectBounds, viewSelection } from '../../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding } from './index.js';
 import { drawBarAxes } from '../axes.js';
 
 export function createSimpleBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, quantitativeDomain, themeValue } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, position, quantitativeDomain, themeValue } = deps;
 
   return function renderSimpleBar(chart, rows, spec, tooltip, d3) {
     const enc = spec.encoding || {};
@@ -20,16 +20,23 @@ export function createSimpleBarRenderer(deps, kit) {
     const selection = viewSelection(spec);
     const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
 
-    const categoryScale = selection?.mode === 'focus'
-      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
-      : horizontal
-        ? d3.scaleBand().domain(channelDomain(rows, categoryChannel)).range(categoryRange).padding(0.22)
-        : bandOrLinear(rows, categoryChannel, categoryRange, d3);
-    const measureScale = d3.scaleLinear()
+    const baseCategoryScale = horizontal
+      ? d3.scaleBand().domain(channelDomain(rows, categoryChannel)).range(categoryRange).padding(0.22)
+      : bandOrLinear(rows, categoryChannel, categoryRange, d3);
+    const baseMeasureScale = d3.scaleLinear()
       .domain(quantitativeDomain(domainRows, measureChannel, 0))
       .range(horizontal ? [0, chart.innerWidth] : [chart.innerHeight, 0]).nice();
-    const x = horizontal ? measureScale : categoryScale;
-    const y = horizontal ? categoryScale : measureScale;
+    const baseX = horizontal ? baseMeasureScale : baseCategoryScale;
+    const baseY = horizontal ? baseCategoryScale : baseMeasureScale;
+    const baseGeom = { x: baseX, y: baseY, categoryField, valueField, chart, horizontal, position };
+    const baseGeometry = simpleBarGeometry(baseGeom);
+    const camera = focusCamera(
+      rows.map((row) => ({ datum: row, bounds: geometryBounds(baseGeometry, row) })),
+      selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const x = cameraScale(baseX, camera, 'x');
+    const y = cameraScale(baseY, camera, 'y');
     const color = colorScale(domainRows, enc.color, d3);
     const geom = { x, y, categoryField, valueField, chart, horizontal, position };
     const steps = kit.steps(chart, orientation, d3);
@@ -40,6 +47,7 @@ export function createSimpleBarRenderer(deps, kit) {
     const geometry = simpleBarGeometryContract(geom, collapseLineage, kit.sourceBaselineExit, zeroBaselineExit);
 
     chart.scales = { x, y, color, orientation };
+    chart.camera = camera;
     chart.channels = enc;
     chart.position = {
       x: (d) => horizontal ? x(d[valueField]) : position(x, d[categoryField]),
@@ -54,7 +62,7 @@ export function createSimpleBarRenderer(deps, kit) {
     kit.renderBarJoin({
       chart, rows, spec, tooltip, d3, bindTooltip, key,
       category: (d) => d[categoryField],
-      className: 'sl-bar', orientation, rx: themeValue('--sl-bar-radius', 3),
+      className: 'sl-bar', orientation, rx: cameraSize(themeValue('--sl-bar-radius', 3), camera),
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, steps, geometry
     });
@@ -128,4 +136,9 @@ function applySimpleBarExitGeometry(selection, geom, sourceBaselineExit, exitPla
 
 function simpleCategoryWidth(scale) {
   return typeof scale.bandwidth === 'function' ? scale.bandwidth() : 10;
+}
+
+function geometryBounds(geometry, datum) {
+  const value = (property) => typeof property === 'function' ? property(datum) : property;
+  return rectBounds(value(geometry.x), value(geometry.y), value(geometry.width), value(geometry.height));
 }

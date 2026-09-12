@@ -36,10 +36,10 @@ for (const sample of scenarios) {
     await page.locator('#start').click();
     expect(await snapshot(page)).toEqual(start);
 
-    await editor.fill(sample.code.replace('count: 8', 'count: 4'));
+    await editor.fill(sample.code.replace('radius: 6', 'radius: 5'));
     await expect(page.locator('#status')).toHaveText('Waiting for input');
     await ready(page);
-    await expect(editor).toHaveValue(/count: 4/);
+    await expect(editor).toHaveValue(/radius: 5/);
     await page.locator('#reset').click();
     await ready(page);
     await expect(editor).toHaveValue(sample.code);
@@ -52,7 +52,7 @@ test('unit bar uses category position while every unit keeps equal size', async 
   await ready(page);
   await page.locator('#end').click();
 
-  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(45);
+  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
   await expect(page.locator('#chart .sl-x-axis .tick')).toHaveCount(3);
   const result = await page.locator('#chart').evaluate(chart => {
     const marks = [...chart.querySelectorAll('circle.sl-unit')].map(node => ({
@@ -74,7 +74,110 @@ test('unit bar uses category position while every unit keeps equal size', async 
   expect(result.radii).toHaveLength(1);
   expect(new Set(result.groupCenters).size).toBe(3);
   expect(result.groupYCounts.every(count => count > 1)).toBe(true);
-  expect(result.labels).toEqual(['Alpha', 'Beta', 'Gamma']);
+  expect(result.labels).toEqual(['setosa', 'versicolor', 'virginica']);
+});
+
+test('Unit bar sets horizontal positions before units fall', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#bar');
+  await ready(page);
+  const geometry = () => page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+    Object.fromEntries(nodes.map(node => [node.dataset.key, {
+      x: Number(node.getAttribute('cx')),
+      y: Number(node.getAttribute('cy'))
+    }])));
+
+  const start = await geometry();
+  await page.locator('#progress').fill('0.52');
+  const afterMoveAcross = await geometry();
+  const steps = await page.locator('#chart [data-transition-steps]').first()
+    .getAttribute('data-transition-steps');
+  await page.locator('#end').click();
+  const end = await geometry();
+
+  expect(Object.keys(afterMoveAcross)).toEqual(Object.keys(start));
+  for (const key of Object.keys(start)) {
+    expect(afterMoveAcross[key].x).toBeCloseTo(end[key].x, 5);
+    expect(afterMoveAcross[key].y).toBeCloseTo(start[key].y, 5);
+  }
+  expect(steps).toBe('view move-across fall');
+});
+
+test('Unit fall uses the direction inferred from successive progress values', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#beeswarm');
+  await ready(page);
+  const progress = page.locator('#progress');
+  const positions = () => page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+    nodes.map(node => Number(node.getAttribute('cy'))));
+
+  await progress.fill('0.7');
+  await progress.fill('0.8');
+  const arrivingForward = await positions();
+
+  await progress.fill('0.9');
+  await progress.fill('0.8');
+  const arrivingBackward = await positions();
+
+  expect(arrivingBackward).not.toEqual(arrivingForward);
+});
+
+test('Unit uses a light bounded per-mark delay by default', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#radius');
+  await ready(page);
+  await page.locator('#progress').fill('0.5');
+
+  const radii = await page.locator('#chart circle.sl-unit').evaluateAll(nodes =>
+    nodes.map(node => Number(node.getAttribute('r')).toFixed(4)));
+  expect(new Set(radii).size).toBeGreaterThan(1);
+});
+
+test('unit focus keeps every unit and uses the shared 2D camera', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#focus');
+  await ready(page);
+  await page.locator('#end').click();
+
+  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
+  const result = await page.locator('#chart svg').evaluate(svg => {
+    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
+    const selected = [...svg.querySelectorAll('circle.sl-unit')]
+      .find(node => node.__data__?.flowerId === 'iris-001');
+    return {
+      width: Number(plot?.getAttribute('width')),
+      height: Number(plot?.getAttribute('height')),
+      cx: Number(selected?.getAttribute('cx')),
+      cy: Number(selected?.getAttribute('cy')),
+      radius: Number(selected?.getAttribute('r')),
+      cameraK: Number(svg.getAttribute('data-camera-k'))
+    };
+  });
+  expect(result.cameraK).toBeGreaterThan(1);
+  expect(result.cx).toBeCloseTo(result.width / 2, 5);
+  expect(result.cy).toBeCloseTo(result.height / 2, 5);
+  expect(result.radius).toBeCloseTo(Math.min(result.width, result.height) / 2, 5);
+});
+
+test('unit lab loads the tidy Iris data and keeps one keyed unit per flower', async ({ page }) => {
+  const dataRequests = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/data/iris.csv')) dataRequests.push(request.url());
+  });
+  await page.goto('/docs/.vitepress/dist/unit-lab.html#all');
+  await ready(page);
+  await page.locator('#end').click();
+
+  await expect(page.locator('#chart circle.sl-unit')).toHaveCount(150);
+  expect(dataRequests.length).toBeGreaterThan(0);
+  const result = await page.locator('#chart').evaluate(chart => {
+    const marks = [...chart.querySelectorAll('circle.sl-unit')];
+    return {
+      keys: new Set(marks.map(node => node.dataset.key)).size,
+      parentKeys: new Set(marks.map(node => node.dataset.parentKey)).size,
+      species: [...new Set(marks.map(node => node.__data__?.species))].sort()
+    };
+  });
+
+  expect(result.keys).toBe(150);
+  expect(result.parentKeys).toBe(150);
+  expect(result.species).toEqual(['setosa', 'versicolor', 'virginica']);
 });
 
 test('zero count renders zero units and group does not silently choose layout or color', async ({ page }) => {

@@ -105,7 +105,7 @@ unstable keys turn a meaningful transition into unrelated exits and enters.
 
 ## Kinds of chart change
 
-VisDelta classifies endpoint differences into four semantic families:
+VisDelta classifies endpoint differences into six semantic families:
 
 | Family | Question | Typical authoring trigger |
 | --- | --- | --- |

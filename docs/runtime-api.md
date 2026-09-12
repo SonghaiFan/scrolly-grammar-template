@@ -49,7 +49,7 @@ The endpoint chart types must match. Transitions between chart types are not sup
 | `delta` | Semantic difference between the endpoints |
 | `view` | Mounted chart view element |
 | `value` | Current normalized progress |
-| `progress(value)` | Pause playback and synchronously show a frame from 0 through 1 |
+| `progress(value)` | Pause playback and synchronously show a frame from 0 through 1; movement direction is inferred from the previous value |
 | `play(options?)` | Animate from the current or requested source progress to the destination |
 | `pause()` | Stop owned playback without changing the current frame |
 | `resize()` | Recompile at the current size while retaining progress |
@@ -72,6 +72,12 @@ button.addEventListener("click", () => {
 
 The control may be UI state, a gesture, a route, a timer, or scroll position.
 VisDelta only needs a progress value from `0` to `1`.
+
+Progress is directional. Moving from `0.7` to `0.8` is a forward frame, while
+moving from `0.9` to `0.8` is a reverse frame. Most transitions look identical
+in both directions. A chart may use the direction for a meaningful motion rule,
+such as Unit marks bouncing when they fall but settling directly when they rise.
+Repeating the same value and resizing keep the last movement direction.
 
 ## Lifecycle and errors
 

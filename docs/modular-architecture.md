@@ -21,6 +21,7 @@ only when it is needed.
 | `visdelta/bar` | The bar-chart builder |
 | `visdelta/point` | The point-chart builder |
 | `visdelta/line` | The line-chart builder |
+| `visdelta/unit` | The unit-chart builder |
 | `visdelta/transition` | `transition()`, progress, play, pause, resize, and destroy |
 | `visdelta/plugins` | Build a chart module or register one for plain specs |
 | `visdelta/browser` | The same API using dependencies supplied by the browser |
@@ -55,13 +56,14 @@ position, gesture, or route can drive the same transition.
 
 ## Size checks
 
-`npm run bundle:check` measures five useful bundles:
+`npm run bundle:check` measures seven useful bundles:
 
 - core difference calculation;
 - area authoring;
 - bar authoring;
 - point authoring;
 - line authoring;
+- unit authoring;
 - bar plus transition, including required shared and the selected lazy-loaded
   bar code.
 
@@ -80,3 +82,6 @@ when a chart uses a data transform.
   chart module must be registered explicitly before `transition()`.
 - The complete `visdelta` entry is a convenience collection of the official
   charts. Focused entries keep chart types independent.
+- Core owns the chart-agnostic `k / x / y` focus camera and scale adapters.
+  Each chart module owns only the visual bounds of its marks and any rule that
+  ties a mark to an axis, such as a Bar's zero baseline.

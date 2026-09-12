@@ -1,8 +1,8 @@
 // @ts-nocheck — D3 rendering code; typed via dependency injection
 import { BaseChart } from '../base.js';
+import { cameraScale, focusCamera, rectBounds } from '../../focus.js';
 import { d3Curve } from '../curve.js';
-import { focusedScale } from '../focus.js';
-import { matchRenderedPaths } from '../path-interpolation.js';
+import { matchPathStrings, matchRenderedPaths } from '../path-interpolation.js';
 import { DIVIDER_DRAW_PROGRESS } from '../detail-timing.js';
 import {
   areaCells,
@@ -21,7 +21,7 @@ class AreaChart extends BaseChart {
   render(chart, rows, spec, tooltip, d3) {
     const {
       bandOrLinear, bindTooltip, colorScale, drawLegend,
-      niceExtent, position, themeValue
+      position, themeValue
     } = this.deps;
     const enc = spec.encoding || {};
     const xField = enc.x?.field;
@@ -41,15 +41,23 @@ class AreaChart extends BaseChart {
       : layers;
     const cells = areaCells(layers, lineageLayers);
     const splitDetail = chart.transitionPlan?.detailChange?.mode === 'split';
-    const focusDeps = { bandOrLinear, d3, niceExtent, position };
-    const x = state.selection?.mode === 'focus'
-      ? focusedScale(scaleRows, enc.x, [0, chart.innerWidth], state.selection, focusDeps)
-      : bandOrLinear(scaleRows, enc.x, [0, chart.innerWidth], d3);
+    const baseX = bandOrLinear(scaleRows, enc.x, [0, chart.innerWidth], d3);
     const boundaryRows = domainLayers.flatMap((layer) => layer.points.flatMap((point) => [
       { __areaValue: point.y0 }, { __areaValue: point.y1 }
     ]));
     const yChannel = { ...enc.y, field: '__areaValue' };
-    const y = bandOrLinear(boundaryRows, yChannel, [chart.innerHeight, 0], d3);
+    const baseY = bandOrLinear(boundaryRows, yChannel, [chart.innerHeight, 0], d3);
+    const camera = focusCamera(
+      cells.map((cell) => ({
+        datum: cell.row,
+        bounds: areaCellBounds(cell, baseX, baseY, position)
+      })),
+      state.selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const x = cameraScale(baseX, camera, 'x');
+    const y = cameraScale(baseY, camera, 'y');
+    chart.camera = camera;
     const color = colorScale(domainRows, enc.color, d3);
     const curveName = spec.curve || 'curveLinear';
     const curve = d3Curve(spec.curve, d3);
@@ -84,7 +92,7 @@ class AreaChart extends BaseChart {
         : { ...center, key: `edge:right:${cell.center.key}` };
       return [left, center, right];
     };
-    const dividers = state.mode === 'stacked'
+    const dividers = splitDetail && state.mode === 'stacked'
       ? areaDividerPaths(cells, layers, frame, edge)
       : [];
     const opacity = (cell) => areaSelectionOpacity(
@@ -100,7 +108,9 @@ class AreaChart extends BaseChart {
       node.__visDeltaAreaCurve = curveName;
       if (previousCurve !== curveName) {
         node.setAttribute('data-area-transition', 'change-curve');
-        return matchRenderedPaths(node, generator(to));
+        return interpolateAreaCurveFrames(
+          node, from, to, previousCurve, curveName, generator, d3
+        );
       }
       node.setAttribute('data-area-transition', 'move-boundaries');
       return interpolateAreaCellFrames(from, to, generator, d3);
@@ -132,7 +142,7 @@ class AreaChart extends BaseChart {
             this.__visDeltaAreaFrame = isAdded(cell) ? flattenAreaFrame(frame(cell)) : frame(cell);
             this.__visDeltaAreaCurve = curveName;
           })
-          .transition(chart.transition.base)
+          .transition(chart.transition.enter || chart.transition.base)
           .style('opacity', opacity)
           .attrTween('d', function(cell) {
             return tween(this, cell, shape);
@@ -149,59 +159,18 @@ class AreaChart extends BaseChart {
           .attrTween('d', function(cell) {
             return tween(this, cell, shape);
           }),
-        (exit) => exit.transition(chart.transition.base)
+        (exit) => exit.transition(chart.transition.exit || chart.transition.base)
           .style('opacity', 0)
           .remove()
       );
 
-    // Fill cells must not draw vertical seams. A separate top edge preserves
-    // the thin layer divider without outlining every observation cell.
-    chart.g.selectAll('path.sl-area-edge')
-      .data(cells, (cell) => cell.key)
-      .join(
-        (enter) => {
-          const path = enter.append('path')
-          .attr('class', 'sl-area-edge')
-          .attr('data-key', (cell) => cell.key)
-          .attr('data-layer-key', (cell) => cell.layerKey)
-          .attr('data-observation-key', (cell) => cell.observationKey)
-          .attr('fill', 'none')
-          .attr('pointer-events', 'none')
-          .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', 1)
-          .attr('d', (cell) => edge(isAdded(cell) ? flattenAreaFrame(frame(cell)) : frame(cell)))
-          .style('opacity', (cell) => isAdded(cell) ? opacity(cell) : 0)
-          .each(function(cell) {
-            this.__visDeltaAreaFrame = isAdded(cell) ? flattenAreaFrame(frame(cell)) : frame(cell);
-            this.__visDeltaAreaCurve = curveName;
-          });
-          const transition = path.transition(chart.transition.base);
-          if (splitDetail) transition
-            .delay(chart.transition.duration * DIVIDER_DRAW_PROGRESS)
-            .duration(Math.max(1, chart.transition.duration * (1 - DIVIDER_DRAW_PROGRESS)));
-          return transition
-          .style('opacity', opacity)
-          .attrTween('d', function(cell) {
-            return tween(this, cell, edge);
-          });
-        },
-        (update) => update
-          .attr('data-key', (cell) => cell.key)
-          .attr('data-layer-key', (cell) => cell.layerKey)
-          .attr('data-observation-key', (cell) => cell.observationKey)
-          .transition(chart.transition.base)
-          .style('opacity', opacity)
-          .attr('stroke', themeValue('--sl-mark-stroke', 'white'))
-          .attr('stroke-width', 1)
-          .attrTween('d', function(cell) {
-            return tween(this, cell, edge);
-          }),
-        (exit) => exit.transition(chart.transition.base).style('opacity', 0).remove()
-      );
+    // Area is fill-first by default. Do not add a persistent outline or use a
+    // border to imply layer separation that the author did not encode.
+    chart.g.selectAll('path.sl-area-edge').remove();
 
     // A stacked Area has one continuous internal boundary per lower layer and
     // connected stretch. During a total -> detail split, draw those boundaries
-    // over the still-visible parent before the ordinary layer edges fade in.
+    // over the still-visible parent before the detailed fills appear.
     // Cached canonical playback makes detail -> total the exact reverse.
     const dividerJoin = chart.g.selectAll('path.sl-area-divider')
       .data(dividers, (divider) => divider.key);
@@ -213,7 +182,7 @@ class AreaChart extends BaseChart {
       .attr('fill', 'none')
       .attr('pointer-events', 'none')
       .attr('d', (divider) => divider.path)
-      .style('opacity', 1);
+      .style('opacity', 0);
     if (splitDetail) {
       dividerEnter
         .attr('stroke-dasharray', function() {
@@ -222,16 +191,20 @@ class AreaChart extends BaseChart {
         })
         .attr('stroke-dashoffset', function() { return this.getTotalLength(); });
     }
-    dividerEnter.merge(dividerJoin)
+    const divider = dividerEnter.merge(dividerJoin);
+    const dividerDrawDuration = Math.max(1, chart.transition.duration * DIVIDER_DRAW_PROGRESS);
+    divider
       .transition(chart.transition.base)
-      .duration(splitDetail
-        ? Math.max(1, chart.transition.duration * DIVIDER_DRAW_PROGRESS)
-        : chart.transition.duration)
+      .duration(dividerDrawDuration)
       .style('opacity', 1)
       .attr('stroke-dashoffset', 0)
       .attrTween('d', function(divider) {
         return matchRenderedPaths(this, divider.path);
-      });
+      })
+      .transition()
+      .duration(Math.max(1, chart.transition.duration - dividerDrawDuration))
+      .style('opacity', 0)
+      .remove();
 
     drawLegend(chart, rows, enc.color, d3);
   }
@@ -289,6 +262,33 @@ function areaDividerPaths(cells, layers, frame, edge) {
   return paths;
 }
 
+function areaCellBounds(cell, x, y, position) {
+  const project = (point) => ({
+    x: position(x, point.x),
+    y0: y(point.y0),
+    y1: y(point.y1)
+  });
+  const center = project(cell.center);
+  const left = cell.left ? midpointBounds(project(cell.left), center) : center;
+  const right = cell.right ? midpointBounds(center, project(cell.right)) : center;
+  const xs = [left.x, center.x, right.x];
+  const ys = [left.y0, left.y1, center.y0, center.y1, right.y0, right.y1];
+  return rectBounds(
+    Math.min(...xs),
+    Math.min(...ys),
+    Math.max(...xs) - Math.min(...xs),
+    Math.max(...ys) - Math.min(...ys)
+  );
+}
+
+function midpointBounds(left, right) {
+  return {
+    x: (left.x + right.x) / 2,
+    y0: (left.y0 + right.y0) / 2,
+    y1: (left.y1 + right.y1) / 2
+  };
+}
+
 function stackDirection(point) {
   const value = Number(point.y1) - Number(point.y0);
   return value < 0 ? -1 : value > 0 ? 1 : 0;
@@ -304,6 +304,56 @@ export function interpolateAreaCellFrames(from, to, shape, d3) {
     y0: safeInterpolate(point.y0, target[index].y0, progress, d3),
     y1: safeInterpolate(point.y1, target[index].y1, progress, d3)
   })));
+}
+
+/**
+ * Morph the two Area boundaries independently so neighbouring cells keep the
+ * exact same shared edge throughout a curve change. Matching each closed cell
+ * as one perimeter lets its top and baseline corners drift at different rates,
+ * which exposes triangular cracks between otherwise touching fills.
+ */
+function interpolateAreaCurveFrames(
+  node, from, to, fromCurveName, toCurveName, targetShape, d3
+) {
+  // Closed curve factories intentionally connect each boundary back to itself.
+  // Keep the general path matcher for those uncommon shapes; the ordinary Area
+  // curves can use the watertight boundary matcher below.
+  if (
+    fromCurveName.endsWith('Closed') || toCurveName.endsWith('Closed') ||
+    fromCurveName.endsWith('Open') || toCurveName.endsWith('Open')
+  ) {
+    return matchRenderedPaths(node, targetShape(to));
+  }
+
+  const boundary = (frame, curveName, channel, reverse = false) => {
+    const points = reverse ? [...frame].reverse() : frame;
+    return d3.line()
+      .x((point) => point.x)
+      .y((point) => point[channel])
+      .curve(d3Curve(curveName, d3))(points) || '';
+  };
+  const top = matchPathStrings(
+    node,
+    boundary(from, fromCurveName, 'y1'),
+    boundary(to, toCurveName, 'y1')
+  );
+  const bottom = matchPathStrings(
+    node,
+    boundary(from, fromCurveName, 'y0', true),
+    boundary(to, toCurveName, 'y0', true)
+  );
+  const sourcePath = node.getAttribute('d') || '';
+  const targetPath = targetShape(to) || '';
+
+  return (progress) => {
+    if (progress <= 0) return sourcePath;
+    if (progress >= 1) return targetPath;
+    return `${top(progress)}${continuePath(bottom(progress))}Z`;
+  };
+}
+
+function continuePath(path) {
+  return path.replace(/^\s*M/i, 'L');
 }
 
 function normalizeAreaCellFrame(frame, fallback) {

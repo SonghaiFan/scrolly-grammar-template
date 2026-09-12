@@ -35,7 +35,7 @@ export interface VisualizationTransition {
   readonly delta: DiffResult;
   readonly view: Element;
   readonly value: number;
-  /** Synchronously display a frame. Also pauses time-based playback. */
+  /** Synchronously display a frame. Direction is inferred from the previous value. */
   progress(value: number): VisualizationTransition;
   /** Plays from 0 to 1 by default. Returns this controller for chaining. */
   play(options?: PlayOptions): VisualizationTransition;
@@ -100,6 +100,7 @@ export async function transition(
   const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host, chartStyle }), localModules);
   const surface = createTransitionSurface(resolvedFrom, resolvedTo, { ...options, chartStyle }, chartTypes);
   let value = 0;
+  let lastDirection = 1;
   let animation: number | null = null;
   let destroyed = false;
 
@@ -110,8 +111,9 @@ export async function transition(
     if (animation !== null) cancelAnimationFrame(animation);
     animation = null;
   }
-  function show(next: number) {
-    surface.progress(next);
+  function show(next: number, direction = lastDirection) {
+    if (direction) lastDirection = direction;
+    surface.progress(next, lastDirection);
     value = next;
   }
   const controller: VisualizationTransition = {
@@ -124,8 +126,9 @@ export async function transition(
     progress(next) {
       assertAlive();
       next = finiteProgress(next);
+      const direction = Math.sign(next - value) || lastDirection;
       stop();
-      show(next);
+      show(next, direction);
       return controller;
     },
     play({ duration = 800, from = 0, to = 1 } = {}) {
@@ -133,22 +136,23 @@ export async function transition(
       if (!Number.isFinite(duration) || duration < 0) throw new Error('duration must be a finite non-negative number.');
       const start = finiteProgress(from);
       const end = finiteProgress(to);
+      const direction = Math.sign(end - start) || lastDirection;
       stop();
-      show(start);
+      show(start, direction);
       const span = duration * Math.abs(end - start);
-      if (!span) { show(end); return controller; }
+      if (!span) { show(end, direction); return controller; }
       let started: number | null = null;
       const tick = (now: number) => {
         started ??= now;
         const fraction = Math.min(1, (now - started) / span);
-        show(start + (end - start) * fraction);
+        show(start + (end - start) * fraction, direction);
         animation = fraction < 1 ? requestAnimationFrame(tick) : null;
       };
       animation = requestAnimationFrame(tick);
       return controller;
     },
     pause() { assertAlive(); stop(); return controller; },
-    resize() { assertAlive(); surface.resize(); show(value); return controller; },
+    resize() { assertAlive(); surface.resize(); show(value, lastDirection); return controller; },
     destroy() {
       if (destroyed) return;
       stop();

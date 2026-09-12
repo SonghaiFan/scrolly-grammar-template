@@ -5,11 +5,21 @@ import { areaCells, areaLayers } from '../dist/charts/area/state.js';
 import { matchAreaFramePoints } from '../dist/charts/area/render.js';
 import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
 import { pointIntermediateSpecs } from '../dist/charts/point/state.js';
+import { defaultTransition } from '../dist/timing.js';
 import {
   expandUnits,
   keyFirstTravelMatching,
   minimumTravelMatching
 } from '../dist/charts/unit/state.js';
+
+test('per-mark delay is opt-in while explicit partial timing keeps safe bounds', () => {
+  assert.equal(defaultTransition().stagger, 0);
+  assert.deepEqual(defaultTransition({ stagger: { step: 24 } }).stagger, {
+    step: 24,
+    max: 120,
+    by: ''
+  });
+});
 
 test('documented filtering uses where, not a nonexistent filter method', () => {
   for (const factory of [area, bar, line, point, unit]) {
@@ -166,7 +176,8 @@ test('where changes rows while focus keeps rows and changes the view', () => {
     area(rows).x('category').y('y').key('id'),
     bar(rows).x('category').y('y').key('id'),
     point(rows).x('x').y('y').key('id'),
-    line(rows).x('x', { type: 'quantitative' }).y('y').key('id')
+    line(rows).x('x', { type: 'quantitative' }).y('y').key('id'),
+    unit(rows).key('id')
   ];
 
   for (const chart of charts) {
@@ -193,20 +204,23 @@ test('unit separates group meaning from layout and preserves count identity', ()
   const groupedSpec = grouped.toSpec();
   const barSpec = bars.toSpec();
 
-  assert.deepEqual(UNIT_LAYOUTS, ['grid', 'bar', 'timeline', 'dodge']);
+  assert.deepEqual(UNIT_LAYOUTS, ['grid', 'bar', 'beeswarm']);
   assert.equal(groupedSpec.meta.state.sceneState.axis.group, 'category');
   assert.equal(groupedSpec.meta.state.sceneState.axis.layout, 'grid');
   assert.equal(groupedSpec.encoding?.color, undefined);
   assert.equal(barSpec.meta.state.sceneState.axis.layout, 'bar');
   assert.equal(barSpec.meta.unit.columns, 2);
   assert.equal(barSpec.meta.unit.radius, 5);
+  assert.equal(base.x('id').layout('beeswarm').toSpec().meta.unit.layout, 'beeswarm');
   assert.equal(typeof bars.rollup, 'undefined');
   assert.equal(typeof bars.breakdown, 'undefined');
 
   const units = expandUnits(barSpec.data, barSpec, {});
   assert.equal(units.length, 3);
   assert.deepEqual(units.map(value => value.__unitKey), ['B\u00000', 'B\u00001', 'B\u00002']);
-  assert.throws(() => base.layout('cluster'), /grid, bar, timeline, dodge/);
+  assert.throws(() => base.layout('cluster'), /grid, bar, beeswarm/);
+  assert.throws(() => base.layout('dodge'), /grid, bar, beeswarm/);
+  assert.throws(() => base.layout('timeline'), /grid, bar, beeswarm/);
   assert.throws(() => base.columns(0), /positive integer/);
   assert.throws(() => base.radius(0), /positive finite/);
   assert.throws(() => base.value('count', { maxUnits: 0 }), /positive integer/);

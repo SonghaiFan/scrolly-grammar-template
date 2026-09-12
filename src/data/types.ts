@@ -51,15 +51,28 @@ export function resolveSpecDataTypes(spec: ViewSpec, rows: readonly unknown[]): 
 /** Convert a value to the runtime representation required by its channel. */
 export function channelValue(value: unknown, channel?: ChannelSpec): unknown {
   if (channel?.type === 'temporal') {
-    if (value instanceof Date) return value;
-    const date = new Date(value as string | number);
-    return Number.isNaN(date.getTime()) ? undefined : date;
+    return temporalDate(value);
   }
   if (channel?.type === 'quantitative') {
     const number = Number(value);
     return Number.isFinite(number) ? number : undefined;
   }
   return value;
+}
+
+/** Normalize dates for filters without changing ordinary string equality. */
+export function comparableValue(value: unknown): unknown {
+  const date = temporalDate(value);
+  return date ? date.getTime() : value;
+}
+
+export function temporalDate(value: unknown): Date | undefined {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value;
+  }
+  if (typeof value !== 'string' || !ISO_DATE.test(value.trim())) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 function resolveChannelType(
@@ -71,9 +84,7 @@ function resolveChannelType(
 }
 
 function isTemporalValue(value: unknown): boolean {
-  if (value instanceof Date) return !Number.isNaN(value.getTime());
-  if (typeof value !== 'string' || !ISO_DATE.test(value.trim())) return false;
-  return !Number.isNaN(new Date(value).getTime());
+  return Boolean(temporalDate(value));
 }
 
 function isQuantitativeValue(value: unknown): boolean {

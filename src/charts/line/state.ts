@@ -2,7 +2,6 @@ import type { CanonicalTransitionPair, ChannelSpec, IntermediateSpec, SelectionS
 import { matchesFilter, normalizeFilter } from '../../data/filter.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { specState, withSpecMeta } from '../../spec-meta.js';
-import { focusedScale } from '../focus.js';
 import { connectedStretches } from '../continuity.js';
 import { linePointKeyAccessor } from './keys.js';
 
@@ -285,17 +284,6 @@ export function connectedLineStretches(
       rows: stretch
     }));
   });
-}
-
-export function selectedLineXScale(
-  rows: Record<string, unknown>[],
-  channel: ChannelSpec | undefined,
-  chart: Record<string, unknown>,
-  selection: SelectionSpec | null,
-  deps: Record<string, unknown>
-): unknown {
-  const baseRange = [0, chart['innerWidth'] as number];
-  return focusedScale(rows, channel, baseRange, selection, deps as never);
 }
 
 function normalizeAxisOrder(value: unknown): string[] {

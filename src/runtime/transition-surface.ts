@@ -70,12 +70,15 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
       if (activeFrame !== frame) { frame.restore(); activeFrame = frame; }
     };
     return {
-      progress(value) {
+      progress(value, direction = 1) {
         if (value === 0) { startFrame.restore(); activeFrame = startFrame; return; }
         if (value === 1) { endFrame.restore(); activeFrame = endFrame; return; }
         const frame = frames.find(frame => value <= frame.end) ?? frames[frames.length - 1];
         activate(frame.dom);
-        frame.evaluator.progress((value - frame.start) / Math.max(Number.EPSILON, frame.end - frame.start));
+        frame.evaluator.progress(
+          (value - frame.start) / Math.max(Number.EPSILON, frame.end - frame.start),
+          direction
+        );
       }
     };
   }
@@ -87,12 +90,13 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
       if (root.parentNode === host) host.replaceChildren(...previousChildren);
       previousChildren = [];
     },
-    progress(value: number) {
+    progress(value: number, direction = 0) {
       hideTooltip(shell.tooltip);
       value = canonicalProgress(value);
+      const canonicalDirection = (direction || 1) * (canonical.reverse ? -1 : 1);
       if (cacheFrames) {
         cached ??= compileFrames();
-        cached.progress(value);
+        cached.progress(value, canonicalDirection);
         return;
       }
       disposeScene();
@@ -106,7 +110,9 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
         // The pair's progress is already normalized. Chart-local timing and
         // The step order applies inside the plan; scroll easing is not a control here.
         const scene = node.__visDeltaScene;
-        if (!applyVirtualScrollSequence(scene, value)) scene.transitionProgress?.progress(value);
+        if (!applyVirtualScrollSequence(scene, value, canonicalDirection)) {
+          scene.transitionProgress?.progress(value, canonicalDirection);
+        }
       }
     },
     resize() { cached = null; },

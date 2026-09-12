@@ -1,6 +1,6 @@
 // @ts-nocheck — D3 rendering utilities; typed via deps injection
 import { specTransition } from '../spec-meta.js';
-import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
+import { DEFAULT_MARK_DELAY, DEFAULT_TIMING, defaultTransition } from '../timing.js';
 import { VISDELTA_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
 import { channelValue, inferFieldType } from '../data/types.js';
@@ -212,8 +212,8 @@ function staggerDelay(spec, datum, index, override) {
   const stagger = override === undefined ? effectiveTransitionSpec(spec).stagger : override;
   if (!stagger) return 0;
   if (typeof stagger === 'number') return index * stagger;
-  const step = stagger.step ?? stagger.ms ?? DEFAULT_TIMING.transition.stagger.step;
-  const max = stagger.max ?? DEFAULT_TIMING.transition.stagger.max;
+  const step = stagger.step ?? stagger.ms ?? DEFAULT_MARK_DELAY.step;
+  const max = stagger.max ?? DEFAULT_MARK_DELAY.max;
   if (stagger.by) {
     const value = Number(datum[stagger.by] ?? datum.__row?.[stagger.by] ?? index);
     if (Number.isFinite(value)) return Math.min(value * step, max);
@@ -378,7 +378,7 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
   if (typeof scale.bandwidth === 'function') {
     const domain = scale.domain();
     const minPxPerLabel = 44; // ~5 chars × 7px + 9px padding
-    const pxPerBand = domain.length > 0 ? chart.innerWidth / domain.length : Infinity;
+    const pxPerBand = scale.step();
     if (pxPerBand < minPxPerLabel) {
       const step = Math.ceil(minPxPerLabel / pxPerBand);
       axis = axis.tickValues(domain.filter((_, i) => i % step === 0));
@@ -394,7 +394,7 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
   xAxis.selectAll('.tick text').attr('dy', '0.8em');
   alignEdgeTickLabels(xAxis, scale, d3);
   timedTransition(xAxis, transition, duration)
-    .attr('transform', axisSideTransform(chart, side, false))
+    .attr('transform', axisPositionTransform(chart, side, options.position))
     .style('opacity', 1);
   if (title) {
     const xLabel = chart.scene.xLabel.interrupt();
@@ -438,7 +438,7 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, 
   if (typeof scale.bandwidth === 'function') {
     const domain = scale.domain();
     const minPxPerLabel = 22; // vertical: ~1 line height
-    const pxPerBand = domain.length > 0 ? chart.innerHeight / domain.length : Infinity;
+    const pxPerBand = scale.step();
     if (pxPerBand < minPxPerLabel) {
       const step = Math.ceil(minPxPerLabel / pxPerBand);
       axis = axis.tickValues(domain.filter((_, i) => i % step === 0));
@@ -452,7 +452,7 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, 
     yAxis.attr('transform', axisSideTransform(chart, side, true)).style('opacity', 0);
   }
   timedTransition(yAxis, transition, duration)
-    .attr('transform', axisSideTransform(chart, side, false))
+    .attr('transform', axisPositionTransform(chart, side, options.position))
     .style('opacity', 1);
   if (title) {
     const yLabel = chart.scene.yLabel.interrupt();
@@ -647,6 +647,14 @@ function axisSideTransform(chart, side, outside) {
   }
   if (side === 'left') return `translate(${outside ? 0 : chart.margin.left},${chart.margin.top})`;
   return `translate(${chart.margin.left},${outside ? chart.height : chart.margin.top + chart.innerHeight})`;
+}
+
+function axisPositionTransform(chart, side, position) {
+  if (!Number.isFinite(position)) return axisSideTransform(chart, side, false);
+  if (side === 'top' || side === 'bottom') {
+    return `translate(${chart.margin.left},${chart.margin.top + position})`;
+  }
+  return `translate(${chart.margin.left + position},${chart.margin.top})`;
 }
 
 function xLabelSideY(chart, side, outside, offset) {

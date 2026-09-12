@@ -169,7 +169,7 @@ Keep the public chaining surface chart-first:
 - point: `flip`, `breakdown`, and `rollup`
 - line: `flip`, `breakdown`, and `rollup`
 - unit: `value`, `columns`, `radius`, `group`, and `layout`; supported layouts
-  are `grid`, `bar`, `timeline`, and `dodge`. Grouping never silently chooses
+  are `grid`, `bar`, and `beeswarm`. Grouping never silently chooses
   layout or color, and Unit has no summary/detail split or merge.
 
 Compiled authoring specs should be Vega-ish first: `data`, `mark`,

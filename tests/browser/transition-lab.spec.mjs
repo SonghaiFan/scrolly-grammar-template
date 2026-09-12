@@ -59,32 +59,92 @@ test('invalid code and invalid pairs preserve preview; reset recovers', async ({
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
-test('bar focus moves the category view without filtering bars', async ({ page }) => {
+test('bar focus moves one camera over the full category scale without filtering bars', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/transition-lab.html#focus');
   await ready(page);
   const start = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
-    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
+    nodes.map(node => ({
+      key: node.getAttribute('data-key'),
+      category: node.getAttribute('data-category'),
+      x: Number(node.getAttribute('x')),
+      y: Number(node.getAttribute('y')),
+      width: Number(node.getAttribute('width')),
+      height: Number(node.getAttribute('height'))
+    })));
+  for (const progress of ['0', '0.25', '0.5', '0.75', '1']) {
+    await page.locator('#progress').fill(progress);
+    const baseline = await page.locator('#chart svg').evaluate(svg => {
+      const translateY = node => Number(
+        (node?.getAttribute('transform') || '').match(/translate\([^,]+,\s*([\d.-]+)/)?.[1]
+      );
+      const frameTop = translateY(svg.querySelector('.sl-frame'));
+      const axisY = translateY(svg.querySelector('.sl-x-axis')) - frameTop;
+      const bottoms = [...svg.querySelectorAll('rect.sl-bar')]
+        .map(bar => Number(bar.getAttribute('y')) + Number(bar.getAttribute('height')));
+      return { axisY, bottoms };
+    });
+    baseline.bottoms.forEach(bottom => expect(Math.abs(bottom - baseline.axisY)).toBeLessThan(0.5));
+  }
   await page.locator('#end').click();
   await expect(page.locator('#chart rect.sl-bar')).toHaveCount(52);
   const focused = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
-    nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
+    nodes.map(node => ({
+      key: node.getAttribute('data-key'),
+      category: node.getAttribute('data-category'),
+      x: Number(node.getAttribute('x')),
+      y: Number(node.getAttribute('y')),
+      width: Number(node.getAttribute('width')),
+      height: Number(node.getAttribute('height'))
+    })));
   expect(focused).not.toEqual(start);
   const visibility = await page.locator('#chart').evaluate(chart => {
     const clip = chart.querySelector('clipPath[id^="sl-mark-clip-"] rect');
     const width = Number(clip?.getAttribute('width'));
+    const height = Number(clip?.getAttribute('height'));
     const bars = [...chart.querySelectorAll('rect.sl-bar')].map(node => ({
       key: node.getAttribute('data-key'),
+      category: node.getAttribute('data-category'),
       hasX: node.hasAttribute('x'),
       x: Number(node.getAttribute('x')),
-      width: Number(node.getAttribute('width'))
+      y: Number(node.getAttribute('y')),
+      width: Number(node.getAttribute('width')),
+      height: Number(node.getAttribute('height'))
     }));
     return {
       all: bars.map(bar => bar.key),
-      inside: bars.filter(bar => bar.hasX && bar.x + bar.width > 0 && bar.x < width).map(bar => bar.key)
+      invalid: bars.filter(bar => !bar.hasX || !Number.isFinite(bar.x)),
+      inside: bars
+        .filter(bar => bar.x + bar.width / 2 >= 0 && bar.x + bar.width / 2 <= width)
+        .map(bar => bar.category),
+      ticks: [...chart.querySelectorAll('.sl-x-axis .tick')]
+        .filter(node => {
+          const x = Number((node.getAttribute('transform') || '').match(/translate\(([-\d.]+)/)?.[1]);
+          return x >= 0 && x <= width;
+        })
+        .map(node => node.textContent),
+      targetBounds: (() => {
+        const target = bars.filter(bar => ['NY', 'PA'].includes(bar.category));
+        return {
+          x0: Math.min(...target.map(bar => bar.x)),
+          y0: Math.min(...target.map(bar => Number(bar.y))),
+          x1: Math.max(...target.map(bar => bar.x + bar.width)),
+          y1: Math.max(...target.map(bar => Number(bar.y) + Number(bar.height)))
+        };
+      })(),
+      width,
+      height
     };
   });
   expect(visibility.all).toHaveLength(52);
-  expect(visibility.inside).toHaveLength(8);
+  expect(visibility.invalid).toEqual([]);
+  expect(visibility.inside).toEqual(expect.arrayContaining(['NY', 'PA']));
+  expect(visibility.ticks).toEqual(expect.arrayContaining(['NY', 'PA']));
+  expect(visibility.ticks.every(tick => visibility.inside.includes(tick))).toBe(true);
+  expect((visibility.targetBounds.x0 + visibility.targetBounds.x1) / 2).toBeCloseTo(visibility.width / 2, 1);
+  expect((visibility.targetBounds.y0 + visibility.targetBounds.y1) / 2).toBeCloseTo(visibility.height / 2, 1);
+  const sourceNy = start.find(bar => bar.category === 'NY');
+  const targetNy = focused.find(bar => bar.category === 'NY');
+  expect(targetNy.width / sourceNy.width).toBeCloseTo(targetNy.height / sourceNy.height, 5);
 });
 
 test('grouped split keeps aggregate bars on the visible baseline while the legend enters', async ({ page }) => {

@@ -1,4 +1,5 @@
 import type { FilterSpec } from '../types/index.js';
+import { comparableValue, temporalDate } from './types.js';
 
 const operators = ['equal', 'notEqual', 'oneOf', 'gt', 'gte', 'lt', 'lte'];
 
@@ -29,7 +30,10 @@ export function normalizeFilter(value: unknown): FilterSpec {
   if (!operators.some(key => key in filter)) throw new Error('Filter requires a comparison operator.');
   if ('oneOf' in filter && !Array.isArray(filter.oneOf)) throw new Error('Filter oneOf must be an array.');
   for (const key of ['gt', 'gte', 'lt', 'lte']) {
-    if (key in filter && !Number.isFinite(filter[key])) throw new Error(`Filter ${key} must be a finite number.`);
+    const bound = filter[key];
+    if (key in filter && !isRangeBound(bound)) {
+      throw new Error(`Filter ${key} must be a finite number or valid ISO date.`);
+    }
   }
   return filter;
 }
@@ -42,16 +46,23 @@ export function filterPredicate(input: unknown): (row: Record<string, unknown>) 
 /** Evaluate a normalized predicate; shared by filtering, highlighting and crop. */
 export function matchesFilter(row: Record<string, unknown>, filter: FilterSpec): boolean {
     const value = row[filter.field];
-    if ('equal' in filter && value !== filter.equal) return false;
-    if ('notEqual' in filter && value === filter['notEqual']) return false;
-    if ('oneOf' in filter && !filter.oneOf!.includes(value)) return false;
+    const comparable = comparableValue(value);
+    if ('equal' in filter && comparable !== comparableValue(filter.equal)) return false;
+    if ('notEqual' in filter && comparable === comparableValue(filter['notEqual'])) return false;
+    if ('oneOf' in filter && !filter.oneOf!.some(item => comparableValue(item) === comparable)) return false;
     const hasRange = ['gt', 'gte', 'lt', 'lte'].some(key => key in filter);
-    if (hasRange && (value == null || value === '' || typeof value === 'boolean' || !Number.isFinite(Number(value)))) return false;
+    if (hasRange && (value == null || value === '' || typeof value === 'boolean')) return false;
+    const rangeValue = typeof comparable === 'number' ? comparable : Number(comparable);
+    if (hasRange && !Number.isFinite(rangeValue)) return false;
     // Positive comparisons exclude missing/NaN values instead of letting them
     // pass through the inverse comparisons previously used here.
-    if ('gte' in filter && !((value as number) >= filter.gte!)) return false;
-    if ('gt' in filter && !((value as number) > filter.gt!)) return false;
-    if ('lte' in filter && !((value as number) <= filter.lte!)) return false;
-    if ('lt' in filter && !((value as number) < filter.lt!)) return false;
+    if ('gte' in filter && !(rangeValue >= Number(comparableValue(filter.gte)))) return false;
+    if ('gt' in filter && !(rangeValue > Number(comparableValue(filter.gt)))) return false;
+    if ('lte' in filter && !(rangeValue <= Number(comparableValue(filter.lte)))) return false;
+    if ('lt' in filter && !(rangeValue < Number(comparableValue(filter.lt)))) return false;
     return true;
+}
+
+function isRangeBound(value: unknown): boolean {
+  return (typeof value === 'number' && Number.isFinite(value)) || Boolean(temporalDate(value));
 }

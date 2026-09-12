@@ -16,8 +16,8 @@ Edit the selector or combine constraints. This example also exercises the real A
 
 ## Focusing the view with `.focus()`
 
-Every row remains in the visualization. Only the visible positional range
-changes, so the motion reads as a pan or zoom rather than an exit.
+Every row remains in the visualization. One uniform camera fits the selected
+marks in x and y, so the motion reads as a pan or zoom rather than an exit.
 
 <SyntaxPlayground initial="focus" compact />
 

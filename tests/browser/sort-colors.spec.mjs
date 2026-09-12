@@ -208,6 +208,8 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
       })
       .sort((a, b) => a.key.localeCompare(b.key));
 
+    change.progress(0);
+    const startSeamCount = host.querySelectorAll('path.sl-bar-seam').length;
     change.progress(0.25);
     const reveal = readSegments();
     const underlay = [...host.querySelectorAll('rect.sl-bar:not(.sl-bar-segment)')].map(node => ({
@@ -224,9 +226,14 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
         length
       };
     });
+    change.progress(0.32);
+    const fullSeam = [...host.querySelectorAll('path.sl-bar-seam')].map(node => ({
+      length: node.getTotalLength(),
+      opacity: Number(getComputedStyle(node).opacity)
+    }));
     change.progress(1);
     const end = readSegments();
-    const endSeam = [...host.querySelectorAll('path.sl-bar-seam')].map(node => ({ length: node.getTotalLength() }));
+    const endSeamCount = host.querySelectorAll('path.sl-bar-seam').length;
     change.destroy();
 
     const monochrome = await transition(plain.rollup(), plain, { target: host, d3, aq, height: 400 });
@@ -237,12 +244,14 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
         fill: d3.color(style.fill)?.formatHex() || style.fill
       };
     });
-    const noColorSeams = host.querySelectorAll('path.sl-bar-seam').length;
+    const noColorSeams = [...host.querySelectorAll('path.sl-bar-seam')].map(node =>
+      Number(getComputedStyle(node).opacity));
     monochrome.destroy();
     host.remove();
-    return { reveal, underlay, seam, end, endSeam, noColor, noColorSeams };
+    return { startSeamCount, reveal, underlay, seam, fullSeam, end, endSeamCount, noColor, noColorSeams };
   });
 
+  expect(result.startSeamCount).toBe(0);
   expect(result.reveal).toHaveLength(4);
   expect(result.reveal.map(({ key, x, y, width, height }) => ({ key, x, y, width, height })))
     .toEqual(result.end.map(({ key, x, y, width, height }) => ({ key, x, y, width, height })));
@@ -251,12 +260,17 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
   expect(result.underlay).toHaveLength(2);
   expect(result.underlay.every(mark => mark.opacity > 0 && mark.opacity < 1)).toBe(true);
   expect(result.seam).toHaveLength(1);
-  expect(result.seam.every(line => line.opacity === 1 && line.width === '1px' && line.blend === 'difference')).toBe(true);
+  expect(result.seam.every(line => line.opacity > 0 && line.opacity <= 1 && line.width === '1px' && line.blend === 'difference')).toBe(true);
   result.seam.forEach((line, index) => {
-    const end = result.endSeam[index];
+    const end = result.fullSeam[index];
     expect(line.length).toBeGreaterThan(0);
     expect(line.length).toBeLessThan(end.length);
   });
+  // The global progress span also includes staggered mark schedules, so the
+  // divider's draw/fade handoff can land a fraction beside authored 0.32.
+  expect(result.fullSeam.every(line => line.opacity > 0.99)).toBe(true);
+  expect(result.endSeamCount).toBe(0);
   expect(result.noColor.every(mark => mark.fill === '#4e79a7')).toBe(true);
-  expect(result.noColorSeams).toBe(1);
+  expect(result.noColorSeams).toHaveLength(1);
+  expect(result.noColorSeams.every(opacity => opacity > 0 && opacity < 1)).toBe(true);
 });

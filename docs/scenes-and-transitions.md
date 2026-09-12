@@ -14,7 +14,7 @@ Internally, the current planner uses four labels:
 
 | Internal label | Plain-English meaning |
 | --- | --- |
-| `selection` | Rows were filtered or some items were highlighted |
+| `selection` | Rows were filtered, items were highlighted, or the camera focused on a subset |
 | `mapping` | A displayed field or mapping changed |
 | `detail` | Totals were split into detail, or detail was combined into totals |
 | `axis` | An axis, scale, orientation, sort order, or layout changed |
@@ -76,17 +76,20 @@ top-left origin as its entry point.
 
 ## Current behavior by chart type
 
+- **Area:** cached, seekable cells; keyed add/remove; connected gaps;
+  total/stacked detail; D3 curves; highlighting; and shared 2D camera focus.
 - **Bar:** cached, seekable frames; matched enter/exit; value changes;
-  filtering/highlighting; flip; split/merge; and stacked/grouped layouts.
+  filtering/highlighting; flip; split/merge; stacked/grouped layouts; and
+  shared 2D camera focus with its zero baseline attached to the axis.
 - **Line:** keyed move/add/remove point paths; clipped time-window shifts;
   cut-move-connect split/merge; coordinate changes; filtering with preserved
-  internal gaps; highlighting; and x-range focus without removing rows.
+  internal gaps; highlighting; and 2D camera focus without removing rows.
 - **Point:** cached, seekable frames; coordinate, filter, highlight, color,
-  size, data, and reversible summary/detail changes. Summary → detail first
+  size, data, shared 2D camera focus, and reversible summary/detail changes. Summary → detail first
   sets the view with the summary marks, then moves the points; detail →
   summary uses those exact frames backward.
 - **Unit:** cached, seekable frames; count, filter, highlight, color, grid,
-  categorical unit bar, timeline, and dodge changes. Layout changes set the
+  categorical unit bar, beeswarm, and shared 2D camera focus. Layout changes set the
   view, preserve every matching key, then minimize travel only for unmatched
   units and open slots. The reverse uses the same frames backward.
   Group meaning and layout remain separate, and Unit has no summary/detail

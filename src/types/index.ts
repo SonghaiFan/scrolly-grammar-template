@@ -45,10 +45,10 @@ export interface FilterSpec {
   field: string;
   equal?: unknown;
   notEqual?: unknown;
-  gt?: number;
-  lt?: number;
-  gte?: number;
-  lte?: number;
+  gt?: number | string | Date;
+  lt?: number | string | Date;
+  gte?: number | string | Date;
+  lte?: number | string | Date;
   oneOf?: unknown[];
   [key: string]: unknown;
 }
@@ -82,6 +82,7 @@ export type TransformSpec =
 export interface StaggerSpec {
   step?: number;
   max?: number;
+  by?: string;
 }
 
 export interface TransitionSpec {
@@ -97,14 +98,11 @@ export interface TransitionOrder {
 }
 
 export interface TimingDefaults {
-  transition: Required<TransitionSpec> & { stagger: StaggerSpec };
-  scene: { stagger: StaggerSpec };
+  transition: Required<TransitionSpec>;
   step: { minDuration: number };
   unit: {
     axisDurationMultiplier: number;
     xRatio: number;
-    stagger: StaggerSpec;
-    xStagger: StaggerSpec;
   };
 }
 
@@ -395,8 +393,13 @@ export interface TransitionMatch {
 }
 
 export interface TransitionStep {
-  part?: ChartPart;
-  changes: TransitionChange[];
+  /** Built-in Core part, or a plain chart-plugin part such as "fall". */
+  part?: ChartPart | (string & {});
+  changes: Array<TransitionChange | (string & {})>;
+}
+
+export interface TransitionMotion {
+  mode: string;
 }
 
 export interface TransitionPlanBaseline {
@@ -436,6 +439,7 @@ export interface TransitionPlan {
   reason?: string;
   target?: { orientation: BarOrientation; layout: BarLayout; renderer: string };
   match?: TransitionMatch;
+  motion?: TransitionMotion;
   enter?: TransitionItemAction;
   exit?: TransitionItemAction;
   steps?: TransitionStep[];

@@ -1,6 +1,6 @@
 // @ts-nocheck — D3 rendering code; typed via deps injection
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
-import { focusedScale, viewSelection } from '../../focus.js';
+import { cameraScale, cameraSize, focusCamera, rectBounds, viewSelection } from '../../../focus.js';
 import {
   barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey
 } from './index.js';
@@ -8,7 +8,7 @@ import { specState } from '../../../spec-meta.js';
 import { drawBarAxes } from '../axes.js';
 
 export function createGroupedBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, quantitativeDomain, themeValue } = deps;
+  const { bindTooltip, channelDomain, colorScale, quantitativeDomain, themeValue } = deps;
 
   return function renderGroupedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -32,14 +32,30 @@ export function createGroupedBarRenderer(deps, kit) {
     const zeroBaselineExit = kit.baselineExitPlan(chart, 'zero-baseline');
 
     const categoryRange = horizontal ? [0, chart.innerHeight] : [0, chart.innerWidth];
-    const categoryScale = selection?.mode === 'focus'
-      ? focusedScale(rows, categoryChannel, categoryRange, selection, { bandOrLinear, d3, niceExtent, position })
-      : d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
-    const segmentScale = d3.scaleBand().domain(segments)
-      .range([0, categoryScale.bandwidth()]).padding(0.08);
-    const measureScale = d3.scaleLinear()
+    const baseCategoryScale = d3.scaleBand().domain(categories).range(categoryRange).padding(0.24);
+    const baseSegmentScale = d3.scaleBand().domain(segments)
+      .range([0, baseCategoryScale.bandwidth()]).padding(0.08);
+    const baseMeasureScale = d3.scaleLinear()
       .domain(quantitativeDomain(domainRows, measureChannel, 0))
       .range(horizontal ? [0, chart.innerWidth] : [chart.innerHeight, 0]).nice();
+    const baseX = horizontal ? baseMeasureScale : baseCategoryScale;
+    const baseY = horizontal ? baseCategoryScale : baseMeasureScale;
+    const baseX1 = horizontal ? null : baseSegmentScale;
+    const baseY1 = horizontal ? baseSegmentScale : null;
+    const baseGeom = {
+      x: baseX, y: baseY, x1: baseX1, y1: baseY1,
+      categoryField, segmentField, valueField, chart, horizontal
+    };
+    const baseGeometry = groupedSegmentGeometry(baseGeom);
+    const camera = focusCamera(
+      rows.map((row) => ({ datum: row, bounds: geometryBounds(baseGeometry, row) })),
+      selection,
+      { width: chart.innerWidth, height: chart.innerHeight }
+    );
+    const categoryScale = cameraScale(baseCategoryScale, camera, horizontal ? 'y' : 'x');
+    const measureScale = cameraScale(baseMeasureScale, camera, horizontal ? 'x' : 'y');
+    const segmentScale = d3.scaleBand().domain(segments)
+      .range([0, categoryScale.bandwidth()]).padding(0.08);
     const x = horizontal ? measureScale : categoryScale;
     const y = horizontal ? categoryScale : measureScale;
     const x1 = horizontal ? null : segmentScale;
@@ -51,6 +67,7 @@ export function createGroupedBarRenderer(deps, kit) {
     const geometry = groupedSegmentGeometryContract(geom, splitLineage, zeroBaselineEnter, kit.sourceBaselineExit, zeroBaselineExit);
 
     chart.scales = { x, ...(x1 ? { x1 } : {}), y, ...(y1 ? { y1 } : {}), color, orientation: rendererOrientation };
+    chart.camera = camera;
     chart.channels = enc;
     chart.position = {
       x: (d) => horizontal ? x(d[valueField]) : x(d[categoryField]) + x1(d[segmentField]) + x1.bandwidth() / 2,
@@ -66,7 +83,7 @@ export function createGroupedBarRenderer(deps, kit) {
       chart, rows, spec, tooltip, d3, bindTooltip, key,
       category: (d) => d[categoryField],
       className: 'sl-bar sl-bar-segment sl-bar-grouped',
-      orientation: rendererOrientation, rx: themeValue('--sl-bar-radius', 3),
+      orientation: rendererOrientation, rx: cameraSize(themeValue('--sl-bar-radius', 3), camera),
       fill: (d) => color(d),
       applyIdentity: applyBarIdentity, steps, geometry
     });
@@ -143,4 +160,9 @@ function applyGroupedSegmentY(selection, geom) {
 
 function applyGroupedSegmentExitGeometry(selection, geom, sourceBaselineExit, exitPlan) {
   return sourceBaselineExit(selection, { horizontal: geom.horizontal, plan: exitPlan, value: (d) => d[geom.valueField] });
+}
+
+function geometryBounds(geometry, datum) {
+  const value = (property) => typeof property === 'function' ? property(datum) : property;
+  return rectBounds(value(geometry.x), value(geometry.y), value(geometry.width), value(geometry.height));
 }

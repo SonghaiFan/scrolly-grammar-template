@@ -172,6 +172,28 @@ test('point focus moves the view without filtering points', async ({ page }) => 
   const focused = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
   expect(focused).not.toEqual(start);
+  const fit = await page.locator('#chart svg').evaluate(svg => {
+    const plot = svg.querySelector('clipPath[id^="sl-mark-clip-"] rect');
+    const circles = [...svg.querySelectorAll('circle.sl-point')];
+    const selected = circles.filter(node => Number(node.__data__?.cyl) === 4);
+    const bounds = {
+      x0: Math.min(...selected.map(node => Number(node.getAttribute('cx')) - Number(node.getAttribute('r')))),
+      y0: Math.min(...selected.map(node => Number(node.getAttribute('cy')) - Number(node.getAttribute('r')))),
+      x1: Math.max(...selected.map(node => Number(node.getAttribute('cx')) + Number(node.getAttribute('r')))),
+      y1: Math.max(...selected.map(node => Number(node.getAttribute('cy')) + Number(node.getAttribute('r'))))
+    };
+    return {
+      bounds,
+      width: Number(plot?.getAttribute('width')),
+      height: Number(plot?.getAttribute('height')),
+      finite: circles.every(node => ['cx', 'cy', 'r'].every(name => Number.isFinite(Number(node.getAttribute(name)))))
+    };
+  });
+  expect(fit.finite).toBe(true);
+  expect((fit.bounds.x0 + fit.bounds.x1) / 2).toBeCloseTo(fit.width / 2, 1);
+  expect((fit.bounds.y0 + fit.bounds.y1) / 2).toBeCloseTo(fit.height / 2, 1);
+  expect(Math.min(fit.bounds.x0, fit.bounds.y0, fit.width - fit.bounds.x1, fit.height - fit.bounds.y1))
+    .toBeCloseTo(0, 1);
 });
 
 test('point flip changes the authored first axis before the second axis', async ({ page }) => {

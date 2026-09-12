@@ -19,9 +19,10 @@ export function createBarRenderKit(deps) {
     const timing = plan.timing || {};
     return {
       ordered,
-      duration: timing.duration || chart.transition.duration,
+      duration: chart.transition.scaleDuration || timing.duration || chart.transition.duration,
+      startDelay: chart.transition.exitDuration || 0,
       ease: easeFor(timing.ease || chart.transition.ease, d3),
-      stagger: timing.stagger,
+      stagger: chart.camera?.bounds ? null : timing.stagger,
       transitionName: chart.scrollDriven ? chart.scrollTransitionName : null
     };
   }
@@ -36,7 +37,7 @@ export function createBarRenderKit(deps) {
             .transition(steps.transitionName)
             .duration(steps.duration)
             .ease(steps.ease)
-            .delay((d, i) => staggerDelay(spec, d, i, steps.stagger))
+            .delay((d, i) => steps.startDelay + staggerDelay(spec, d, i, steps.stagger))
         : current.transition().duration(steps.duration).ease(steps.ease);
       if (index === 0 && baseAttrs) baseAttrs(current);
       applyMarks(current);
@@ -49,10 +50,10 @@ export function createBarRenderKit(deps) {
     const index = steps.ordered.findIndex((step) =>
       step.part === part && step.changes.includes('axis'));
     if (index < 0) return null;
-    return d3.transition(steps.transitionName)
-      .duration(steps.duration)
-      .ease(steps.ease)
-      .delay(index * steps.duration);
+      return d3.transition(steps.transitionName)
+        .duration(steps.duration)
+        .ease(steps.ease)
+        .delay(steps.startDelay + index * steps.duration);
   }
 
   return {
@@ -81,6 +82,12 @@ export function createBarRenderKit(deps) {
       applyGeometry = geometry?.apply,
       exitGeometry = geometry?.exit
     } = options;
+    // A focus change is one rigid camera move. Per-mark staggering would bend
+    // the coordinate system: bars would temporarily leave the shared axis
+    // baseline even though neither their data nor identity changed.
+    const delay = chart.camera?.bounds
+      ? () => 0
+      : (d, i) => staggerDelay(spec, d, i);
 
     chart.g.selectAll('rect.sl-bar')
       .data(rows, key)
@@ -95,8 +102,8 @@ export function createBarRenderKit(deps) {
           .style('opacity', 0)
           .call(bindTooltip, spec, tooltip)
           .each(function(d) { setRectGeometry(d3.select(this), startGeometry(d)); })
-          .transition(chart.transition.base)
-          .delay((d, i) => staggerDelay(spec, d, i))
+          .transition(chart.transition.enter || chart.transition.base)
+          .delay((d, i) => (chart.transition.enterDelay || 0) + delay(d, i))
           .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
           .attr('x', targetGeometry.x)
           .attr('y', targetGeometry.y)
@@ -114,14 +121,16 @@ export function createBarRenderKit(deps) {
           }
           return prepared
             .transition(chart.transition.base)
-            .delay((d, i) => staggerDelay(spec, d, i))
+            .delay((d, i) => (chart.transition.exitDuration || 0) + delay(d, i))
             .style('opacity', (d) => barSelectionOpacity(d, spec, themeValue('--sl-dim-opacity', 0.22)))
             .call(applyGeometry)
             .attr('fill', fill);
         },
         (exit) => {
-          const leaving = exit.transition(chart.transition.base).style('opacity', 0);
-          if (exitGeometry) exitGeometry(leaving);
+          // A filtered/deleted bar leaves in the coordinate system where it
+          // was read. Only after it is gone may the shared scale move.
+          const leaving = exit.transition(chart.transition.exit || chart.transition.base).style('opacity', 0);
+          if (exitGeometry && !chart.transition.exitFirst) exitGeometry(leaving);
           return leaving.remove();
         }
       );
@@ -130,15 +139,22 @@ export function createBarRenderKit(deps) {
   function renderBarSeams({ chart, path = '', startPath = path, draw = false }) {
     const seams = chart.g.selectAll('path.sl-bar-seam').data(path ? [path] : []);
     seams.exit().transition(chart.transition.base).style('opacity', 0).remove();
-    seams.enter().append('path')
+    const seam = seams.enter().append('path')
       .attr('class', 'sl-bar-seam')
-      .style('opacity', draw ? 1 : 0)
+      .style('opacity', 0)
       .attr('d', startPath)
-      .merge(seams)
+      .merge(seams);
+    if (!draw) return;
+    const drawDuration = Math.max(1, chart.transition.duration * DIVIDER_DRAW_PROGRESS);
+    seam
       .transition(chart.transition.base)
-      .duration(draw ? Math.max(1, chart.transition.duration * DIVIDER_DRAW_PROGRESS) : chart.transition.duration)
+      .duration(drawDuration)
       .style('opacity', 1)
-      .attr('d', (d) => d);
+      .attr('d', (d) => d)
+      .transition()
+      .duration(Math.max(1, chart.transition.duration - drawDuration))
+      .style('opacity', 0)
+      .remove();
   }
 }
 

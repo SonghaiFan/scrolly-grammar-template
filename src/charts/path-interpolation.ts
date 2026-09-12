@@ -59,6 +59,26 @@ export function matchRenderedPaths(
   }
 }
 
+/** Match two path strings using the same browser geometry as a rendered path. */
+export function matchPathStrings(
+  referenceNode: SVGPathElement,
+  fromPath: string | null | undefined,
+  toPath: string | null | undefined
+): PathInterpolator {
+  const from = fromPath || '';
+  const sourceNode = referenceNode.ownerDocument.createElementNS(SVG_NAMESPACE, 'path');
+  sourceNode.setAttribute('d', from);
+  sourceNode.setAttribute('visibility', 'hidden');
+  sourceNode.setAttribute('pointer-events', 'none');
+  const measurementRoot = referenceNode.ownerSVGElement || referenceNode.parentNode;
+  measurementRoot?.appendChild(sourceNode);
+  try {
+    return matchRenderedPaths(sourceNode, toPath);
+  } finally {
+    sourceNode.remove();
+  }
+}
+
 export function interpolatePathPoints(
   fromPoints: readonly PathPoint[],
   toPoints: readonly PathPoint[]
