@@ -14,6 +14,7 @@ const publicApi = [
   'area',
   'availableChartTypes',
   'bar',
+  'detectDataTypes',
   'chartStylePresets',
   'd3ChartStyle',
   'darkChartStyle',
@@ -26,6 +27,7 @@ const publicApi = [
   'point',
   'registerChartType',
   'registerChartModule',
+  'resolveEncodingTypes',
   'transition',
   'unit',
   'visualizationSpec'

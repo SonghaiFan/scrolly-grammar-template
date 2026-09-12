@@ -89,26 +89,55 @@
 .dark .VPHomeHero { background: var(--vp-c-bg); }
 .VPHomeHero .container { max-width: 1440px !important; }
 .VPHero .name,
-.VPHero .text { max-width: 13ch; letter-spacing: -0.055em; }
-.VPHero .name { color: var(--vp-c-text-1) !important; font-weight: 300; }
-.VPHero .text { font-family: Iowan Old Style, Baskerville, Georgia, ui-serif, serif; font-weight: 400; letter-spacing: -0.045em; }
-.VPHero .tagline { max-width: 580px; font-weight: 300; line-height: 1.5; letter-spacing: -0.02em; }
-.VPHero .actions .VPButton { min-height: 44px; border-radius: 999px; font-weight: 500; }
-.VPHero .actions .VPButton:active { transform: translateY(1px); }
+.VPHero .text {
+  max-width: 16ch;
+  color: var(--vp-c-text-1) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  font-size: clamp(3rem, 5.2vw, 5rem) !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.055em;
+}
+.VPHero .name { font-weight: 300 !important; }
+.VPHero .text { font-family: Georgia, "Times New Roman", ui-serif, serif; font-weight: 400 !important; }
+.VPHero .tagline { max-width: 610px; padding-top: 22px !important; color: var(--vp-c-text-2); font-size: 18px; font-weight: 400; line-height: 1.55; letter-spacing: -0.015em; }
+.VPHero .actions { padding-top: 28px !important; }
+.VPButton { min-height: 42px; border-radius: 999px !important; font-weight: 500 !important; }
+.VPButton:active { transform: translateY(1px); }
 
-.VPFeatures { padding-top: 0 !important; }
+.VPFeatures { padding: 0 32px !important; }
 .VPFeatures .container { max-width: 1440px !important; }
 .VPFeatures .items { margin: 0 !important; border-top: 1px solid var(--vp-c-divider); border-left: 1px solid var(--vp-c-divider); }
 .VPFeatures .item { padding: 0 !important; }
-.VPFeature { border: 0 !important; border-right: 1px solid var(--vp-c-divider) !important; border-bottom: 1px solid var(--vp-c-divider) !important; border-radius: 0 !important; background: transparent !important; }
-.VPFeature .box { min-height: 190px; padding: 32px 28px 48px !important; }
+.VPFeature {
+  border: 0 !important;
+  border-right: 1px solid var(--vp-c-divider) !important;
+  border-bottom: 1px solid var(--vp-c-divider) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.VPFeature .box { min-height: 190px; padding: 32px 28px 52px !important; }
 .VPFeature .title { font-size: 18px !important; font-weight: 500 !important; letter-spacing: -0.025em; }
-.VPFeature .details { max-width: 34ch; font-weight: 400 !important; }
+.VPFeature .details { max-width: 36ch; font-weight: 400 !important; }
+
+.VPNavBarSearch button { border-radius: 999px !important; }
+.VPNavBarMenuLink { padding-inline: 8px !important; font-size: 13px !important; font-weight: 400 !important; }
+.VPNavBarMenuGroup .button { padding-inline: 8px !important; }
+.VPNavBarMenuGroup .text, .VPSidebarItem .text { font-size: 13px !important; font-weight: 400 !important; }
+.vp-doc div[class*="language-"] { border-radius: 0 !important; }
 
 @media (min-width: 960px) {
-  .VPFeatures .item.grid-6 { width: 25% !important; }
-  .VPFeatures .item.grid-6:first-child,
-  .VPFeatures .item.grid-6:last-child { width: 50% !important; }
+  .VPFeatures .item:nth-child(1),
+  .VPFeatures .item:nth-child(6) { width: 50% !important; }
+  .VPFeatures .item:nth-child(n+2):nth-child(-n+5) { width: 25% !important; }
+}
+
+@media (min-width: 768px) and (max-width: 959px) {
+  .VPFeatures .item { width: 50% !important; }
+}
+
+@media (max-width: 767px) {
+  .VPFeatures .item { width: 100% !important; }
 }
 
 .ontology-flow {
@@ -469,12 +498,13 @@
 
 .playground-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .playground-editor-pane,
 .playground-output-pane { min-width: 0; padding: 14px; }
-.playground-editor-pane { border-right: 1px solid var(--vp-c-divider); }
+.playground-output-pane { order: 1; }
+.playground-editor-pane { order: 2; border-top: 1px solid var(--vp-c-divider); }
 .playground-pane-label { margin-bottom: 8px; }
 .playground-line-plan { display: flex; justify-content: space-between; gap: 12px; margin: -2px 0 9px; padding: 6px 8px; border: 1px solid var(--vp-c-divider); border-radius: 0; color: var(--vp-c-text-2); font: 10px/1.4 var(--vp-font-family-mono); }
 .playground-line-plan strong { color: var(--vp-c-brand-1); font-weight: 700; }
@@ -519,7 +549,6 @@
   .workbench-visual { border-right: 0; border-bottom: 1px solid var(--vp-c-divider); }
   .workbench-chart { min-height: 230px; }
   .workbench-inspector { height: 160px; }
-  .playground-editor-pane { border-right: 0; border-bottom: 1px solid var(--vp-c-divider); }
   .playground-editor { min-height: 330px; }
 }
 

@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { scenarios } from '../../examples/line/scenarios.js';
 
-const ready = page => expect(page.locator('#status')).toHaveText('Ready');
+const ready = async page => {
+  await page.locator('#status').scrollIntoViewIfNeeded();
+  await expect(page.locator('#status')).toHaveText(/Ready|Error/);
+  if (await page.locator('#status').textContent() === 'Error') {
+    throw new Error(await page.getByRole('alert').textContent());
+  }
+};
 const snapshot = page => page.locator('#chart svg').evaluate(svg =>
   Array.from(svg.querySelectorAll('path.sl-line, circle.sl-line-point, .tick, .sl-legend-item')).map(node => ({
     tag: node.tagName,
@@ -9,6 +15,37 @@ const snapshot = page => page.locator('#chart svg').evaluate(svg =>
     attrs: Array.from(node.attributes).map(attr => [attr.name, attr.value]).sort(),
     opacity: node.style.opacity
   })));
+
+test('line infers an ISO date x field and places every mark on its time scale', async ({ page }) => {
+  await page.goto('/tests/fixtures/runtime.html');
+  const result = await page.evaluate(async () => {
+    const [{ line }, { transition }] = await Promise.all([
+      import('/dist/line.js'),
+      import('/dist/transition-entry.js')
+    ]);
+    document.body.innerHTML = '<div id="chart"></div>';
+    const rows = [
+      { id: 'a', date: '2026-01-01', value: 12 },
+      { id: 'b', date: '2026-02-01', value: 18 },
+      { id: 'c', date: '2026-03-01', value: 15 }
+    ];
+    const from = line(rows).x('date').y('value').key('id');
+    const to = from.y('value');
+    const controller = await transition(from, to, { target: '#chart', d3, aq, height: 360 });
+    controller.progress(1);
+    const path = document.querySelector('path.sl-line')?.getAttribute('d') || '';
+    return {
+      xType: from.toSpec().encoding.x.type,
+      path,
+      ticks: [...document.querySelectorAll('.sl-x-axis .tick text')].map(node => node.textContent)
+    };
+  });
+
+  expect(result.xType).toBe('temporal');
+  expect(result.path).toMatch(/^M/);
+  expect(result.path).not.toMatch(/NaN|undefined/);
+  expect(result.ticks.length).toBeGreaterThan(1);
+});
 
 for (const sample of scenarios) {
   test(`line lab ${sample.id}: editable pair and reversible seek`, async ({ page }) => {
@@ -32,10 +69,10 @@ for (const sample of scenarios) {
     await page.locator('#start').click();
     expect(await snapshot(page)).toEqual(start);
 
-    await editor.fill(sample.code.replace('sales: 28', 'sales: 22'));
+    await editor.fill(sample.code.replace('const sampleSize = 24;', 'const sampleSize = 18;'));
     await expect(page.locator('#status')).toHaveText('Waiting for input');
     await ready(page);
-    await expect(editor).toHaveValue(/sales: 22/);
+    await expect(editor).toHaveValue(/const sampleSize = 18;/);
     await page.locator('#reset').click();
     await ready(page);
     await expect(editor).toHaveValue(sample.code);
@@ -83,14 +120,14 @@ test('line filter keeps an internal gap while focus keeps every observation', as
   await ready(page);
   await expect(page.locator('.playground-line-plan')).toContainText('Remove points');
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(4);
+  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(21);
   await expect(page.locator('#chart path.sl-line')).toHaveCount(2);
 
   await page.locator('#scenario').selectOption('focus');
   await ready(page);
   await expect(page.locator('.playground-line-plan')).toContainText('Focus view');
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(6);
+  await expect(page.locator('#chart circle.sl-line-point')).toHaveCount(24);
   await expect(page.locator('#chart path.sl-line')).toHaveCount(1);
 });
 
@@ -106,32 +143,37 @@ test('line lab names the authored observation direction', async ({ page }) => {
   await expect(page.locator('.playground-line-plan')).toContainText('Remove points');
 });
 
-test('line add keeps y-axis ticks and horizontal grid lines on one schedule', async ({ page }) => {
+test('line axis ticks and grid lines share one scale transition', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/line-lab.html#add');
   await ready(page);
 
-  for (const progress of ['0.05', '0.25', '0.5', '0.75', '0.95']) {
-    await page.locator('#progress').fill(progress);
+  for (const progress of [0.05, 0.25, 0.5, 0.75, 0.95]) {
+    await page.locator('#progress').fill(String(progress));
     const frame = await page.locator('#chart svg').evaluate((svg) => {
-      const read = selector => new Map([...svg.querySelectorAll(selector)].map(node => [
-        String(node.__data__),
-        {
-          y: new DOMPoint(0, 0).matrixTransform(node.getScreenCTM()).y,
-          opacity: Number(getComputedStyle(node).opacity)
-        }
-      ]));
+      const ticks = (selector) => [...svg.querySelectorAll(selector)].map((node) => ({
+        value: String(node.__data__),
+        y: node.getCTM()?.f,
+        opacity: Number(getComputedStyle(node).opacity)
+      }));
       return {
-        ticks: [...read('.sl-y-axis > .tick')],
-        grid: [...read('.sl-grid > .tick')]
+        axis: ticks('.sl-y-axis > .tick'),
+        grid: ticks('.sl-grid > .tick')
       };
     });
-    const ticks = new Map(frame.ticks);
-    const grid = new Map(frame.grid);
 
-    expect([...grid.keys()]).toEqual([...ticks.keys()]);
-    for (const [value, tick] of ticks) {
-      expect(Math.abs(tick.y - grid.get(value).y)).toBeLessThanOrEqual(0.1);
-      expect(Math.abs(tick.opacity - grid.get(value).opacity)).toBeLessThanOrEqual(0.01);
+    const axisByValue = new Map(frame.axis.map((tick) => [tick.value, tick]));
+    const gridByValue = new Map(frame.grid.map((tick) => [tick.value, tick]));
+    expect([...axisByValue.keys()].sort()).toEqual([...gridByValue.keys()].sort());
+    for (const [value, axisTick] of axisByValue) {
+      const gridTick = gridByValue.get(value);
+      expect(
+        Math.abs(gridTick.y - axisTick.y),
+        `grid position for ${value} at ${progress}`
+      ).toBeLessThan(0.1);
+      expect(
+        Math.abs(gridTick.opacity - axisTick.opacity),
+        `grid opacity for ${value} at ${progress}`
+      ).toBeLessThan(0.01);
     }
   }
 });
@@ -191,6 +233,12 @@ test('line flip changes x before y', async ({ page }) => {
   const firstAxis = await positions();
   expect(firstAxis.map(point => point.y)).toEqual(start.map(point => point.y));
   expect(firstAxis.map(point => point.x)).not.toEqual(start.map(point => point.x));
+
+  await page.locator('#end').click();
+  const end = await positions();
+  expect(end.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))).toBe(true);
+  expect(new Set(end.map(point => Math.round(point.y))).size).toBeGreaterThan(12);
+  await expect(page.locator('#chart path.sl-line')).not.toHaveAttribute('d', /NaN/);
 });
 
 test('line time window combines keyed add and remove without a path wiggle', async ({ page }) => {
@@ -223,24 +271,29 @@ test('line time window combines keyed add and remove without a path wiggle', asy
       };
     });
   };
+  const start = await frameAt(0);
   const early = await frameAt(0.2);
   const middle = await frameAt(0.5);
   const beforeEnter = await frameAt(0.69);
   const late = await frameAt(0.8);
   const end = await frameAt(1);
   const radius = (frame, key) => frame.circles.find(point => point.key === key)?.radius ?? 0;
+  const leavingKey = start.circles.find(point => point.radius > 0 && radius(end, point.key) === 0)?.key;
+  const enteringKey = end.circles.find(point => point.radius > 0 && radius(start, point.key) === 0)?.key;
 
   expect(middle.strategy).toBe('add-remove-points');
   expect(middle.d).not.toBe(early.d);
   expect(middle.backwards).toBe(false);
-  expect(radius(early, 'Q1')).toBeGreaterThan(0);
+  expect(leavingKey).toBeTruthy();
+  expect(enteringKey).toBeTruthy();
+  expect(radius(early, leavingKey)).toBeGreaterThan(0);
   expect(Math.abs(early.first.x - startPoint.x)).toBeLessThan(1);
   expect(Math.abs(early.first.y - startPoint.y)).toBeLessThan(1);
-  expect(radius(middle, 'Q1')).toBe(0);
-  expect(radius(beforeEnter, 'Q7')).toBe(0);
+  expect(radius(middle, leavingKey)).toBe(0);
+  expect(radius(beforeEnter, enteringKey)).toBe(0);
   expect(Math.abs(beforeEnter.last.x - end.last.x)).toBeLessThan(1);
   expect(Math.abs(beforeEnter.last.y - end.last.y)).toBeLessThan(1);
-  expect(radius(late, 'Q7')).toBeGreaterThan(0);
+  expect(radius(late, enteringKey)).toBeGreaterThan(0);
 });
 
 test('opposite time-window endpoints use the same add-and-remove frames in reverse', async ({ page }) => {

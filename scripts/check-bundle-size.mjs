@@ -113,7 +113,8 @@ for (const path of loaded) {
   }
 }
 // Includes seekable semantic bar splits plus the chart-owned responsive axis,
-// title, margin, legend, and axis-system timing used by the focused runtime.
-const budget = 36_750;
+// title, number-format retention, margin, legend, axis-system timing, and the
+// shared field-type detection used by the focused runtime.
+const budget = 37_500;
 if (gzipBytes > budget) throw new Error(`Focused bar transition exceeds ${budget} bytes gzip: ${gzipBytes}`);
 console.log(`bar + transition (entry, shared chunks, bar plugin): ${gzipBytes} bytes gzip (budget ${budget}; excludes D3, optional Arquero, CSS).`);

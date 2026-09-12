@@ -1,8 +1,9 @@
 # Data Sources & Transforms
 
-VisDelta accepts inline rows or a data-source declaration on each visualization
-and reshapes rows during transition compilation. D3 loads remote sources;
-Arquero is the current optional transform backend.
+VisDelta accepts tidy inline rows or a tidy data-source declaration on each
+visualization, then applies chart-state operations during transition
+compilation. D3 loads remote sources; Arquero is the current optional backend
+for those state operations.
 
 ## Declaring datasets
 
@@ -28,43 +29,62 @@ The same source declaration can be attached with `.data(source)`. For a named
 source such as `bar("sales")`, pass the matching data map to
 `transition(..., { data: { sales: rows } })`.
 
-### Tidy data works best
+### Tidy data is the input contract
 
-VisDelta's built-in chart types assume **long ("tidy") format**: one row per
+VisDelta's chart types expect **long ("tidy") data**: one row per
 observation, with separate columns for the category, the measure, and the
-value — rather than one column per measure. For example:
+value. Prepare, validate, and clean data before passing it to VisDelta. For
+example:
 
 ```text
-year,decade,period,type,count        ← tidy / long (preferred)
+year,decade,period,type,count
 1910,1910s,early,Hot days,7
 1910,1910s,early,Cold days,16
 ```
 
-vs.
+### Field types are detected by Core
 
-```text
-year,decade,tmax,tmin,hot_days,cold_days,period   ← wide
-1910,1910s,19.8,9.6,7,16,early
+For tidy rows, VisDelta detects each field as `quantitative`, `temporal`, or
+`nominal`. Finite numbers are quantitative. Valid JavaScript `Date` values and
+ISO date strings such as `2026-01-31` are temporal. Other fields are nominal.
+This applies both to inline rows and to data loaded from CSV or JSON.
+
+```js
+const prices = line(stock)
+  .x("date")   // temporal, detected from the data
+  .y("close"); // quantitative, detected from the data
 ```
 
-Wide data isn't a dead end — `bar`'s `.segment({ fields: [...] })` (and
-`.breakdown()` under the hood) can **fold** wide columns into long rows at
-render time via the `fold` transform (below). But if you control the data
-pipeline, exporting tidy CSVs up front keeps your authoring code simpler.
+Detection fills in missing information; it does not overrule the author. Use an
+explicit type when a field should be read differently:
+
+```js
+line(rows).x("year", { type: "nominal" });
+```
+
+The Core exports `detectDataTypes(rows)` for inspection and
+`resolveEncodingTypes(rows, encoding)` for custom chart modules. Detection is
+not data cleaning: invalid or mixed fields stay nominal, and VisDelta does not
+repair, reshape, or impute input data.
 
 ## The transform pipeline
 
-Each view spec carries an optional `transform` array — a sequence of
-reshaping operations applied **in order** to the bound dataset before it's
+Each view spec carries an optional `transform` array — a sequence of visual
+state operations applied **in order** to tidy observations before they are
 encoded and rendered. `applyTransforms(rows, transforms, aq)` runs this
 pipeline using Arquero under the hood; you rarely call it directly — it's
 an internal utility invoked by the renderer. Arquero is optional only when no
 transforms are declared. Cached bar and point pair transitions evaluate transforms
 during compilation and resize, not on every progress frame.
 
+These operations express what a chart state shows: select observations, combine
+them into summaries, order them, or limit the view. They are not a data-cleaning
+pipeline. Parsing schemas, pivoting wide tables, joining sources, imputing
+missing values, and correcting records belong upstream.
+
 Most transforms get attached for you by chart methods (`.where()` →
-`filter`, `.sort()` → `sort`, `.breakdown()`/`.rollup()` → `aggregate`/`fold`,
-…). You can also provide raw transform objects in a view spec when a builder
+`filter`, `.sort()` → `sort`, `.breakdown()`/`.rollup()` → `aggregate`, …).
+You can also provide raw transform objects in a view spec when a builder
 method doesn't cover your case; `.channel()` and `.axis()` are not transform
 setters.
 
@@ -104,26 +124,6 @@ Derives a calendar-unit label from a date field. Currently supports
 { timeUnit: { field: "observedAt", unit: "month", as: "month" } }
 // as defaults to `${field}_${unit}` if omitted
 ```
-
-### `fold`
-
-Converts **wide columns into long rows** — the "melt"/"unpivot" operation.
-This is how `.segment({ fields: [...] })` turns `hot_days`/`cold_days`
-columns into `type`/`count` rows.
-
-```js
-{
-  fold: {
-    fields: ["hot_days", "cold_days"],
-    as: ["type", "count"],                                   // [keyColumn, valueColumn], default ["key", "value"]
-    labels: { hot_days: "Hot days", cold_days: "Cold days" } // optional: remap raw column names to display labels
-  }
-}
-```
-
-Each input row becomes `fields.length` output rows, one per folded column,
-with the column name (or its mapped label) in the key column and that
-column's value in the value column.
 
 ### `bin`
 
@@ -184,15 +184,13 @@ Truncates to the first `n` rows after all preceding transforms run:
 
 ## Putting it together
 
-A spec's `transform` array composes naturally — e.g. filter, then fold, then
-aggregate, then sort:
+A spec's `transform` array composes naturally — e.g. filter, then aggregate,
+then sort:
 
 ```js
 {
   transform: [
     { filter: { field: "period", equal: "recent" } },
-    { fold: { fields: ["hot_days", "cold_days"], as: ["type", "count"],
-              labels: { hot_days: "Hot days", cold_days: "Cold days" } } },
     { aggregate: { groupby: ["decade", "type"], fields: [{ op: "sum", field: "count", as: "count" }] } },
     { sort: { field: "decade" } }
   ]
@@ -200,7 +198,6 @@ aggregate, then sort:
 ```
 
 When authoring through the chart builders, you'll rarely hand-write this —
-`.where()`, `.segment()`, `.breakdown()`, `.rollup()`, and `.sort()` build it
+`.where()`, `.breakdown()`, `.rollup()`, and `.sort()` build it
 for you, in the right order, while also updating encodings, keys, and titles
-to match. Reach for raw `transform` entries only when you need a reshape the
-builders don't expose yet.
+to match.

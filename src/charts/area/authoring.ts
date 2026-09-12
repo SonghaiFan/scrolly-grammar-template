@@ -33,14 +33,6 @@ export class AreaState extends ChartState<AreaViewState> {
     return compileViewWithCompiler(spec, { scene: [] }, AREA_SPEC_COMPILER);
   }
 
-  override x(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.x(field, { type: 'nominal', ...options });
-  }
-
-  override y(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.y(field, { type: 'quantitative', ...options });
-  }
-
   /** Set the value from which an ordinary area grows. Defaults to zero. */
   baseline(value: number): this {
     if (!Number.isFinite(value)) throw new Error('Area baseline must be a finite number.');

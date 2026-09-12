@@ -12,6 +12,7 @@ import { validateTransforms } from './data/validate.js';
 import { createChartRuntimeDeps } from './runtime/chart-deps.js';
 import { resolveTarget } from './runtime/target.js';
 import { d3ChartStyle } from './charts/style.js';
+import { resolveSpecDataTypes } from './data/types.js';
 
 export type { Visualization } from './core.js';
 
@@ -90,7 +91,8 @@ export async function transition(
       pending = loadData({ rows: data }, options.d3).then(result => cloneState(result.rows));
       sourceCache.set(cacheKey, pending);
     }
-    return { ...spec, data: { values: await pending } };
+    const rows = await pending;
+    return resolveSpecDataTypes({ ...spec, data: { values: rows } }, rows);
   };
   const [resolvedFrom, resolvedTo] = await Promise.all([resolveData(source), resolveData(target)]);
   const host = resolveTarget(options.target ?? '#app');

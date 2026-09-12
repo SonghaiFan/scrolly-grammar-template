@@ -40,7 +40,7 @@ control that movement.
 | Term | Meaning | Not the same as |
 | --- | --- | --- |
 | **Data** | Inline rows, `{ values }`, URL input, or a named dataset | A transformed table |
-| **Transform** | An ordered change to the data, such as filter, fold, combine, sort, or limit | A visual transition |
+| **Transform** | An ordered chart-state operation, such as select, combine, sort, or limit | Data cleaning |
 | **Chart state** | A chart description returned by `area()`, `bar()`, `line()`, `point()`, or `unit()`; changing it creates a new state and leaves the old one alone | A chart already drawn on a web page |
 | **Chart type** | A chart family such as area, bar, line, point, or unit | A layout change within one chart type |
 | **Mapping** | A link from a data field to x, y, color, or size | Pixel geometry |
@@ -80,6 +80,10 @@ For this reason, an x or y step changes the whole chart part—not just the bars
 x step = x scale + x axis + marks
 y step = y scale + y axis + marks
 ```
+
+Grid lines belong to their axis ticks. A tick, its label, and its grid line use
+the same scale, timing, and transition progress, so they stay aligned in every
+frame rather than behaving like separate chart changes.
 
 Visual encodings are always authored. VisDelta may choose presentation defaults
 such as one theme-accent fill, point radius, line width, margins, or animation duration, but
@@ -128,7 +132,7 @@ The public language is divided into seven grammar families. A method belongs to 
 | `bar({ values: rows })` | Available | Explicit inline source object |
 | `bar(url)` / `{ url, type? }` | Available | Load CSV or JSON through D3 |
 | `bar("dataset")` + `transition(..., { data })` | Available | Resolve a named source from the data map passed to the transition |
-| `filter`, `fold`, `bin`, `aggregate`, `sort`, `limit`, `timeUnit` transforms | Available | Execute in declared order; Arquero is required |
+| `filter`, `aggregate`, `sort`, and `limit` transforms | Available | Operate on tidy observations in declared order; Arquero is required |
 | Streaming or incremental data sources | Developing | Intended data-source category; no public contract yet |
 | Reactive query graph | Research | Possible future derivation model |
 

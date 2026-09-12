@@ -1,9 +1,11 @@
 # Area transition lab
 
-These fourteen editable scenarios are the first executable transition matrix
-for VisDelta's Area module. They cover mapping, keyed observations, values,
-filtering, focus, highlight, fill, baseline, and reversible total/stacked
-changes.
+These fourteen editable scenarios use a bundled tidy US unemployment dataset
+to exercise VisDelta's Area module. Each source row is one month and industry.
+The demo asset adds `year` and the industry's `share` of that month's total
+before it enters VisDelta; the library receives tidy rows and performs no data
+cleaning. The scenarios cover scales, mappings, keyed observations, filtering,
+focus, highlight, fill, baseline, and reversible total/stacked changes.
 
 Area is a **band**, not a filled Line. Every x position has a lower boundary
 `y0` and an upper boundary `y1`:
@@ -21,9 +23,9 @@ only its right half; the last owns only its left half. A stretch with only one
 observation draws no Area: one point has no connection, so it cannot enclose a
 filled band. Use Point when an isolated observation itself should stay visible.
 
-Color is explicit. `.breakdown("region")` creates stack geometry but does not
+Color is explicit. `.breakdown("industry")` creates stack geometry but does not
 silently assign hues. Pass a color range to `.breakdown()`, or chain
-`.color("region")`. Without a color mapping, every area is black and the thin
+`.color("industry")`. Without a color mapping, every area is black and the thin
 boundary stroke keeps adjacent layers visible.
 
 Split and merge are one transition evaluated in opposite directions. The

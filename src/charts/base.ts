@@ -31,15 +31,17 @@ export abstract class BaseChart<S extends ViewSpec = ViewSpec> {
     x: unknown,
     y: unknown,
     enc: EncodingSpec,
-    d3: D3Lib
+    d3: D3Lib,
+    options: { duration?: number } = {}
   ): void {
     const deps = this.deps as {
-      drawGrid?: (chart: ChartContext, y: unknown, d3: D3Lib) => void;
-      drawXAxis?: (chart: ChartContext, x: unknown, title: string | undefined, d3: D3Lib) => void;
-      drawYAxis?: (chart: ChartContext, y: unknown, title: string | undefined, d3: D3Lib) => void;
+      drawGrid?: (chart: ChartContext, y: unknown, d3: D3Lib, transition: unknown, options: { duration?: number }) => void;
+      drawXAxis?: (chart: ChartContext, x: unknown, title: string | undefined, d3: D3Lib, transition: unknown, options: { duration?: number }) => void;
+      drawYAxis?: (chart: ChartContext, y: unknown, title: string | undefined, d3: D3Lib, transition: unknown, options: { duration?: number }) => void;
     };
-    deps.drawGrid?.(chart, y, d3);
-    deps.drawXAxis?.(chart, x, enc.x?.title, d3);
-    deps.drawYAxis?.(chart, y, enc.y?.title, d3);
+    const transition = (chart as ChartContext & { transition: { base: unknown } }).transition.base;
+    deps.drawGrid?.(chart, y, d3, transition, options);
+    deps.drawXAxis?.(chart, x, enc.x?.title, d3, transition, options);
+    deps.drawYAxis?.(chart, y, enc.y?.title, d3, transition, options);
   }
 }

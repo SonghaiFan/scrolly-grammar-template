@@ -31,10 +31,10 @@ for (const sample of pointScenarios) {
     await page.locator('#start').click();
     expect(await snapshot(page)).toEqual(start);
 
-    await editor.fill(sample.code.replace('income: 42', 'income: 22'));
+    await editor.fill(sample.code.replace('Weight (1,000 lb)', 'Vehicle weight'));
     await expect(page.locator('#status')).toHaveText('Waiting for input');
     await ready(page);
-    await expect(editor).toHaveValue(/income: 22/);
+    await expect(editor).toHaveValue(/Vehicle weight/);
     await page.locator('#reset').click();
     await ready(page);
     await expect(editor).toHaveValue(sample.code);
@@ -57,13 +57,13 @@ test('point radius, highlight, and cached node identity are real renderer behavi
     };
   });
   expect(result.reused).toBe(true);
-  expect(result.opacity.filter(value => value === 1)).toHaveLength(3);
-  expect(result.opacity.filter(value => value === 0.12)).toHaveLength(3);
+  expect(result.opacity.filter(value => value === 1)).toHaveLength(11);
+  expect(result.opacity.filter(value => value === 0.12)).toHaveLength(21);
 
   await page.locator('#scenario').selectOption('size');
   await ready(page);
   await page.locator('#start').click();
-  await expect(page.locator('#chart circle.sl-point').first()).toHaveAttribute('r', '6');
+  await expect(page.locator('#chart circle.sl-point').first()).toHaveAttribute('r', '5');
   await page.locator('#end').click();
   const radii = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
     nodes.map(node => Number(node.getAttribute('r'))));
@@ -90,8 +90,8 @@ test('point defaults use compact, open correlation axes', async ({ page }) => {
   expect(style.horizontalGridLines).toBeGreaterThan(1);
   expect(style.xDomainOpacity).toBe('0');
   expect(style.yDomainOpacity).toBe('0');
-  expect(style.xTitle).toBe('Income →');
-  expect(style.yTitle).toBe('↑ Health');
+  expect(style.xTitle).toBe('Weight (1,000 lb) →');
+  expect(style.yTitle).toBe('↑ Fuel economy (mpg)');
   expect(style.xTitleAnchor).toBe('end');
   expect(style.yTitleAnchor).toBe('start');
   expect(style.xAxisTransform).toMatch(/^translate\(44,/);
@@ -116,6 +116,19 @@ test('point defaults use compact, open correlation axes', async ({ page }) => {
   expect(header.legend.bottom).toBeLessThan(header.yTitle.top);
 });
 
+test('point lab loads the tidy mtcars dataset without inventing observations', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => {
+    if (request.url().endsWith('/data/mtcars.csv')) requests.push(request.url());
+  });
+  await page.goto('/docs/.vitepress/dist/point-lab.html#x');
+  await ready(page);
+  await expect(page.locator('#editor')).toHaveValue(/\.\/data\/mtcars\.csv/);
+  await expect(page.locator('#chart circle.sl-point')).toHaveCount(32);
+  expect(requests).toHaveLength(1);
+  expect(new URL(requests[0]).pathname).toBe('/docs/.vitepress/dist/data/mtcars.csv');
+});
+
 test('axis title changes use one label node without a ghost copy', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/point-lab.html#rollup');
   await ready(page);
@@ -132,7 +145,7 @@ test('an added point grows at its target instead of flying from an unrelated anc
   await ready(page);
   const pointAt = async (progress) => {
     await page.locator('#progress').fill(String(progress));
-    return page.locator('#chart circle.sl-point[data-key="G"]').evaluate(node => ({
+    return page.locator('#chart circle.sl-point[data-key="Maserati Bora"]').evaluate(node => ({
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy')),
       radius: Number(node.getAttribute('r'))
@@ -155,7 +168,7 @@ test('point focus moves the view without filtering points', async ({ page }) => 
   const start = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
   await page.locator('#end').click();
-  await expect(page.locator('#chart circle.sl-point')).toHaveCount(6);
+  await expect(page.locator('#chart circle.sl-point')).toHaveCount(32);
   const focused = await page.locator('#chart circle.sl-point').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('cx'), node.getAttribute('cy')]));
   expect(focused).not.toEqual(start);
@@ -256,7 +269,7 @@ test('point combine starts slowly and accelerates into the summary', async ({ pa
   await ready(page);
   const positionAt = async (progress) => {
     await page.locator('#progress').fill(String(progress));
-    return page.locator('#chart circle.sl-point[data-key="detail:A"]').evaluate(node => ({
+    return page.locator('#chart circle.sl-point[data-key="detail:Datsun 710"]').evaluate(node => ({
       x: Number(node.getAttribute('cx')),
       y: Number(node.getAttribute('cy'))
     }));
@@ -362,6 +375,14 @@ test('point Blend parent exists only while a child is close enough to connect', 
   await page.goto('/docs/.vitepress/dist/point-lab.html#breakdown');
   await ready(page);
 
+  await page.locator('#progress').fill('0');
+  const fullRadii = await page.locator('#chart .sl-point-blend-group').evaluateAll(groups =>
+    Object.fromEntries(groups.map(group => [
+      String(group.__data__.parent),
+      Number(group.querySelector('[data-blend-role="parent"], [data-blend-role="summary"]')?.getAttribute('r'))
+    ]))
+  );
+
   const connectionFrames = async (progressValues) => {
     const frames = [];
     for (const progress of progressValues) {
@@ -386,6 +407,7 @@ test('point Blend parent exists only while a child is close enough to connect', 
             return 1 - t * t * (3 - 2 * t);
           });
           return {
+            parent: String(group.__data__.parent),
             radius: Number(parent.getAttribute('r')),
             connectedShare: strengths.reduce((sum, strength) => sum + strength, 0) / children.length,
             childIsClose: strengths.some(strength => strength > 0)
@@ -404,11 +426,11 @@ test('point Blend parent exists only while a child is close enough to connect', 
   }
   expect(splitFrames.some(frame => frame.some(parent => parent.radius > 1))).toBe(true);
   expect(splitFrames.some(frame => frame.some(parent => parent.radius <= 0.01))).toBe(true);
-  // Before the endpoint guard is needed, each of the three children owns one
-  // third of the authored 24px final parent radius.
+  // Before the endpoint guard is needed, each child contributes an equal share
+  // of its own summary circle's authored radius.
   for (const frame of splitFrames.slice(0, 3)) {
     for (const parent of frame) {
-      expect(parent.radius / 24).toBeCloseTo(parent.connectedShare, 4);
+      expect(parent.radius / fullRadii[parent.parent]).toBeCloseTo(parent.connectedShare, 4);
     }
   }
 

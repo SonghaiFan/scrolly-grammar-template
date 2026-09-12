@@ -1,56 +1,62 @@
-const base = `const rows = [
-  { id: "Q1", period: "Q1", year: 2021, sales: 28, profit: 12 },
-  { id: "Q2", period: "Q2", year: 2022, sales: 47, profit: 24 },
-  { id: "Q3", period: "Q3", year: 2023, sales: 39, profit: 19 },
-  { id: "Q4", period: "Q4", year: 2024, sales: 66, profit: 34 },
-  { id: "Q5", period: "Q5", year: 2025, sales: 58, profit: 31 },
-  { id: "Q6", period: "Q6", year: 2026, sales: 79, profit: 43 }
+// Keep these pairs aligned with tests/browser/area-lab.spec.mjs.
+const unemploymentData = `const DATA_URL = "./data/unemployment.csv";
+const startDate = new Date("2007-01-01");
+const endDate = new Date("2010-02-01");
+const unemploymentRows = await d3.csv(DATA_URL, d3.autoType);
+const rows = unemploymentRows.filter((row) =>
+  row.date >= startDate && row.date <= endDate
+);`;
+
+const base = `${unemploymentData}
+
+const manufacturingRows = rows.filter((row) => row.industry === "Manufacturing");
+const constructionRows = rows.filter((row) => row.industry === "Construction");
+
+const base = area(manufacturingRows)
+  .x("date", { title: "Date" })
+  .y("unemployed", { title: "Unemployed (thousands)", format: "," })
+  .key("date")
+  .tooltip(["date", "industry", "unemployed", "share"]);`;
+
+const stacked = `${unemploymentData}
+
+const selectedIndustries = [
+  "Wholesale and Retail Trade",
+  "Manufacturing",
+  "Leisure and hospitality",
+  "Business services",
+  "Construction"
 ];
+const industryRows = rows.filter((row) => selectedIndustries.includes(row.industry));
 
-const base = area(rows)
-  .x("period", { title: "Period" })
-  .y("sales", { title: "Sales" })
-  .key("id")
-  .tooltip(["period", "sales", "profit"]);`;
-
-const stacked = `const rows = [
-  { period: "Q1", region: "North", sales: 18 },
-  { period: "Q1", region: "South", sales: 10 },
-  { period: "Q2", region: "North", sales: 29 },
-  { period: "Q2", region: "South", sales: 18 },
-  { period: "Q3", region: "North", sales: 22 },
-  { period: "Q3", region: "South", sales: 17 },
-  { period: "Q4", region: "North", sales: 38 },
-  { period: "Q4", region: "South", sales: 28 },
-  { period: "Q5", region: "North", sales: 31 },
-  { period: "Q5", region: "South", sales: 27 },
-  { period: "Q6", region: "North", sales: 46 },
-  { period: "Q6", region: "South", sales: 33 }
-];
-
-const detailed = area(rows)
-  .x("period", { title: "Period" })
-  .y("sales", { title: "Sales" })
-  .key(["period", "region"])
-  .breakdown("region", {
-    color: ["#1c6ae4", "#fa4d1d"]
+const detailed = area(industryRows)
+  .x("date", { title: "Date" })
+  .y("unemployed", { title: "Unemployed (thousands)", format: "," })
+  .key(["date", "industry"])
+  .breakdown("industry", {
+    color: ["#d73027", "#fc8d59", "#fee08b", "#91cf60", "#1a9850"]
   });
 
 const total = detailed.rollup({ op: "sum" });`;
 
 const filtered = `${base}
 
-const filtered = base.where({
-  field: "id",
-  oneOf: ["Q1", "Q2", "Q5", "Q6"]
-});`;
+const filtered = base.where({ field: "year", notEqual: 2008 });`;
 
-const added = `${base}
+const added = `${unemploymentData}
 
-const withQ7 = base.data([
-  ...rows,
-  { id: "Q7", period: "Q7", year: 2027, sales: 88, profit: 51 }
-]);`;
+const recentRows = rows
+  .filter((row) => row.industry === "Manufacturing")
+  .slice(-13);
+const beforeLatest = recentRows.slice(0, -1);
+
+const base = area(beforeLatest)
+  .x("date", { title: "Date" })
+  .y("unemployed", { title: "Unemployed (thousands)", format: "," })
+  .key("date")
+  .tooltip(["date", "industry", "unemployed", "share"]);
+
+const withLatest = base.data(recentRows);`;
 
 function sample(id, label, description, setup, from, to) {
   return { id, label, description, code: `${setup}\n\nconst from = ${from};\nconst to = ${to};\n\nreturn { from, to };` };
@@ -62,18 +68,18 @@ export async function loadChart() {
 }
 
 export const scenarios = [
-  sample('x', '01 · Change x field', 'Move the same band from named periods to a numeric year axis.', base, 'base', 'base.x("year", { type: "quantitative", title: "Year" })'),
-  sample('y', '02 · Change y field', 'Keep the ordered periods and change the upper boundary measure.', base, 'base', 'base.y("profit", { title: "Profit" })'),
-  sample('filter', '03 · Filter observations', 'Remove middle observations and preserve the honest gap as two connected areas.', filtered, 'base', 'filtered'),
-  sample('restore', '04 · Restore observations', 'Restore the filtered observations and their part of the area.', filtered, 'filtered', 'base'),
-  sample('add', '05 · Add an observation', 'Extend the area to one new keyed period.', added, 'base', 'withQ7'),
-  sample('remove', '06 · Remove an observation', 'Remove the final keyed period from the area.', added, 'withQ7', 'base'),
-  sample('data', '07 · Update values', 'Move the upper boundary while keeping observation identity.', base, 'base', 'base.data(rows.map((row, index) => ({ ...row, sales: row.sales + (index % 2 ? 9 : -5) })))'),
-  sample('highlight', '08 · Highlight one layer', 'Keep both stacked layers and dim the South region.', stacked, 'detailed', 'detailed.highlight({ region: "North" }, { opacity: 0.12 })'),
-  sample('color', '09 · Change fill color', 'Change a constant fill without changing the area geometry.', base, 'base.color("#1c6ae4")', 'base.color("#fa4d1d")'),
-  sample('baseline', '10 · Change baseline', 'Move the lower boundary from zero to twenty.', base, 'base', 'base.baseline(20)'),
-  sample('focus', '11 · Focus the view', 'Keep every observation while fitting the x view around later years.', base, 'base', 'base.focus("datum.year >= 2023")'),
-  sample('split', '12 · Split into stacked areas', 'Draw the internal boundary through the total, then reveal the colored parts.', stacked, 'total', 'detailed'),
-  sample('merge', '13 · Merge stacked areas', 'Hide the parts and erase the same internal boundary in exact reverse.', stacked, 'detailed', 'total'),
-  sample('curve', '14 · Change curve', 'Shape both Area boundaries with an exact D3 curve name.', base, 'base.curve("curveLinear")', 'base.curve("curveMonotoneX")')
+  sample('x', '01 · Focus the time window', 'Keep every monthly observation but fit the date axis to the recession period.', base, 'base', 'base.x("date", { title: "Date", domain: [new Date("2008-09-01"), endDate] })'),
+  sample('y', '02 · Change the measure', 'Change the manufacturing band from unemployed people to its explicitly prepared share of total unemployment.', base, 'base', 'base.y("share", { title: "Share of total unemployment", format: ".0%" })'),
+  sample('filter', '03 · Filter observations', 'Remove the 2008 manufacturing observations and preserve that missing year as an honest gap.', filtered, 'base', 'filtered'),
+  sample('restore', '04 · Restore observations', 'Restore the same 2008 observations and their part of the area.', filtered, 'filtered', 'base'),
+  sample('add', '05 · Add an observation', 'Extend the manufacturing area to February 2010.', added, 'base', 'withLatest'),
+  sample('remove', '06 · Remove an observation', 'Remove February 2010 in the exact reverse of Add.', added, 'withLatest', 'base'),
+  sample('data', '07 · Compare industries', 'Keep the monthly dates and mapping, but move from manufacturing to construction unemployment.', base, 'base', 'base.data(constructionRows)'),
+  sample('highlight', '08 · Highlight one industry', 'Keep all five industry layers and dim every layer except Construction.', stacked, 'detailed', 'detailed.highlight({ industry: "Construction" }, { opacity: 0.12 })'),
+  sample('color', '09 · Change fill color', 'Change a constant fill without changing manufacturing data or geometry.', base, 'base.color("#1c6ae4")', 'base.color("#fa4d1d")'),
+  sample('baseline', '10 · Change baseline', 'Rebase the band at 500 thousand so the filled height shows unemployment above that level.', base, 'base', 'base.baseline(500)'),
+  sample('focus', '11 · Focus the view', 'Keep all manufacturing observations while fitting the date view around 2009.', base, 'base', 'base.focus({ field: "year", equal: 2009 })'),
+  sample('split', '12 · Split into industry areas', 'Draw the internal boundaries through the combined total, then reveal five explicitly colored industries.', stacked, 'total', 'detailed'),
+  sample('merge', '13 · Merge into a total', 'Hide the industry parts and erase the same boundaries in exact reverse.', stacked, 'detailed', 'total'),
+  sample('curve', '14 · Change curve', 'Shape both manufacturing Area boundaries with exact D3 curve names.', base, 'base.curve("curveLinear")', 'base.curve("curveMonotoneX")')
 ];

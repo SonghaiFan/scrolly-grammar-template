@@ -4,19 +4,17 @@ These thirteen scenarios are the executable transition matrix for VisDelta's
 current bar implementation. Edit either endpoint, run the code, scrub any
 frame, reverse playback, and inspect the computed semantic delta.
 
-The lab uses the bundled [US population by state and age CSV](/data/us-population-state-age.csv)
-instead of toy A/B/C rows. The source stays in its original wide form: one row
-per region and nine numeric age columns. Segmented examples make the reshaping
-explicit with `.segment({ fields: AGE_BANDS, as: ["age", "population"] })`,
-then explicitly bind `.color("age", ...)` with the same ordered domain and a
-nine-color palette. Folding the columns never creates a color encoding by
-itself.
+The lab uses a bundled [tidy US population by state and age CSV](/data/us-population-state-age-tidy.csv)
+instead of toy A/B/C rows. Its 468 observations have only three fields:
+`state`, `age`, and `population`. The supplied wide source was reshaped before
+it entered VisDelta; data cleaning is not part of the visualization runtime.
+Segmented examples use `.breakdown("age")`, then explicitly encode
+`.color("age", ...)` with an ordered domain and palette.
 
-The stacked overview keeps all 52 regions. Transitions whose mechanics need
-wider marks declare a fixed six- or eight-state subset directly in the editable
-code, so the filtering is visible and every frame remains readable. The data
-replacement example loads the same CSV with the provided `d3` object and adds
-unchanged source rows; it does not manufacture replacement values.
+The ranked and stacked overviews keep all 52 regions. Examples that need wider
+marks name a fixed six- or eight-state subset in the editable code, keeping the
+filter visible and every animation frame readable. The data-replacement example
+adds unchanged rows from the same CSV; it does not invent replacement values.
 
 <SyntaxPlayground mode="bar-lab" initial="measure" />
 

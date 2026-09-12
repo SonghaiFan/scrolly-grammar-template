@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { area, bar, chartStylePresets, darkChartStyle, d3ChartStyle, defineChartStyle, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, paperChartStyle, point, unit, UNIT_LAYOUTS } from '../dist/index.js';
+import { area, bar, chartStylePresets, darkChartStyle, detectDataTypes, d3ChartStyle, defineChartStyle, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, paperChartStyle, point, unit, UNIT_LAYOUTS } from '../dist/index.js';
 import { areaCells, areaLayers } from '../dist/charts/area/state.js';
 import { matchAreaFramePoints } from '../dist/charts/area/render.js';
 import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
@@ -17,6 +17,36 @@ test('documented filtering uses where, not a nonexistent filter method', () => {
     assert.equal(typeof declaration.filter, 'undefined');
     assert.doesNotThrow(() => declaration.where('datum.y >= 2').toSpec());
   }
+});
+
+test('core detects tidy field types and resolves missing channel types', () => {
+  const rows = [
+    { date: '2026-01-01', value: 12, group: 'North' },
+    { date: '2026-01-02', value: 18, group: 'South' }
+  ];
+
+  assert.deepEqual(detectDataTypes(rows), {
+    date: 'temporal',
+    value: 'quantitative',
+    group: 'nominal'
+  });
+
+  for (const factory of [area, line, point]) {
+    const encoding = factory(rows).x('date').y('value').toSpec().encoding;
+    assert.equal(encoding.x.type, 'temporal');
+    assert.equal(encoding.y.type, 'quantitative');
+  }
+});
+
+test('an explicit channel type overrides core inference', () => {
+  const rows = [{ date: '2026-01-01', value: 12 }];
+  const spec = line(rows)
+    .x('date', { type: 'nominal' })
+    .y('value', { type: 'ordinal' })
+    .toSpec();
+
+  assert.equal(spec.encoding.x.type, 'nominal');
+  assert.equal(spec.encoding.y.type, 'ordinal');
 });
 
 test('chart style modules inherit the default grammar without entering chart specs', () => {
@@ -98,6 +128,33 @@ test('wide bar segments preserve their fold when rolling up to totals', () => {
   ]);
   assert.equal(total.encoding?.color, undefined);
   assert.equal(total.encoding?.y?.field, 'population');
+});
+
+test('tidy bar detail preserves number format and rolls up without reshaping data', () => {
+  const rows = [
+    { state: 'CA', age: '<10', population: 5 },
+    { state: 'CA', age: '≥80', population: 1 }
+  ];
+  const detailed = bar(rows)
+    .x('state', { title: 'Region' })
+    .y('population', { title: 'Residents', format: '~s' })
+    .key(['state', 'age'])
+    .breakdown('age')
+    .color('age', { domain: ['<10', '≥80'], range: ['#d53e4f', '#3288bd'] });
+
+  const detailSpec = detailed.toSpec();
+  const total = detailed.rollup().toSpec();
+  assert.equal(detailSpec.encoding.y.format, '~s');
+  assert.equal(detailSpec.encoding.x.title, 'Region');
+  assert.equal(detailSpec.encoding.y.title, 'Residents');
+  assert.deepEqual(total.transform, [{
+    aggregate: {
+      groupby: ['state'],
+      fields: [{ op: 'sum', field: 'population', as: 'population' }]
+    }
+  }]);
+  assert.equal(total.encoding.color, undefined);
+  assert.equal(total.encoding.y.field, 'population');
 });
 
 test('where changes rows while focus keeps rows and changes the view', () => {

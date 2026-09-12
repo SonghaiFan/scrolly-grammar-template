@@ -111,7 +111,7 @@ class AreaChart extends BaseChart {
       .transition(chart.transition.base).style('opacity', 0);
     this.setCartesianState(chart, enc, { x, y, color }, {
       x: (row) => position(x, row[xField]),
-      y: (row) => y(row[yField])
+      y: (row) => position(y, row[yField])
     });
     drawAreaAxes(chart, x, y, enc, d3, this.deps);
 

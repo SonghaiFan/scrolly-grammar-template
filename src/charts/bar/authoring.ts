@@ -2,7 +2,7 @@ import { serializeViewSpec } from '../../spec-meta.js';
 import { cloneState } from '../../grammar/view-state.js';
 import { normalizeFilter } from '../../data/filter.js';
 import { titleize } from '../../labels.js';
-import { ChartState, channelFrom, colorFrom, normalizeDataSource } from '../authoring.js';
+import { ChartState, channelFrom, colorFrom, normalizeDataSource, resolveInlineDataTypes } from '../authoring.js';
 import { compileViewWithCompiler } from '../compile-view.js';
 import { createBarSpecCompiler } from './compile.js';
 import { chartModule as barModule } from './module.js';
@@ -58,9 +58,9 @@ export class BarState extends ChartState<BarViewState> {
     delete spec.aggregate;
     if (spec.semanticKey == null) delete spec.semanticKey;
 
-    return pruneAuthoringState(
+    return resolveInlineDataTypes(pruneAuthoringState(
       compileViewWithCompiler(serializeViewSpec(spec as ViewSpec), { scene: [] }, BAR_SPEC_COMPILER)
-    ) as Omit<BarViewState, '__grammar'>;
+    )) as Omit<BarViewState, '__grammar'>;
   }
 
   override x(field: string | ChannelSpec, options: Partial<ChannelSpec> = {}): this {
@@ -139,7 +139,13 @@ export class BarState extends ChartState<BarViewState> {
       layout: options.layout ?? 'stacked',
       op: options.op ?? 'sum'
     });
-    return (options.title === false ? next : next.y(value, { title: options.title ?? titleize(value) })) as unknown as this;
+    const currentY = (this.state as BarViewState).encoding?.y;
+    return (options.title === false
+      ? next
+      : next.y(value, {
+          title: options.title ?? currentY?.title ?? titleize(value),
+          format: currentY?.format
+        })) as unknown as this;
   }
 
   rollup(
@@ -264,7 +270,7 @@ export class BarState extends ChartState<BarViewState> {
         labels,
         segment,
         value,
-        valueTitle: config.valueTitle ?? titleize(value),
+        valueTitle: config.valueTitle ?? state.encoding?.y?.title ?? titleize(value),
         layout: config.layout ?? 'stacked',
         color: cloneState(config.color),
         domain: config.domain,
@@ -425,13 +431,11 @@ function normalizeAggregation(
     ...config,
     groupby,
     category,
-    categoryTitle: (config.categoryTitle ?? titleize(category ?? '')) as string,
+    categoryTitle: (config.categoryTitle ?? state.encoding?.x?.title ?? titleize(category ?? '')) as string,
     segment,
     value,
     as,
-    valueTitle: (config.valueTitle ?? (segment
-      ? titleize(value)
-      : state.encoding?.y?.title ?? titleize(as))) as string,
+    valueTitle: (config.valueTitle ?? state.encoding?.y?.title ?? titleize(segment ? value : as)) as string,
     op
   };
 }

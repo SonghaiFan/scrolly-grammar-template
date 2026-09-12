@@ -50,10 +50,10 @@ class PointChart extends BaseChart {
     const focusDeps = { bandOrLinear, d3, niceExtent, position };
     const x = selection?.mode === 'focus'
       ? focusedScale(viewRows, viewEnc.x, [0, chart.innerWidth], selection, focusDeps)
-      : quantitativeScale(viewRows, viewEnc.x, [0, chart.innerWidth], d3);
+      : bandOrLinear(viewRows, viewEnc.x, [0, chart.innerWidth], d3);
     const y = selection?.mode === 'focus'
       ? focusedScale(viewRows, viewEnc.y, [chart.innerHeight, 0], selection, focusDeps)
-      : quantitativeScale(viewRows, viewEnc.y, [chart.innerHeight, 0], d3);
+      : bandOrLinear(viewRows, viewEnc.y, [chart.innerHeight, 0], d3);
     const color = colorScale(domainRows, enc.color, d3);
     const fallbackRadius = Number.isFinite(Number(spec.size))
       ? Number(spec.size)

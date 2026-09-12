@@ -24,14 +24,6 @@ export class PointState extends ChartState<PointViewState> {
     return compileViewWithCompiler(spec, { scene: [] }, POINT_SPEC_COMPILER);
   }
 
-  override x(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.x(field, { type: 'quantitative', ...options });
-  }
-
-  override y(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.y(field, { type: 'quantitative', ...options });
-  }
-
   pointSize(value: number): this {
     if (!Number.isFinite(value) || value <= 0) {
       throw new Error('Point size must be a positive finite number.');

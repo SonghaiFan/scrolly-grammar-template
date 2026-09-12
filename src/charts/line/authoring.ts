@@ -29,14 +29,6 @@ export class LineState extends ChartState<LineViewState> {
     return compileViewWithCompiler(spec, { scene: [] }, LINE_SPEC_COMPILER);
   }
 
-  override x(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.x(field, { type: 'nominal', ...options });
-  }
-
-  override y(field: string | import('../../types/index.js').ChannelSpec, options: Partial<import('../../types/index.js').ChannelSpec> = {}): this {
-    return super.y(field, { type: 'quantitative', ...options });
-  }
-
   curve(value: D3CurveName): this {
     if (!isD3CurveName(value)) {
       throw new Error(`Line curve must be a D3 curve name: ${D3_CURVE_NAMES.join(', ')}.`);

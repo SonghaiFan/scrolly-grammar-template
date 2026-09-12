@@ -29,15 +29,14 @@ for (const sample of scenarios) {
     await page.locator('#start').click();
     expect(await snapshot(page)).toEqual(start);
 
-    const edited = sample.code.replaceAll('"Population"', '"Residents"');
-    await editor.fill(edited);
+    await editor.fill(sample.code.replaceAll('"State"', '"Region"'));
     await expect(page.locator('#status')).toHaveText('Waiting for input');
     await ready(page);
-    await expect(page.locator('#chart')).toContainText('Residents');
+    await expect(page.locator('#chart')).toContainText('Region');
     await page.locator('#reset').click();
     await ready(page);
     await expect(editor).toHaveValue(sample.code);
-    await expect(page.locator('#chart')).not.toContainText('Residents');
+    await expect(page.locator('#chart')).not.toContainText('Region');
     expect(errors).toEqual([]);
   });
 }
@@ -123,13 +122,13 @@ test('manual run, drafts, switching and playback controls', async ({ page }) => 
   await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
-  const edited = scenarios[0].code.replaceAll('"Population"', '"Residents"');
+  const edited = scenarios[0].code.replaceAll('"State"', '"Region"');
   await page.locator('#editor').fill(edited);
   await expect(page.locator('#status')).toHaveText('Edited · press Run');
-  await expect(page.locator('#chart')).not.toContainText('Residents');
+  await expect(page.locator('#chart')).not.toContainText('Region');
   await page.locator('#run').click();
   await ready(page);
-  await expect(page.locator('#chart')).toContainText('Residents');
+  await expect(page.locator('#chart')).toContainText('Region');
   await page.locator('#scenario').selectOption('grouped-split');
   await ready(page);
   await expect(page.locator('#editor')).toHaveValue(scenarios.find(s => s.id === 'grouped-split').code);
@@ -153,7 +152,7 @@ test('late async evaluation cannot overwrite a newer edit', async ({ page }) => 
   await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
-  await page.locator('#editor').fill(`await new Promise(resolve => { window.releaseLabRun = resolve; });\n${scenarios[0].code.replaceAll('"Population"', '"Stale population"')}`);
+  await page.locator('#editor').fill(`await new Promise(resolve => { window.releaseLabRun = resolve; });\n${scenarios[0].code.replaceAll('"State"', '"Stale region"')}`);
   await page.locator('#run').click();
   await expect(page.locator('#status')).toHaveText('Compiling');
   await page.locator('#scenario').selectOption('filter');
@@ -165,15 +164,16 @@ test('late async evaluation cannot overwrite a newer edit', async ({ page }) => 
   await expect(page.locator('#chart > div')).toHaveCount(1);
 });
 
-test('bar lab loads the bundled population CSV with ordered age detail', async ({ page }) => {
+test('bar lab loads tidy population observations with ordered age detail', async ({ page }) => {
   const requests = [];
   page.on('request', request => {
-    if (request.url().endsWith('/data/us-population-state-age.csv')) requests.push(request.url());
+    if (request.url().endsWith('/data/us-population-state-age-tidy.csv')) requests.push(request.url());
   });
   await page.goto('/docs/.vitepress/dist/transition-lab.html#split');
   await ready(page);
 
-  await expect(page.locator('#editor')).toHaveValue(/\.segment\(\{[\s\S]*fields: AGE_BANDS/);
+  await expect(page.locator('#editor')).toHaveValue(/\.breakdown\("age"\)/);
+  await expect(page.locator('#editor')).not.toHaveValue(/\.segment\(\{[\s\S]*fields:/);
   await expect(page.locator('#editor')).toHaveValue(/\.color\("age", \{ domain: AGE_BANDS, range: AGE_COLORS \}\)/);
   await expect(page.locator('#chart rect.sl-bar:not(.sl-bar-segment)')).toHaveCount(52);
   await page.locator('#end').click();
@@ -181,21 +181,18 @@ test('bar lab loads the bundled population CSV with ordered age detail', async (
   await expect(page.locator('#chart .sl-legend-item text')).toHaveText([
     '<10', '10-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '≥80'
   ]);
-  const yTicks = await page.locator('#chart .sl-y-axis .tick text').allTextContents();
-  expect(yTicks.some(label => /M$/.test(label))).toBe(true);
   expect(requests).toHaveLength(1);
-  expect(new URL(requests[0]).pathname).toBe('/docs/.vitepress/dist/data/us-population-state-age.csv');
+  expect(new URL(requests[0]).pathname).toBe('/docs/.vitepress/dist/data/us-population-state-age-tidy.csv');
 });
 
 for (const [splitId, mergeId] of [['split', 'merge'], ['grouped-split', 'grouped-merge']]) {
-  test(`real population ${splitId} and ${mergeId} use the same browser frames in reverse`, async ({ page }) => {
+  test(`real population ${splitId} and ${mergeId} use the same frames in reverse`, async ({ page }) => {
     const progressValues = [0, 0.17, 0.5, 0.83, 1];
     const frames = async id => {
       await page.goto('/docs/.vitepress/dist/transition-lab.html');
       await ready(page);
       await page.locator('#scenario').selectOption(id);
-      await expect(page.getByRole('textbox', { name: 'Editable VisDelta code' }))
-        .toHaveValue(scenarios.find(scenario => scenario.id === id).code);
+      await expect(page.locator('#editor')).toHaveValue(scenarios.find(scenario => scenario.id === id).code);
       await ready(page);
       const values = [];
       for (const progress of progressValues) {

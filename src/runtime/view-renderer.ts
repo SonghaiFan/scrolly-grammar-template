@@ -6,6 +6,7 @@ import { easeProgress, hasScrollAction, normalizeScrollAction } from './actions.
 import { activeMarkLayer, applyPlotClip, drawTextBoard, drawUnsupported, effectiveTransitionSpec, fadeLayers, transitionSpec } from './marks.js';
 
 import { domainTransforms, viewRows } from './data.js';
+import { resolveSpecDataTypes } from '../data/types.js';
 import { applySceneTransitions, getScene, resetSceneToEmptySource, resizeScene } from './scene.js';
 import { clamp } from './utils.js';
 import { VISDELTA_TRANSITION_NAME, clearSceneTransitionProgress, createSceneTransitionProgress } from '../transition-progress.js';
@@ -60,8 +61,8 @@ function drawView(node: any, viewSpec: AnyRecord, viewConfig: AnyRecord, dataset
     ? transitionSource.effectiveViewSpec
     : scene.previousSpec;
   const chartType = chartTypes.get(effectiveViewSpec);
-  const targetForPlan = prepareChartSpec(chartType, effectiveViewSpec);
-  const sourceForPlan = prepareChartSpec(chartType, rawSourceSpec);
+  const targetForPlan = prepareChartSpec(chartType, effectiveViewSpec, datasets);
+  const sourceForPlan = prepareChartSpec(chartType, rawSourceSpec, datasets);
   const intermediatePhases = intermediateRenderPhases(chartType, sourceForPlan, targetForPlan);
   if (intermediatePhases.length) {
     const renderPhases = renderPhaseConfigs(intermediatePhases, {
@@ -111,11 +112,15 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   }
   clearSceneTransitionProgress(scene, { finish: !scrollDriven });
   const chartType = chartTypes.get(effectiveViewSpec);
-  const renderSpec = chartType?.prepareSpec?.(effectiveViewSpec) || effectiveViewSpec;
+  const typedSpec = resolveSpecDataTypes(
+    effectiveViewSpec,
+    viewRows(effectiveViewSpec.data, datasets)
+  );
+  const renderSpec = chartType?.prepareSpec?.(typedSpec) || typedSpec;
   const previousRawSpec = scrollDriven
     ? renderOptions.transitionSource?.effectiveViewSpec || null
     : scene.previousSpec;
-  const previousSpec = prepareChartSpec(chartType, previousRawSpec);
+  const previousSpec = prepareChartSpec(chartType, previousRawSpec, datasets);
   const source = viewRows(renderSpec.data, datasets);
   const rows = applyTransforms(source, renderSpec.transform || [], aq);
   const domainRows = applyTransforms(source, domainTransforms(renderSpec.transform || []), aq);
@@ -209,9 +214,10 @@ function fitMarginPair(margin, start, end, budget) {
   margin[end] = Math.max(0, margin[end] * scale);
 }
 
-function prepareChartSpec(chartType, spec) {
+function prepareChartSpec(chartType, spec, datasets = {}) {
   if (!spec) return null;
-  return chartType?.prepareSpec?.(spec) || spec;
+  const typed = resolveSpecDataTypes(spec, viewRows(spec.data, datasets));
+  return chartType?.prepareSpec?.(typed) || typed;
 }
 
 function intermediateRenderPhases(chartType, sourceSpec, targetSpec) {

@@ -147,7 +147,7 @@ Point use cached frame evaluation.
 | `.flip(options?)` | Switch vertical and horizontal orientation; optionally set x/y step order |
 | `.breakdown(segment, options?)` | Split totals into stacked or grouped detail; color remains explicit |
 | `.rollup(groupby, options?)` | Aggregate rows into fewer bars |
-| `.segment(config)` | Configure tidy or wide-data segmentation, labels, layout, and color |
+| `.segment(config)` | Configure segmentation for tidy observations |
 | `.layout(mode, options?)` | Select simple, grouped, or stacked geometry |
 
 ### `line()`
@@ -237,7 +237,6 @@ D3 loads inline, CSV, and JSON data. Arquero is required only when the resolved 
 | --- | --- |
 | `filter` | Match `equal`, `notEqual`, `oneOf`, `gt`, `gte`, `lt`, or `lte` conditions |
 | `timeUnit` | Derive a supported calendar unit, currently month |
-| `fold` | Convert wide columns to tidy rows |
 | `bin` | Bucket quantitative values |
 | `aggregate` | Group and compute count, sum, mean, min, max, or median |
 | `sort` | Sort by one or more fields |

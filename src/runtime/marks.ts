@@ -3,6 +3,7 @@ import { specTransition } from '../spec-meta.js';
 import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
 import { VISDELTA_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
+import { channelValue, inferFieldType } from '../data/types.js';
 import type { ChartStyleModule } from '../charts/style.js';
 
 export interface RenderContext {
@@ -274,26 +275,40 @@ function drawUnsupported(chart, spec, availableTypes = []) {
 
 function bandOrLinear(rows, channel, range, d3) {
   if (!channel) return d3.scaleLinear().domain([0, 1]).range(range);
-  if (channel.type === 'quantitative') return quantitativeScale(rows, channel, range, d3);
-  if (channel.type === 'temporal') {
-    return d3.scaleTime().domain(channel.domain || d3.extent(rows, (d) => new Date(d[channel.field]))).range(range);
+  const resolved = channel.field && !channel.type
+    ? { ...channel, type: inferFieldType(rows, channel.field) }
+    : channel;
+  let scale;
+  if (resolved.type === 'quantitative') scale = quantitativeScale(rows, resolved, range, d3);
+  else if (resolved.type === 'temporal') {
+    const domain = (resolved.domain || d3.extent(rows, (d) => channelValue(d[resolved.field], resolved)))
+      .map((value) => channelValue(value, resolved));
+    scale = d3.scaleTime().domain(domain).range(range);
+  } else {
+    scale = d3.scaleBand().domain(channelDomain(rows, resolved)).range(range).padding(0.24);
   }
-  return d3.scaleBand().domain(channelDomain(rows, channel)).range(range).padding(0.24);
+  scale.__visDeltaChannel = resolved;
+  return scale;
 }
 
 function quantitativeScale(rows, channel = {}, range, d3) {
   const scaleType = channel.scale?.type || channel.scaleType || 'linear';
   const domain = quantitativeDomain(rows, channel, scaleType === 'log' ? 1 : undefined);
+  let scale;
   if (scaleType === 'log') {
     const safeDomain = domain.map((value) => Math.max(Number(value) || 1, 0.1));
-    return d3.scaleLog().domain(safeDomain).range(range).nice();
+    scale = d3.scaleLog().domain(safeDomain).range(range).nice();
+  } else if (scaleType === 'sqrt') {
+    scale = d3.scaleSqrt().domain(domain).range(range).nice();
+  } else {
+    scale = d3.scaleLinear().domain(domain).range(range).nice();
   }
-  if (scaleType === 'sqrt') return d3.scaleSqrt().domain(domain).range(range).nice();
-  return d3.scaleLinear().domain(domain).range(range).nice();
+  scale.__visDeltaChannel = { ...channel, type: 'quantitative' };
+  return scale;
 }
 
 function position(scale, value) {
-  const scaled = scale(value);
+  const scaled = scale(channelValue(value, scale.__visDeltaChannel));
   if (typeof scale.bandwidth === 'function') return scaled + scale.bandwidth() / 2;
   return scaled;
 }
@@ -718,12 +733,6 @@ function resolveColorChannel(rows, channel) {
 function normalizeColorSubchannel(rows, channel = {}) {
   if (!channel.field) return channel;
   return { ...channel, type: channel.type || inferFieldType(rows, channel.field) };
-}
-
-function inferFieldType(rows, field) {
-  const values = rows.map((row) => row[field]).filter((value) => value != null && value !== '');
-  if (!values.length) return 'nominal';
-  return values.every((value) => Number.isFinite(Number(value))) ? 'quantitative' : 'nominal';
 }
 
 // Automatic categorical color assignment: resolve the active palette from CSS

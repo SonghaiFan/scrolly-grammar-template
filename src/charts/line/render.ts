@@ -38,6 +38,9 @@ class LineChart extends BaseChart {
     const pointDuration = Math.max(1, totalDuration - pointStart);
     // Geometry and axes move together first. New points use the remaining
     // time. Canonical reverse playback makes a removal do the exact opposite.
+    // A mark-specific duration must not mutate the shared base transition.
+    // Axis ticks, labels, and grid lines receive the same explicit duration
+    // below so one scale change remains one synchronized chart-part change.
     const t = chart.transition.base;
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
     const plottedRows = state.detailPosition === 'total'
@@ -66,7 +69,7 @@ class LineChart extends BaseChart {
     const line = d3
       .line()
       .x((d) => position(x, d[enc.x.field]))
-      .y((d) => y(d[enc.y.field]))
+      .y((d) => position(y, d[enc.y.field]))
       .curve(d3Curve(spec.curve, d3));
     const pointLine = d3
       .line()
@@ -79,7 +82,7 @@ class LineChart extends BaseChart {
       points: entry.rows.map((row, index) => ({
         key: String(key(row, index)),
         x: position(x, row[enc.x.field]),
-        y: y(row[enc.y.field])
+        y: position(y, row[enc.y.field])
       }))
     });
     const previousPointFrame = chart.g.selectAll('circle.sl-line-point').nodes().map((node) => ({
@@ -90,11 +93,11 @@ class LineChart extends BaseChart {
     const targetPointFrame = plottedRows.map((row, index) => ({
       key: String(key(row, index)),
       x: position(x, row[enc.x.field]),
-      y: y(row[enc.y.field])
+      y: position(y, row[enc.y.field])
     }));
     const targetPoint = (row, index) => ({
       x: position(x, row[enc.x.field]),
-      y: y(row[enc.y.field])
+      y: position(y, row[enc.y.field])
     });
     const pointRadius = Number.isFinite(Number(spec.pointSize))
       ? Number(spec.pointSize)
@@ -110,7 +113,7 @@ class LineChart extends BaseChart {
     fadeNonLineShapes(chart);
     this.setCartesianState(chart, enc, { x, y, color }, {
       x: (d) => position(x, d[enc.x.field]),
-      y: (d) => y(d[enc.y.field])
+      y: (d) => position(y, d[enc.y.field])
     });
     drawLineAxes(chart, x, y, enc, d3, this.deps, { duration: lineDuration });
 
@@ -211,7 +214,7 @@ class LineChart extends BaseChart {
           .duration(lineDuration)
           .style('opacity', (d) => visiblePointOpacity(d))
           .attr('cx', (d) => position(x, d[enc.x.field]))
-          .attr('cy', (d) => y(d[enc.y.field]))
+          .attr('cy', (d) => position(y, d[enc.y.field]))
           .attr('fill', (d) => color(d))
           .attr('data-scroll-radius', pointRadius)
           .attr('r', visiblePointRadius),

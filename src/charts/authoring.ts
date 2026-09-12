@@ -2,6 +2,7 @@ import { serializeViewSpec } from '../spec-meta.js';
 import { ViewState, cloneState } from '../grammar/view-state.js';
 import { titleize } from '../labels.js';
 import { normalizeFilter } from '../data/filter.js';
+import { resolveSpecDataTypes } from '../data/types.js';
 import type {
   ChannelSpec,
   ChannelType,
@@ -49,9 +50,8 @@ function isDataUrl(s: string): boolean {
 
 export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   override toSpec(): Omit<S, '__grammar'> {
-    return compileAuthoredView(
-      this.compileSpec(serializeViewSpec(super.toSpec() as ViewSpec))
-    ) as Omit<S, '__grammar'>;
+    const compiled = this.compileSpec(serializeViewSpec(super.toSpec() as ViewSpec));
+    return compileAuthoredView(resolveInlineDataTypes(compiled)) as Omit<S, '__grammar'>;
   }
 
   /** Chart subclasses override this without importing the global chart manifest. */
@@ -68,11 +68,11 @@ export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   }
 
   x(field: string | ChannelSpec, options: Partial<ChannelSpec> = {}): this {
-    return this.channel('x', field, { type: 'quantitative', ...options });
+    return this.channel('x', field, options);
   }
 
   y(field: string | ChannelSpec, options: Partial<ChannelSpec> = {}): this {
-    return this.channel('y', field, { type: 'quantitative', ...options });
+    return this.channel('y', field, options);
   }
 
   channel(name: string, field: string | ChannelSpec, options: Partial<ChannelSpec> = {}): this {
@@ -151,6 +151,12 @@ export class ChartState<S extends ViewSpec = ViewSpec> extends ViewState<S> {
   axis(config: Partial<AxisSpec> = {}): this {
     return this.with({ axis: cloneState(config) } as Partial<S>, 'axis');
   }
+}
+
+export function resolveInlineDataTypes(spec: ViewSpec): ViewSpec {
+  const data = spec.data as { values?: unknown[] } | unknown[] | undefined;
+  const rows = Array.isArray(data) ? data : Array.isArray(data?.values) ? data.values : null;
+  return rows ? resolveSpecDataTypes(spec, rows) : spec;
 }
 
 function compileAuthoredView(spec: ViewSpec): ViewSpec {

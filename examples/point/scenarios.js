@@ -1,28 +1,33 @@
 // Keep these pairs aligned with tests/browser/point-lab.spec.mjs.
-const base = `const rows = [
-  { id: "A", place: "Aster", region: "North", income: 42, education: 58, health: 66, happiness: 54, population: 18 },
-  { id: "B", place: "Birch", region: "South", income: 57, education: 49, health: 61, happiness: 68, population: 31 },
-  { id: "C", place: "Cedar", region: "North", income: 68, education: 72, health: 78, happiness: 74, population: 24 },
-  { id: "D", place: "Dune", region: "South", income: 76, education: 64, health: 70, happiness: 63, population: 42 },
-  { id: "E", place: "Elm", region: "North", income: 51, education: 81, health: 73, happiness: 82, population: 36 },
-  { id: "F", place: "Flint", region: "South", income: 84, education: 77, health: 86, happiness: 79, population: 27 }
-];
+const base = `const DATA_URL = "./data/mtcars.csv";
 
-const base = point(rows)
-  .x("income", { title: "Income" })
-  .y("health", { title: "Health" })
-  .key("id")
-  .tooltip(["place", "region", "income", "health"]);`;
+const cars = point(DATA_URL)
+  .x("wt", { title: "Weight (1,000 lb)" })
+  .y("mpg", { title: "Fuel economy (mpg)" })
+  .key("name")
+  .tooltip(["name", "cyl", "mpg", "wt", "hp"]);`;
+
+const replacement = `const DATA_URL = "./data/mtcars.csv";
+const rows = await d3.csv(DATA_URL, d3.autoType);
+
+const fourCylinderCars = point(rows.filter(row => row.cyl === 4))
+  .x("wt", { title: "Weight (1,000 lb)" })
+  .y("mpg", { title: "Fuel economy (mpg)" })
+  .key("name")
+  .tooltip(["name", "cyl", "mpg", "wt", "hp"]);`;
 
 function sample(id, label, description, setup, from, to) {
   return { id, label, description, code: `${setup}\n\nconst from = ${from};\nconst to = ${to};\n\nreturn { from, to };` };
 }
 
 const summarySetup = `${base}
+const SUMMARY_CARS = ["Datsun 710", "Fiat 128", "Honda Civic", "Duster 360", "Camaro Z28", "Maserati Bora"];
 
-const detailed = base.color("region");
-const summary = detailed.rollup("region", {
-  key: "region",
+const detailed = cars
+  .where({ field: "name", oneOf: SUMMARY_CARS })
+  .color("cyl", { type: "nominal", title: "Cylinders", domain: [4, 8], range: ["#4c78a8", "#f58518"] });
+const summary = detailed.rollup("cyl", {
+  key: "cyl",
   x: { op: "mean" },
   y: { op: "mean" },
   size: { op: "count", range: [10, 24] }
@@ -34,27 +39,19 @@ export async function loadChart() {
 }
 
 export const pointScenarios = [
-  sample('x', '01 · Change x field', 'Keep the same points and move them to a different horizontal measure.', base, 'base', 'base.x("education", { title: "Education" })'),
-  sample('y', '02 · Change y field', 'Keep the same points and move them to a different vertical measure.', base, 'base', 'base.y("happiness", { title: "Happiness" })'),
-  sample('xy', '03 · Change both fields', 'Change both position mappings while each point keeps its identity.', base, 'base', 'base.x("education").y("happiness")'),
-  sample('filter', '04 · Filter points', 'Keep the North region. South points exit and return when you scrub backward.', base, 'base', 'base.where({ region: "North" })'),
-  sample('add', '05 · Add a point', 'Add one new place while the six existing points stay matched by id.', base, 'base', `base.data([...rows, {
-  id: "G", place: "Grove", region: "North",
-  income: 63, education: 69, health: 81,
-  happiness: 76, population: 22
-}])`),
-  sample('data', '06 · Update values', 'Replace the data values while keeping point identity and mappings.', base, 'base', `base.data(rows.map((row, index) => ({
-  ...row,
-  income: row.income + (index % 2 ? 8 : -6),
-  health: row.health + (index % 3 - 1) * 7
-})))`),
-  sample('highlight', '07 · Highlight points', 'Keep every point visible and fade the region outside the focus.', base, 'base', 'base.highlight({ region: "North" }, { opacity: 0.12 })'),
-  sample('color', '08 · Map color', 'Introduce a categorical color mapping without changing position.', base, 'base', 'base.color("region")'),
-  sample('size', '09 · Map size', 'Map population to point radius using an explicit visual range.', base, 'base.radius(6)', 'base.size("population", { range: [5, 18] })'),
-  sample('flip', '10 · Swap x and y', 'Swap the axes and move the points with their changing scales and labels.', base, 'base', 'base.flip({ order: ["x", "y"] })'),
+  sample('x', '01 · Change x field', 'Move the same 32 cars from weight to engine displacement on the horizontal axis.', base, 'cars', 'cars.x("disp", { title: "Displacement (cu in)" })'),
+  sample('y', '02 · Change y field', 'Move the same cars from fuel economy to horsepower on the vertical axis.', base, 'cars', 'cars.y("hp", { title: "Horsepower" })'),
+  sample('xy', '03 · Change both fields', 'Change both position mappings while every car keeps its identity.', base, 'cars', 'cars.x("disp", { title: "Displacement (cu in)" }).y("hp", { title: "Horsepower" })'),
+  sample('filter', '04 · Filter points', 'Keep the 11 four-cylinder cars; scrub backward to restore the other cars.', base, 'cars', 'cars.where({ cyl: 4 })'),
+  sample('add', '05 · Add a point', 'Add the real Maserati Bora observation at its target position.', base, 'cars.where({ field: "name", notEqual: "Maserati Bora" })', 'cars'),
+  sample('data', '06 · Replace observations', 'Replace the four-cylinder rows with the six-cylinder rows from the same CSV.', replacement, 'fourCylinderCars', 'fourCylinderCars.data(rows.filter(row => row.cyl === 6))'),
+  sample('highlight', '07 · Highlight points', 'Keep every car visible and dim cars that do not have four cylinders.', base, 'cars', 'cars.highlight({ cyl: 4 }, { opacity: 0.12 })'),
+  sample('color', '08 · Map color', 'Explicitly map cylinder count to a categorical color scale.', base, 'cars', 'cars.color("cyl", { type: "nominal", title: "Cylinders", domain: [4, 6, 8], range: ["#4c78a8", "#f2cf5b", "#f58518"] })'),
+  sample('size', '09 · Map size', 'Explicitly map horsepower to point radius.', base, 'cars.radius(5)', 'cars.size("hp", { title: "Horsepower", range: [5, 18] })'),
+  sample('flip', '10 · Swap x and y', 'Swap vehicle weight and fuel economy while preserving car identity.', base, 'cars', 'cars.flip({ order: ["x", "y"] })'),
   sample('rollup', '11 · Combine into summaries', 'Gather the points under one fixed view, then let the view return to the summary scale.', summarySetup, 'detailed', 'summary'),
-  sample('breakdown', '12 · Reveal detail', 'Set the detail view first, then spread each regional summary into its places.', summarySetup, 'summary', 'detailed'),
-  sample('focus', '13 · Focus the view', 'Keep every point in the data while fitting both axes around the North region.', base, 'base', 'base.focus({ region: "North" })')
+  sample('breakdown', '12 · Reveal detail', 'Set the detail view first, then spread each cylinder-count summary into its cars.', summarySetup, 'summary', 'detailed'),
+  sample('focus', '13 · Focus the view', 'Keep all 32 cars in the scene while fitting both axes around four-cylinder cars.', base, 'cars', 'cars.focus({ cyl: 4 })')
 ];
 
 export const scenarios = pointScenarios;

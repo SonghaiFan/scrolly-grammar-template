@@ -125,7 +125,7 @@ title, format, … }`).
 
 ### `.sort(field, order?)`
 
-Sorting changes the rendered row/category order, not the automatic color mapping or legend order. Automatic domains are inferred from the source after data-shaping transforms (such as fold and aggregate), excluding sort, filter, and limit. Explicit color `domain` and `range` still take precedence; declaring a different color mapping can intentionally change colors during a sort transition.
+Sorting changes the rendered row/category order, not the automatic color mapping or legend order. Automatic domains are inferred from the tidy source after chart-state aggregation, excluding sort, filter, and limit. Explicit color `domain` and `range` still take precedence; declaring a different color mapping can intentionally change colors during a sort transition.
 
 Appends a `{ sort: { field, order } }` transform. `order` is `"ascending"`
 (default) or `"descending"`. Multiple `.sort()` calls accumulate in the
@@ -429,21 +429,14 @@ base.rollup({ by: "decade", value: "count", as: "total", op: "sum", color: "#b05
 
 ### `.segment(fieldOrConfig?, config?)`
 
-Lower-level detail primitive behind `.breakdown()` — directly configures
-a multi-field "long format" segmentation, including **wide-to-long folding**
-(turning columns like `hot_days`/`cold_days` into rows). Most stories should prefer `.breakdown()`/`.rollup()`;
-reach for `.segment()` when you need to fold wide columns or set custom
-labels/domains directly.
+Lower-level detail primitive behind `.breakdown()` for tidy observations.
+Most stories should prefer `.breakdown()`/`.rollup()`; use `.segment()` only
+when a chart module needs direct detail configuration. Prepare wide data before
+it enters VisDelta.
 
 ```js
-base.segment("type")    // tidy-data shorthand — equivalent to most `.breakdown()` use
-base.segment({
-  fields: ["hot_days", "cold_days"],     // wide columns to fold into long rows
-  segment: "type", value: "count",
-  labels: { hot_days: "Hot days", cold_days: "Cold days" },
-  layout: "stacked",
-  color: TEMPERATURE_HUE
-})
+base.segment("type")
+base.segment({ segment: "type", value: "count", layout: "stacked" })
 ```
 
 ### `.layout(layout, options?)`

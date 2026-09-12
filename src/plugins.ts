@@ -10,6 +10,7 @@ export {
   selectorFrom
 } from './charts/authoring.js';
 export { compileViewWithCompiler } from './charts/compile-view.js';
+export { detectDataTypes, resolveEncodingTypes } from './data/types.js';
 export { registerChartType, registerChartModule, availableChartTypes } from './runtime/chart-registry.js';
 export type { ChartTypeConfig } from './charts/plugin.js';
 export type { ChartGridStyle, ChartLegendPosition, ChartStyleDefinition, ChartStyleModule, ChartStyleRule, ChartStyleRuleDefinition } from './charts/style.js';

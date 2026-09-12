@@ -73,7 +73,7 @@ transition options. Missing source names reject rather than rendering an empty
 chart. A transition keeps its loaded data snapshot; construct another transition
 to fetch updated data. Data transformations still use the existing chart grammar.
 Arquero is optional for data with no transforms. Pass `aq` when a visualization
-uses filters, aggregation, fold, bin, sort, or another data transform.
+uses chart-state filters, aggregation, sorting, or another supported transform.
 See [data transform grammar](./data-transforms.md) for supported operations and
 validation errors; unsupported declarations are not silently ignored.
 

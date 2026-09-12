@@ -25,14 +25,29 @@ export function matchRenderedPaths(
   try {
     const fromLength = finiteLength(fromNode);
     const toLength = finiteLength(targetNode);
+    // A syntactically non-empty path can still have no measurable geometry
+    // (for example an Area cell at a collapsed endpoint). Browsers throw when
+    // getPointAtLength() is called on that path, so keep the readable endpoint
+    // frames and step between them instead of inventing sample points.
+    if (fromLength === 0 || toLength === 0) {
+      return stepBetweenPaths(fromPath, to);
+    }
     const segmentCount = Math.max(
       MIN_SEGMENTS,
       Math.min(MAX_SEGMENTS, Math.ceil(Math.max(fromLength, toLength) / PIXELS_PER_SEGMENT))
     );
-    const movePoints = interpolatePathPoints(
-      samplePath(fromNode, fromLength, segmentCount),
-      samplePath(targetNode, toLength, segmentCount)
-    );
+    let movePoints: PathInterpolator;
+    try {
+      movePoints = interpolatePathPoints(
+        samplePath(fromNode, fromLength, segmentCount),
+        samplePath(targetNode, toLength, segmentCount)
+      );
+    } catch {
+      // Chromium can report a positive total length for a path that still
+      // rejects point sampling. Preserve both valid endpoint strings rather
+      // than failing the whole chart render.
+      return stepBetweenPaths(fromPath, to);
+    }
     return (progress: number) => {
       const value = clampProgress(progress);
       if (value === 0) return fromPath;

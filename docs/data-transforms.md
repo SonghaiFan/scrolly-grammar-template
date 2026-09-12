@@ -12,7 +12,6 @@ Validation also runs for empty datasets.
 | `sort` | `{ field, order? }` or `{ fields: [fieldName, { field, order? }, …] }` |
 | `limit` | A non-negative integer; zero produces no rows |
 | `aggregate` | `{ groupby?: string[], fields?: [{ op?, field?, as? }] }` |
-| `fold` | `{ fields: string[], as?: [key, value], labels?, sourceAs?, labelAs? }` |
 | `bin` | `{ field, as?, step?, maxbins? }` |
 | `timeUnit` | `{ field, unit: "month", as? }`; no other unit is currently supported |
 
