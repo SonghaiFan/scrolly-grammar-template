@@ -13,6 +13,8 @@ export interface ChannelSpec {
   field?: string;
   type?: ChannelType;
   title?: string;
+  /** D3 format specifier used by a quantitative axis, for example "~s". */
+  format?: string;
   aggregate?: string | boolean;
   timeUnit?: string;
   value?: string;
@@ -498,6 +500,7 @@ export interface SpecCompiler {
 }
 
 export interface ChartDeps {
+  chartStyle?: import('../charts/style.js').ChartStyleModule;
   drawGrid?: (chart: ChartContext, scale: unknown, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
   drawXAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
   drawYAxis?: (chart: ChartContext, scale: unknown, title: string | undefined, d3: D3Lib, transition?: unknown, options?: Record<string, unknown>) => void;
@@ -579,6 +582,8 @@ export interface RuntimeOptions {
   d3: D3Lib;
   aq?: Record<string, unknown>;
   debug?: boolean;
+  /** Structural chart presentation; CSS can target its generated style class. */
+  chartStyle?: import('../charts/style.js').ChartStyleModule;
 }
 
 export interface PageOptions {

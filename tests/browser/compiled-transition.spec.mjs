@@ -68,6 +68,90 @@ test('seek and play reuse nodes without unnecessary transforms, scales or D3 sch
   expect(result.clicks).toBe(1);
 });
 
+test('a chart-style module changes presentation without entering transition semantics', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const compact = sl.defineChartStyle({
+      key: 'compact editorial',
+      tickSpacing: { x: 48, y: 40 },
+      charts: {
+        bar: {
+          margin: { top: 28, right: 12, bottom: 36, left: 36 },
+          grid: 'horizontal',
+          openYDomain: false,
+          edgeTitles: false
+        }
+      },
+      axisTitle: channel => channel?.title
+    });
+    const target = base.y('other');
+    const change = await sl.transition(base, target, { ...options('#cached'), chartStyle: compact });
+    change.progress(0.37);
+    const svg = change.view.querySelector('svg');
+    const keys = [...svg.querySelectorAll('rect.sl-bar')].map(node => node.dataset.key).sort();
+    const midTitle = svg.querySelector('.sl-y-label').textContent;
+    change.progress(0.8);
+    return {
+      className: change.view.closest('.sl-transition-root').className,
+      styleKey: change.view.closest('.sl-transition-root').dataset.chartStyle,
+      keys,
+      delta: change.delta,
+      gridLines: svg.querySelectorAll('.sl-grid line').length,
+      xTitle: svg.querySelector('.sl-x-label').textContent,
+      midTitle,
+      targetTitle: svg.querySelector('.sl-y-label').textContent
+    };
+  });
+
+  expect(result.className).toContain('sl-style-compact-editorial');
+  expect(result.styleKey).toBe('compact-editorial');
+  expect(result.keys).toEqual(['A', 'B', 'C']);
+  expect(result.delta).toEqual(await page.evaluate(() => sl.delta(base, base.y('other'))));
+  expect(result.gridLines).toBeGreaterThan(0);
+  expect(result.xTitle).toBe('Id');
+  expect(result.midTitle).toBe('Value');
+  expect(result.targetTitle).toBe('Other');
+});
+
+test('the Paper preset owns conventional axis titles, a right legend, and its palette', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const rows = [
+      { id: 'A', region: 'North', income: 42, health: 66 },
+      { id: 'B', region: 'South', income: 68, health: 78 }
+    ];
+    const from = sl.point(rows).x('income', { title: 'Income' }).y('health', { title: 'Health' }).key('id').color('region');
+    const change = await sl.transition(from, from, { ...options('#cached'), chartStyle: sl.paperChartStyle });
+    change.progress(1);
+    const root = change.view.closest('.sl-transition-root');
+    const frame = root.querySelector('.sl-frame').getBoundingClientRect();
+    const legend = root.querySelector('.sl-legend').getBoundingClientRect();
+    const xLabel = root.querySelector('.sl-x-label');
+    const yLabel = root.querySelector('.sl-y-label');
+    return {
+      styleKey: root.dataset.chartStyle,
+      xText: xLabel.textContent,
+      xAnchor: xLabel.getAttribute('text-anchor'),
+      yText: yLabel.textContent,
+      yAnchor: yLabel.getAttribute('text-anchor'),
+      yTransform: yLabel.getAttribute('transform'),
+      xDomainOpacity: getComputedStyle(root.querySelector('.sl-x-axis .domain')).opacity,
+      yDomainOpacity: getComputedStyle(root.querySelector('.sl-y-axis .domain')).opacity,
+      legendIsRight: legend.left > frame.right,
+      fills: [...root.querySelectorAll('circle.sl-point')].map(node => getComputedStyle(node).fill)
+    };
+  });
+
+  expect(result.styleKey).toBe('paper');
+  expect(result.xText).toBe('Income');
+  expect(result.xAnchor).toBe('middle');
+  expect(result.yText).toBe('Health');
+  expect(result.yAnchor).toBe('middle');
+  expect(result.yTransform).toContain('rotate(-90)');
+  expect(result.xDomainOpacity).toBe('1');
+  expect(result.yDomainOpacity).toBe('1');
+  expect(result.legendIsRight).toBe(true);
+  expect(result.fills).toEqual(['rgb(139, 47, 32)', 'rgb(49, 91, 69)']);
+});
+
 for (const scenario of ['measure', 'filter', 'highlight', 'color', 'sort', 'flip', 'split', 'merge', 'grouped-split', 'grouped-merge']) {
   test(`${scenario}: cached mark geometry matches reconstruction`, async ({ page }) => {
     const samples = await page.evaluate(async scenario => {

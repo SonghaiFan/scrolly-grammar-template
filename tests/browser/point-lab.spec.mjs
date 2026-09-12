@@ -107,7 +107,24 @@ test('point defaults use compact, open correlation axes', async ({ page }) => {
     };
     return { legend: box('.sl-legend'), yTitle: box('.sl-y-label') };
   });
-  expect(header.legend.bottom <= header.yTitle.top || header.legend.right <= header.yTitle.left).toBe(true);
+  expect(
+    header.legend.bottom <= header.yTitle.top ||
+    header.yTitle.bottom <= header.legend.top ||
+    header.legend.right <= header.yTitle.left ||
+    header.yTitle.right <= header.legend.left
+  ).toBe(true);
+  expect(header.legend.bottom).toBeLessThan(header.yTitle.top);
+});
+
+test('axis title changes use one label node without a ghost copy', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/point-lab.html#rollup');
+  await ready(page);
+  for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+    await page.locator('#progress').fill(String(progress));
+    await expect(page.locator('#chart .sl-x-label')).toHaveCount(1);
+    await expect(page.locator('#chart .sl-y-label')).toHaveCount(1);
+    await expect(page.locator('#chart .sl-axis-label-ghost')).toHaveCount(0);
+  }
 });
 
 test('an added point grows at its target instead of flying from an unrelated anchor', async ({ page }) => {
@@ -209,7 +226,10 @@ test('point rollup and breakdown are the same transition in reverse', async ({ p
       { id: 'D', region: 'South', x: 68, y: 61 }
     ];
     const detailed = point(rows).x('x').y('y').key('id').color('region');
-    const summary = detailed.rollup('region', { key: 'region', sizeRange: [10, 22] });
+    const summary = detailed.rollup('region', {
+      key: 'region',
+      size: { op: 'count', range: [10, 22] }
+    });
     const options = target => ({ target, d3, aq, height: 360 });
     const split = await transition(summary, detailed, options('#split'));
     const merge = await transition(detailed, summary, options('#merge'));

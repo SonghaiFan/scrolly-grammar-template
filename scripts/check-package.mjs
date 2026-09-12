@@ -48,6 +48,10 @@ const publicExports = {
     types: "./dist/plugins.d.ts",
     import: "./dist/plugins.js"
   },
+  "./chart-style": {
+    types: "./dist/charts/style.d.ts",
+    import: "./dist/charts/style.js"
+  },
   "./composition": {
     types: "./dist/composition.d.ts",
     import: "./dist/composition.js"
@@ -80,6 +84,8 @@ const requiredFiles = [
   "dist/index.js",
   "dist/composition.d.ts",
   "dist/composition.js",
+  "dist/charts/style.d.ts",
+  "dist/charts/style.js",
   "dist/transition-entry.d.ts",
   "dist/transition-entry.js",
   "dist/visdelta.browser.js",

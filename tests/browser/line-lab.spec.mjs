@@ -106,6 +106,36 @@ test('line lab names the authored observation direction', async ({ page }) => {
   await expect(page.locator('.playground-line-plan')).toContainText('Remove points');
 });
 
+test('line add keeps y-axis ticks and horizontal grid lines on one schedule', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/line-lab.html#add');
+  await ready(page);
+
+  for (const progress of ['0.05', '0.25', '0.5', '0.75', '0.95']) {
+    await page.locator('#progress').fill(progress);
+    const frame = await page.locator('#chart svg').evaluate((svg) => {
+      const read = selector => new Map([...svg.querySelectorAll(selector)].map(node => [
+        String(node.__data__),
+        {
+          y: new DOMPoint(0, 0).matrixTransform(node.getScreenCTM()).y,
+          opacity: Number(getComputedStyle(node).opacity)
+        }
+      ]));
+      return {
+        ticks: [...read('.sl-y-axis > .tick')],
+        grid: [...read('.sl-grid > .tick')]
+      };
+    });
+    const ticks = new Map(frame.ticks);
+    const grid = new Map(frame.grid);
+
+    expect([...grid.keys()]).toEqual([...ticks.keys()]);
+    for (const [value, tick] of ticks) {
+      expect(Math.abs(tick.y - grid.get(value).y)).toBeLessThanOrEqual(0.1);
+      expect(Math.abs(tick.opacity - grid.get(value).opacity)).toBeLessThanOrEqual(0.01);
+    }
+  }
+});
+
 test('all exact D3 curve names render through the Line module', async ({ page }) => {
   await page.goto('/tests/fixtures/runtime.html');
   const results = await page.evaluate(async () => {

@@ -66,6 +66,10 @@
       "types": "./dist/plugins.d.ts",
       "import": "./dist/plugins.js"
     },
+    "./chart-style": {
+      "types": "./dist/charts/style.d.ts",
+      "import": "./dist/charts/style.js"
+    },
     "./composition": {
       "types": "./dist/composition.d.ts",
       "import": "./dist/composition.js"

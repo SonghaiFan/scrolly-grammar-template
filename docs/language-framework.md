@@ -81,9 +81,20 @@ x step = x scale + x axis + marks
 y step = y scale + y axis + marks
 ```
 
+Visual encodings are always authored. VisDelta may choose presentation defaults
+such as one theme-accent fill, point radius, line width, margins, or animation duration, but
+it never decides that a data field means color, size, position, or another visual
+channel. Operations such as `.breakdown()` may declare grouping and geometry;
+they do not silently add a color mapping. Write `.color(...)`, `.size(...)`, or
+the equivalent named option when that mapping is part of the intended message.
+
 Therefore `flip({ order: ["x", "y"] })` reads as “change x first, then y.” If
 an old and new axis cannot be smoothly interpolated, VisDelta fades between them
-inside the same step instead of replacing the axis at the first frame.
+in place inside the same step. Both stay anchored to their authored axis
+baseline; neither exits nor enters because the coordinate dimension still exists.
+This temporary copy belongs to the axis geometry only. An axis title always has
+one text node and one meaning in each frame; when its wording changes, that one
+title switches at the middle of the step.
 An entering or exiting axis moves from its own side of the chart: a bottom axis
 uses the bottom edge, a left axis uses the left edge, and top/right axes use
 their matching edges. An axis never enters from the chart's top-left origin.

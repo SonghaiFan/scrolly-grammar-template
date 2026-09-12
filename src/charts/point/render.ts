@@ -16,6 +16,7 @@ class PointChart extends BaseChart {
   render(chart, rows, spec, tooltip, d3) {
     const {
       bindTooltip,
+      chartStyle,
       colorScale,
       drawGrid,
       drawLegend,
@@ -98,7 +99,7 @@ class PointChart extends BaseChart {
       x: (d) => position(x, d[enc.x?.field]),
       y: (d) => position(y, d[enc.y?.field])
     });
-    drawPointAxes(chart, x, y, viewEnc, d3, { drawGrid, drawXAxis, drawYAxis });
+    drawPointAxes(chart, x, y, viewEnc, d3, { chartStyle, drawGrid, drawXAxis, drawYAxis });
     drawLegend(chart, rows, enc.color, d3);
 
     const crispLayer = chart.g.selectAll('g.sl-point-crisp-layer')

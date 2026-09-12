@@ -21,10 +21,15 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
   const canonicalProgress = value => canonical.reverse ? 1 - value : value;
   const host = resolveTarget(options.target || '#app');
   const root = document.createElement('div');
-  root.className = 'sl-transition-root';
+  const styleKey = String(options.chartStyle?.key || 'd3').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+  root.className = `sl-transition-root sl-style-${styleKey}`;
+  root.dataset.chartStyle = styleKey;
   const shell = renderChartShell(root, {}, 'main');
   const node = shell.views.main as any;
-  const config = { height: options.height ?? from.height ?? to.height ?? 500 };
+  const config = {
+    height: options.height ?? from.height ?? to.height ?? 500,
+    margin: invariantTransitionMargin(chartType, source, target)
+  };
   const scenes = { scene: inferTransition(source, target) };
   // Cache only when the selected chart type explicitly opts into reusable-frame
   // contract. Unspecified/custom renderers use the reconstruction bridge.
@@ -107,4 +112,14 @@ export function createTransitionSurface(from: AnyRecord, to: AnyRecord, options:
     resize() { cached = null; },
     destroy() { cached = null; disposeScene(); root.remove(); }
   };
+}
+
+function invariantTransitionMargin(chartType, source, target) {
+  const resolve = spec => ({ ...chartType.defaultMargin(spec), ...(spec.margin || {}) });
+  const a = resolve(source);
+  const b = resolve(target);
+  return Object.fromEntries(['top', 'right', 'bottom', 'left'].map(side => [
+    side,
+    Math.max(Number(a[side]) || 0, Number(b[side]) || 0)
+  ]));
 }

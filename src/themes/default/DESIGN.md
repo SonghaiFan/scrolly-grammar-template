@@ -12,8 +12,8 @@ colors:
   on-surface:       "#1f2328"
   muted:            "#66707a"
   border:           "#dde1e6"
-  outline:          "#aeb4bb"
-  outline-variant:  "#eceff2"
+  outline:          "#747b83"
+  outline-variant:  "#e7eaed"
   series-1:         "#4e79a7"
   series-2:         "#f28e2b"
   series-3:         "#e15759"
@@ -27,12 +27,12 @@ colors:
 
 typography:
   label:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif"
-    fontSize: 11px
-    fontWeight: 500
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif"
+    fontSize: 10px
+    fontWeight: 400
     lineHeight: 1.4
   body:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, sans-serif"
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif"
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.6
@@ -52,28 +52,28 @@ spacing:
 
 components:
   bar:
-    radius:     "{rounded.md}"
+    radius:     3
     dimOpacity: 0.22
   point:
     stroke:      "{colors.surface}"
     strokeWidth: 1.5
   line:
-    width:     3
-    pointSize: 4.5
+    width:     2
+    pointSize: 3.5
     pointStroke: "{colors.surface}"
     pointStrokeWidth: 1.5
   unit:
     stroke:      "{colors.surface}"
-    strokeWidth: 0.5
+    strokeWidth: 0.75
   axis:
     fontSize:    "{typography.label.fontSize}"
-    labelOffset: 48
+    labelOffset: 40
     tickCount:   6
   grid:
     width: 1px
   legend:
     swatchSize:   9
-    swatchRadius: "{rounded.sm}"
+    swatchRadius: 2
     fontSize:     "{typography.label.fontSize}"
 ---
 
@@ -113,7 +113,7 @@ so small-N palettes (2–4 series) are as distinct as possible.
 
 ## Typography
 
-A single humanist sans-serif stack (Inter at the top) across all text roles.
+A single system sans-serif stack across all text roles.
 No size gymnastics; only two sizes matter:
 
 - **Label:** {typography.label.fontSize} / {typography.label.fontWeight} —
@@ -125,7 +125,7 @@ special treatment; plain and readable.
 
 ## Layout & Spacing
 
-An 8px base grid. The axis label offset (48px = 6 × 8px) places axis titles
+An 8px base grid. The axis label offset is 40px and places axis titles
 at a comfortable reading distance from the outermost tick label.
 
 ## Shapes
@@ -135,16 +135,17 @@ Conservative corner rounding:
 - **sm ({rounded.sm}px):** Legend swatches — just enough to look intentional.
 - **md ({rounded.md}px):** Bar marks — softens the column without making it
   feel "app-like."
-- **lg ({rounded.lg}px):** Figures and cards — matches browser default style.
+- **figure (4px):** Chart frames — visible softness without a card-like shape.
+- **lg ({rounded.lg}px):** Reserved for larger narrative cards.
 
 Never use `full` on data marks. Pill-shaped bars lose area accuracy.
 
 ## Components
 
 ### Bar
-Plain rectangles with {rounded.md}px rounding. Non-highlighted bars fade to
-{components.bar.dimOpacity} opacity in highlight mode so the focused bar
-reads clearly without removing the spatial context of neighbors.
+Plain rectangles with a small {components.bar.radius}px radius. Non-highlighted
+bars fade to {components.bar.dimOpacity} opacity in highlight mode so the
+focused bar reads clearly without removing the spatial context of neighbors.
 
 ### Point / Line-point
 White-outlined circles. The {components.point.strokeWidth}px stroke

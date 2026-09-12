@@ -29,14 +29,15 @@ for (const sample of scenarios) {
     await page.locator('#start').click();
     expect(await snapshot(page)).toEqual(start);
 
-    await editor.fill(sample.code.replaceAll('category: "A"', 'category: "Edited"'));
+    const edited = sample.code.replaceAll('"Population"', '"Residents"');
+    await editor.fill(edited);
     await expect(page.locator('#status')).toHaveText('Waiting for input');
     await ready(page);
-    await expect(page.locator('#chart')).toContainText('Edited');
+    await expect(page.locator('#chart')).toContainText('Residents');
     await page.locator('#reset').click();
     await ready(page);
     await expect(editor).toHaveValue(sample.code);
-    await expect(page.locator('#chart')).not.toContainText('Edited');
+    await expect(page.locator('#chart')).not.toContainText('Residents');
     expect(errors).toEqual([]);
   });
 }
@@ -65,38 +66,70 @@ test('bar focus moves the category view without filtering bars', async ({ page }
   const start = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
   await page.locator('#end').click();
-  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
+  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(52);
   const focused = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
     nodes.map(node => [node.getAttribute('data-key'), node.getAttribute('x'), node.getAttribute('y')]));
   expect(focused).not.toEqual(start);
   const visibility = await page.locator('#chart').evaluate(chart => {
-    const clip = chart.querySelector('clipPath rect');
+    const clip = chart.querySelector('clipPath[id^="sl-mark-clip-"] rect');
     const width = Number(clip?.getAttribute('width'));
     const bars = [...chart.querySelectorAll('rect.sl-bar')].map(node => ({
       key: node.getAttribute('data-key'),
+      hasX: node.hasAttribute('x'),
       x: Number(node.getAttribute('x')),
       width: Number(node.getAttribute('width'))
     }));
     return {
       all: bars.map(bar => bar.key),
-      inside: bars.filter(bar => bar.x + bar.width > 0 && bar.x < width).map(bar => bar.key)
+      inside: bars.filter(bar => bar.hasX && bar.x + bar.width > 0 && bar.x < width).map(bar => bar.key)
     };
   });
-  expect(visibility.all).toHaveLength(3);
-  expect(visibility.inside).toHaveLength(2);
+  expect(visibility.all).toHaveLength(52);
+  expect(visibility.inside).toHaveLength(8);
+});
+
+test('grouped split keeps aggregate bars on the visible baseline while the legend enters', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#grouped-split');
+  await ready(page);
+
+  for (const progress of ['0', '0.01', '0.03', '0.23', '0.43']) {
+    await page.locator('#progress').fill(progress);
+    const frame = await page.locator('#chart svg').evaluate((svg) => {
+      const numberFromTranslate = (node, index) => {
+        const values = (node.getAttribute('transform') || '').match(/-?\d+(?:\.\d+)?/g) || [];
+        return Number(values[index] || 0);
+      };
+      const frameTop = numberFromTranslate(svg.querySelector('.sl-frame'), 1);
+      const axisY = numberFromTranslate(svg.querySelector('.sl-x-axis'), 1);
+      const clipHeight = Number(svg.querySelector('clipPath[id^="sl-mark-clip-"] rect')?.getAttribute('height'));
+      const visible = [...svg.querySelectorAll('rect.sl-bar')]
+        .filter((bar) => Number(getComputedStyle(bar).opacity) > 0.001);
+      const bottoms = new Map();
+      for (const bar of visible) {
+        const category = bar.getAttribute('data-category');
+        const bottom = Number(bar.getAttribute('y')) + Number(bar.getAttribute('height'));
+        bottoms.set(category, Math.max(bottoms.get(category) ?? -Infinity, bottom));
+      }
+      return { baseline: axisY - frameTop, clipHeight, bottoms: [...bottoms.values()] };
+    });
+
+    expect(frame.bottoms.length).toBeGreaterThan(0);
+    expect(frame.clipHeight).toBeCloseTo(frame.baseline, 5);
+    frame.bottoms.forEach((bottom) => expect(bottom).toBeCloseTo(frame.baseline, 5));
+  }
 });
 
 test('manual run, drafts, switching and playback controls', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
-  const edited = scenarios[0].code.replaceAll('category: "A"', 'category: "Draft"');
+  const edited = scenarios[0].code.replaceAll('"Population"', '"Residents"');
   await page.locator('#editor').fill(edited);
   await expect(page.locator('#status')).toHaveText('Edited · press Run');
-  await expect(page.locator('#chart')).not.toContainText('Draft');
+  await expect(page.locator('#chart')).not.toContainText('Residents');
   await page.locator('#run').click();
   await ready(page);
-  await expect(page.locator('#chart')).toContainText('Draft');
+  await expect(page.locator('#chart')).toContainText('Residents');
   await page.locator('#scenario').selectOption('grouped-split');
   await ready(page);
   await expect(page.locator('#editor')).toHaveValue(scenarios.find(s => s.id === 'grouped-split').code);
@@ -120,17 +153,85 @@ test('late async evaluation cannot overwrite a newer edit', async ({ page }) => 
   await page.goto('/docs/.vitepress/dist/transition-lab.html');
   await ready(page);
   await page.locator('#auto-run').uncheck();
-  await page.locator('#editor').fill(`await new Promise(resolve => { window.releaseLabRun = resolve; });\n${scenarios[0].code.replaceAll('category: "A"', 'category: "Stale"')}`);
+  await page.locator('#editor').fill(`await new Promise(resolve => { window.releaseLabRun = resolve; });\n${scenarios[0].code.replaceAll('"Population"', '"Stale population"')}`);
   await page.locator('#run').click();
   await expect(page.locator('#status')).toHaveText('Compiling');
   await page.locator('#scenario').selectOption('filter');
   await ready(page);
   await page.evaluate(() => window.releaseLabRun());
   await page.locator('#end').click();
-  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(2);
+  await expect(page.locator('#chart rect.sl-bar')).toHaveCount(4);
   await expect(page.locator('#chart')).not.toContainText('Stale');
   await expect(page.locator('#chart > div')).toHaveCount(1);
 });
+
+test('bar lab loads the bundled population CSV with ordered age detail', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => {
+    if (request.url().endsWith('/data/us-population-state-age.csv')) requests.push(request.url());
+  });
+  await page.goto('/docs/.vitepress/dist/transition-lab.html#split');
+  await ready(page);
+
+  await expect(page.locator('#editor')).toHaveValue(/\.segment\(\{[\s\S]*fields: AGE_BANDS/);
+  await expect(page.locator('#editor')).toHaveValue(/\.color\("age", \{ domain: AGE_BANDS, range: AGE_COLORS \}\)/);
+  await expect(page.locator('#chart rect.sl-bar:not(.sl-bar-segment)')).toHaveCount(52);
+  await page.locator('#end').click();
+  await expect(page.locator('#chart rect.sl-bar-segment')).toHaveCount(52 * 9);
+  await expect(page.locator('#chart .sl-legend-item text')).toHaveText([
+    '<10', '10-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '≥80'
+  ]);
+  const yTicks = await page.locator('#chart .sl-y-axis .tick text').allTextContents();
+  expect(yTicks.some(label => /M$/.test(label))).toBe(true);
+  expect(requests).toHaveLength(1);
+  expect(new URL(requests[0]).pathname).toBe('/docs/.vitepress/dist/data/us-population-state-age.csv');
+});
+
+for (const [splitId, mergeId] of [['split', 'merge'], ['grouped-split', 'grouped-merge']]) {
+  test(`real population ${splitId} and ${mergeId} use the same browser frames in reverse`, async ({ page }) => {
+    const progressValues = [0, 0.17, 0.5, 0.83, 1];
+    const frames = async id => {
+      await page.goto('/docs/.vitepress/dist/transition-lab.html');
+      await ready(page);
+      await page.locator('#scenario').selectOption(id);
+      await expect(page.getByRole('textbox', { name: 'Editable VisDelta code' }))
+        .toHaveValue(scenarios.find(scenario => scenario.id === id).code);
+      await ready(page);
+      const values = [];
+      for (const progress of progressValues) {
+        await page.locator('#progress').fill(String(progress));
+        values.push(await page.locator('#chart svg').evaluate(svg => {
+          const normalized = value => value == null
+            ? null
+            : String(value).replace(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi, token =>
+                String(Math.round(Number(token) * 1e8) / 1e8));
+          return [...svg.querySelectorAll('rect.sl-bar, path.sl-bar-seam')]
+            .map(node => ({
+              tag: node.tagName,
+              className: node.getAttribute('class'),
+              key: node.getAttribute('data-key'),
+              x: normalized(node.getAttribute('x')),
+              y: normalized(node.getAttribute('y')),
+              width: normalized(node.getAttribute('width')),
+              height: normalized(node.getAttribute('height')),
+              d: normalized(node.getAttribute('d')),
+              opacity: normalized(getComputedStyle(node).opacity),
+              fillOpacity: normalized(getComputedStyle(node).fillOpacity),
+              fill: getComputedStyle(node).fill
+            }))
+            .sort((a, b) => `${a.className}:${a.key}`.localeCompare(`${b.className}:${b.key}`));
+        }));
+      }
+      return values;
+    };
+
+    const splitFrames = await frames(splitId);
+    const mergeFrames = await frames(mergeId);
+    progressValues.forEach((_, index) => {
+      expect(mergeFrames[progressValues.length - 1 - index]).toEqual(splitFrames[index]);
+    });
+  });
+}
 
 test('narrow layout fits and resize preserves progress', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/transition-lab.html#split');

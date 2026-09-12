@@ -11,6 +11,7 @@ import { transitionRegistry } from './runtime/chart-registry.js';
 import { validateTransforms } from './data/validate.js';
 import { createChartRuntimeDeps } from './runtime/chart-deps.js';
 import { resolveTarget } from './runtime/target.js';
+import { d3ChartStyle } from './charts/style.js';
 
 export type { Visualization } from './core.js';
 
@@ -93,8 +94,9 @@ export async function transition(
   };
   const [resolvedFrom, resolvedTo] = await Promise.all([resolveData(source), resolveData(target)]);
   const host = resolveTarget(options.target ?? '#app');
-  const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host }), localModules);
-  const surface = createTransitionSurface(resolvedFrom, resolvedTo, options, chartTypes);
+  const chartStyle = options.chartStyle ?? d3ChartStyle;
+  const chartTypes = await transitionRegistry(resolvedFrom, createChartRuntimeDeps({ root: host, chartStyle }), localModules);
+  const surface = createTransitionSurface(resolvedFrom, resolvedTo, { ...options, chartStyle }, chartTypes);
   let value = 0;
   let animation: number | null = null;
   let destroyed = false;

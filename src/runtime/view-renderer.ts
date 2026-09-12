@@ -139,19 +139,24 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
   resizeScene(scene, width, height);
 
   const rendererKey = resolveMarkRendererKey(renderSpec);
+  const margin = fitMargins(width, height, {
+    top: 58,
+    right: 44,
+    bottom: 64,
+    left: 68,
+    ...(chartType?.defaultMargin?.(renderSpec) || {}),
+    ...(effectiveViewSpec.margin || {}),
+    ...(viewConfig.margin || {})
+  });
+  scene.svg
+    .attr('class', `sl-chart sl-chart-${rendererKey}`)
+    .attr('data-chart-type', rendererKey);
   const chart: AnyRecord = {
     scene,
     type: rendererKey,
     width,
     height,
-    margin: {
-      top: 58,
-      right: 44,   // extra breathing room prevents last-bar clipping at narrow widths
-      bottom: 64,
-      left: 68,
-      ...(chartType?.defaultMargin?.(renderSpec) || {}),
-      ...(effectiveViewSpec.margin || {})
-    },
+    margin,
     transition: transitionSpec(renderSpec, previousSpec, { scrollDriven, d3 } as AnyRecord),
     transitionPlan: chartType?.resolveTransitionPlan?.(previousSpec, renderSpec) || {},
     sceneTransition,
@@ -187,6 +192,21 @@ function renderCompiledView(node: any, effectiveViewSpec: AnyRecord, viewConfig:
     });
   }
   scene.previousSpec = renderSpec;
+}
+
+function fitMargins(width, height, margin) {
+  const fitted = { ...margin };
+  fitMarginPair(fitted, 'left', 'right', Math.max(0, width - 24));
+  fitMarginPair(fitted, 'top', 'bottom', Math.max(0, height - 24));
+  return fitted;
+}
+
+function fitMarginPair(margin, start, end, budget) {
+  const total = Math.max(0, Number(margin[start]) || 0) + Math.max(0, Number(margin[end]) || 0);
+  if (!total || total <= budget) return;
+  const scale = budget / total;
+  margin[start] = Math.max(0, margin[start] * scale);
+  margin[end] = Math.max(0, margin[end] * scale);
 }
 
 function prepareChartSpec(chartType, spec) {

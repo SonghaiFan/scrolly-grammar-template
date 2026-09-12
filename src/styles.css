@@ -1,4 +1,5 @@
-:root {
+:root,
+.sl-style-d3 {
   color-scheme: light;
   --sl-color-primary: #4e79a7;
   --sl-color-surface: #fff;
@@ -6,8 +7,8 @@
   --sl-color-on-surface: #1f2328;
   --sl-color-muted: #66707a;
   --sl-color-border: #dde1e6;
-  --sl-color-outline: #aeb4bb;
-  --sl-color-outline-variant: #eceff2;
+  --sl-color-outline: #747b83;
+  --sl-color-outline-variant: #e7eaed;
   --sl-color-series-1: #4e79a7;
   --sl-color-series-2: #f28e2b;
   --sl-color-series-3: #e15759;
@@ -21,9 +22,9 @@
   --sl-rounded-sm: 2;
   --sl-rounded-md: 3;
   --sl-rounded-lg: 6;
-  --sl-type-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --sl-type-label-size: 11px;
-  --sl-type-label-weight: 500;
+  --sl-type-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sl-type-label-size: 10px;
+  --sl-type-label-weight: 400;
   --sl-type-body-size: 14px;
   --sl-space-xs: 4px;
   --sl-space-sm: 8px;
@@ -40,8 +41,11 @@
   --sl-accent: var(--sl-color-primary);
   --sl-grid: var(--sl-color-outline-variant);
   --sl-axis: var(--sl-color-outline);
+  --sl-axis-text: var(--sl-color-muted);
+  --sl-axis-title: var(--sl-color-on-surface);
+  --sl-legend-text: var(--sl-color-muted);
   --sl-font-family: var(--sl-type-family);
-  --sl-shadow: 0 1px 2px rgba(31, 35, 40, 0.05);
+  --sl-shadow: none;
   --sl-series-1: var(--sl-color-series-1);
   --sl-series-2: var(--sl-color-series-2);
   --sl-series-3: var(--sl-color-series-3);
@@ -52,23 +56,24 @@
   --sl-series-8: var(--sl-color-series-8);
   --sl-series-9: var(--sl-color-series-9);
   --sl-series-10: var(--sl-color-series-10);
-  --sl-bar-radius: var(--sl-rounded-md);
-  --sl-line-width: 3;
+  --sl-bar-radius: 3;
+  --sl-line-width: 2;
   --sl-mark-stroke: var(--sl-color-surface);
   --sl-point-stroke-width: 1.5;
-  --sl-unit-stroke-width: 0.5;
-  --sl-line-point-size: 4.5;
+  --sl-unit-stroke-width: 0.75;
+  --sl-line-point-size: 3.5;
   --sl-dim-opacity: 0.22;
   --sl-axis-font-size: var(--sl-type-label-size);
-  --sl-axis-label-offset: 48;
+  --sl-axis-title-font-size: 11px;
+  --sl-axis-label-offset: 40;
   --sl-tick-count: 6;
   --sl-grid-width: 1px;
   --sl-legend-swatch-size: 9;
-  --sl-legend-swatch-radius: var(--sl-rounded-sm);
+  --sl-legend-swatch-radius: 2;
   --sl-legend-font-size: var(--sl-type-label-size);
   --sl-figure-bg: var(--sl-color-surface);
   --sl-figure-blur: 0px;
-  --sl-figure-radius: calc(var(--sl-rounded-lg) * 1px);
+  --sl-figure-radius: 4px;
   --sl-figure-border: 1px solid var(--sl-color-border);
   --sl-figure-shadow: var(--sl-shadow);
 }
@@ -94,12 +99,12 @@
 }
 
 .sl-figure-header {
-  min-height: 58px;
+  min-height: 52px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px 12px;
+  padding: 14px 16px 10px;
   border-bottom: 1px solid var(--sl-border);
 }
 
@@ -126,7 +131,9 @@
 
 .sl-view svg {
   display: block;
+  max-width: 100%;
   width: 100%;
+  height: auto;
 }
 
 .sl-axis path,
@@ -135,14 +142,16 @@
   shape-rendering: crispEdges;
 }
 
-.sl-axis text,
-.sl-axis-label {
-  fill: var(--sl-muted);
+.sl-axis text {
+  fill: var(--sl-axis-text);
   font-size: var(--sl-axis-font-size);
+  font-weight: var(--sl-type-label-weight);
 }
 
 .sl-axis-label {
-  font-weight: 700;
+  fill: var(--sl-axis-title);
+  font-size: var(--sl-axis-title-font-size);
+  font-weight: 600;
 }
 
 .sl-grid line {
@@ -211,9 +220,9 @@
 }
 
 .sl-legend {
-  fill: var(--sl-muted);
+  fill: var(--sl-legend-text);
   font-size: var(--sl-legend-font-size);
-  font-weight: 500;
+  font-weight: var(--sl-type-label-weight);
 }
 
 .sl-empty {
@@ -222,6 +231,113 @@
   place-items: center;
   color: var(--sl-muted);
   font-size: 0.95rem;
+}
+
+/* Built-in chart-style presets. The runtime scopes one of these classes to
+   each transition root, so presets can coexist without changing the page. */
+.sl-style-paper {
+  color-scheme: light;
+  --sl-color-primary: #8b2f20;
+  --sl-color-surface: #fffdf7;
+  --sl-color-bg: #f4eee2;
+  --sl-color-on-surface: #21180f;
+  --sl-color-muted: #746653;
+  --sl-color-border: #cbbda5;
+  --sl-color-outline: #a4957d;
+  --sl-color-outline-variant: #e4d9c7;
+  --sl-color-series-1: #8b2f20;
+  --sl-color-series-2: #315b45;
+  --sl-color-series-3: #294b78;
+  --sl-color-series-4: #7a5a22;
+  --sl-color-series-5: #6d4969;
+  --sl-color-series-6: #3c6d70;
+  --sl-color-series-7: #a36146;
+  --sl-color-series-8: #596c35;
+  --sl-color-series-9: #77533a;
+  --sl-color-series-10: #55514a;
+  --sl-type-family: Iowan Old Style, Baskerville, Georgia, ui-serif, serif;
+  --sl-font-family: Iowan Old Style, Baskerville, Georgia, ui-serif, serif;
+  --sl-series-1: #8b2f20;
+  --sl-series-2: #315b45;
+  --sl-series-3: #294b78;
+  --sl-series-4: #7a5a22;
+  --sl-series-5: #6d4969;
+  --sl-series-6: #3c6d70;
+  --sl-series-7: #a36146;
+  --sl-series-8: #596c35;
+  --sl-series-9: #77533a;
+  --sl-series-10: #55514a;
+  --sl-accent: #8b2f20;
+  --sl-type-label-size: 11px;
+  --sl-axis-font-size: 11px;
+  --sl-axis-title-font-size: 12px;
+  --sl-axis-title: #21180f;
+  --sl-axis-text: #746653;
+  --sl-axis: #a4957d;
+  --sl-grid: #e4d9c7;
+  --sl-legend-text: #5f513f;
+  --sl-bar-radius: 0;
+  --sl-mark-stroke: #fffdf7;
+  --sl-point-stroke-width: 1;
+  --sl-line-width: 1.75;
+  --sl-legend-swatch-radius: 0;
+  --sl-figure-bg: #fffdf7;
+  --sl-figure-border: 1px solid #cbbda5;
+  --sl-figure-radius: 0;
+  --sl-figure-shadow: none;
+}
+
+.sl-style-dark {
+  color-scheme: dark;
+  --sl-color-primary: #67b7e5;
+  --sl-color-surface: #11161c;
+  --sl-color-bg: #0b1015;
+  --sl-color-on-surface: #dbe7ef;
+  --sl-color-muted: #91a0ac;
+  --sl-color-border: #2b3741;
+  --sl-color-outline: #536472;
+  --sl-color-outline-variant: #243039;
+  --sl-color-series-1: #67b7e5;
+  --sl-color-series-2: #3f8fbd;
+  --sl-color-series-3: #94d2f2;
+  --sl-color-series-4: #28688f;
+  --sl-color-series-5: #b7e2f7;
+  --sl-color-series-6: #54a3cf;
+  --sl-color-series-7: #d4eefb;
+  --sl-color-series-8: #356f8b;
+  --sl-color-series-9: #78c4e8;
+  --sl-color-series-10: #a9cfdf;
+  --sl-type-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sl-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sl-series-1: #67b7e5;
+  --sl-series-2: #3f8fbd;
+  --sl-series-3: #94d2f2;
+  --sl-series-4: #28688f;
+  --sl-series-5: #b7e2f7;
+  --sl-series-6: #54a3cf;
+  --sl-series-7: #d4eefb;
+  --sl-series-8: #356f8b;
+  --sl-series-9: #78c4e8;
+  --sl-series-10: #a9cfdf;
+  --sl-accent: #67b7e5;
+  --sl-type-label-size: 10px;
+  --sl-type-label-weight: 400;
+  --sl-axis-font-size: 10px;
+  --sl-axis-title-font-size: 11px;
+  --sl-axis-title: #dbe7ef;
+  --sl-axis-text: #91a0ac;
+  --sl-axis: #536472;
+  --sl-grid: #243039;
+  --sl-legend-text: #aab6bf;
+  --sl-bar-radius: 0;
+  --sl-mark-stroke: #11161c;
+  --sl-point-stroke-width: 1.25;
+  --sl-line-width: 1.5;
+  --sl-legend-swatch-radius: 0;
+  --sl-figure-bg: #11161c;
+  --sl-figure-border: 1px solid #2b3741;
+  --sl-figure-radius: 0;
+  --sl-figure-shadow: none;
 }
 
 .sl-text-board {

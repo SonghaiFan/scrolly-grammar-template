@@ -3,10 +3,12 @@ import { specTransition } from '../spec-meta.js';
 import { DEFAULT_TIMING, defaultTransition } from '../timing.js';
 import { VISDELTA_TRANSITION_NAME } from '../transition-progress.js';
 import { clamp, escapeHtml, titleize } from './utils.js';
+import type { ChartStyleModule } from '../charts/style.js';
 
 export interface RenderContext {
   root?: Element;
   colors?: Map<string, Map<string, string>> | null;
+  chartStyle?: ChartStyleModule;
 }
 
 /** Helpers capture one instance context, including delayed D3 callbacks. */
@@ -47,7 +49,6 @@ const DEFAULT_PALETTE = [
   ['--sl-series-10', '#bab0ac']
 ];
 const DEFAULT_LUMINANCE_BASE = ['--sl-accent', '#4e79a7'];
-const DEFAULT_MARK_COLOR = '#000000';
 
 // ─── Hue-maximisation helpers ─────────────────────────────────────────────────
 
@@ -132,7 +133,11 @@ function pickCategoricalColors(n, colors) {
 // Falls back silently when running outside a browser (SSR / tests).
 function themeValue(cssVar, fallback) {
   if (typeof document === 'undefined') return fallback;
-  const style = getComputedStyle(context.root ?? document.documentElement);
+  const contextRoot = context.root ?? document.documentElement;
+  const scopedRoot = contextRoot.matches?.('.sl-transition-root, .sl-chart-root')
+    ? contextRoot
+    : contextRoot.querySelector?.('.sl-transition-root, .sl-chart-root');
+  const style = getComputedStyle(scopedRoot ?? contextRoot);
   const raw = style.getPropertyValue(cssVar).trim();
   if (!raw) return fallback;
   // Defensive var() resolution: if the browser returns an unresolved
@@ -313,16 +318,16 @@ function channelDomain(rows, channel = {}) {
 
 function colorScale(rows, channel, d3) {
   const resolved = resolveColorChannel(rows, channel);
-  if (!resolved) return () => DEFAULT_MARK_COLOR;
+  if (!resolved) return () => themeColor(DEFAULT_LUMINANCE_BASE);
   channel = resolved;
   if (channel.value) return () => cssColor(channel.value, '#4e79a7');
   if (channel.hue || channel.luminance) return compositeColorScale(channel, d3);
-  if (!channel.field) return () => DEFAULT_MARK_COLOR;
+  if (!channel.field) return () => themeColor(DEFAULT_LUMINANCE_BASE);
   if (channel.type === 'quantitative') return luminanceColorScale(rows, channel, d3);
   // Use story-level registry for consistent key→color mapping across scenes.
   const fieldRegistry = !channel.range && context.colors?.get(channel.field);
   if (fieldRegistry) {
-    const fallback = DEFAULT_MARK_COLOR;
+    const fallback = themeColor(DEFAULT_LUMINANCE_BASE);
     return (row) => fieldRegistry.get(String(row[channel.field])) ?? fallback;
   }
   const domain = channelDomain(rows, channel);
@@ -332,13 +337,14 @@ function colorScale(rows, channel, d3) {
 
 function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, options = {}) {
   const side = options.side === 'top' ? 'top' : 'bottom';
+  const duration = options.duration;
   if (!scale) {
     const inactiveSide = activeAxisSide(chart.scene.xAxis, side);
     markAxisInactive(chart.scene.xAxis);
-    chart.scene.xAxis.transition(transition)
+    timedTransition(chart.scene.xAxis, transition, duration)
       .attr('transform', axisSideTransform(chart, inactiveSide, true))
       .style('opacity', 0);
-    chart.scene.xLabel.transition(transition)
+    timedTransition(chart.scene.xLabel, transition, duration)
       .attr('transform', `translate(${chart.margin.left},0)`)
       .attr('y', xLabelSideY(chart, inactiveSide, true, themeValue('--sl-axis-label-offset', 48)))
       .style('opacity', 0);
@@ -348,7 +354,10 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
   const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
   const labelOffset = themeValue('--sl-axis-label-offset', 48);
   const axisFactory = side === 'top' ? d3.axisTop : d3.axisBottom;
-  let axis = typeof scale.bandwidth === 'function' ? axisFactory(scale) : axisFactory(scale).ticks(tickCount);
+  let axis = typeof scale.bandwidth === 'function'
+    ? axisFactory(scale)
+    : axisFactory(scale).ticks(tickCount, options.tickFormat);
+  axis = axis.tickSizeOuter(0);
   // Adaptive label thinning for band (categorical) x-axes:
   // when available px-per-band < threshold, skip every Nth label so they never overlap.
   if (typeof scale.bandwidth === 'function') {
@@ -362,19 +371,19 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
   }
   const kind = axisKind(side, scale);
   const xAxis = chart.scene.xAxis.interrupt();
-  const entersFromSide = axisNeedsEntry(xAxis, kind);
-  renderAxisWithGuard(xAxis, axis, transition, kind);
+  const entersFromSide = axisIsEntering(xAxis);
+  renderAxisWithGuard(xAxis, axis, transition, kind, duration);
   if (entersFromSide) {
     xAxis.attr('transform', axisSideTransform(chart, side, true)).style('opacity', 0);
   }
   xAxis.selectAll('.tick text').attr('dy', '0.8em');
   alignEdgeTickLabels(xAxis, scale, d3);
-  xAxis.transition(transition)
+  timedTransition(xAxis, transition, duration)
     .attr('transform', axisSideTransform(chart, side, false))
     .style('opacity', 1);
   if (title) {
     const xLabel = chart.scene.xLabel.interrupt();
-    const xLabelTransition = transitionAxisLabel(xLabel, title, transition);
+    const xLabelTransition = transitionAxisLabel(xLabel, title, transition, duration);
     if (entersFromSide) {
       xLabel
         .attr('x', chart.innerWidth / 2)
@@ -387,25 +396,29 @@ function drawXAxis(chart, scale, title, d3, transition = chart.transition.base, 
       .attr('x', chart.innerWidth / 2).attr('y', xLabelSideY(chart, side, false, labelOffset))
       .attr('text-anchor', 'middle').attr('transform', `translate(${chart.margin.left},0)`);
   } else {
-    chart.scene.xLabel.transition(transition).style('opacity', 0);
+    timedTransition(chart.scene.xLabel, transition, duration).style('opacity', 0);
   }
 }
 
 function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, options = {}) {
   const side = options.side === 'right' ? 'right' : 'left';
+  const duration = options.duration;
   if (!scale) {
     const inactiveSide = activeAxisSide(chart.scene.yAxis, side);
     markAxisInactive(chart.scene.yAxis);
-    chart.scene.yAxis.transition(transition)
+    timedTransition(chart.scene.yAxis, transition, duration)
       .attr('transform', axisSideTransform(chart, inactiveSide, true))
       .style('opacity', 0);
-    chart.scene.yLabel.transition(transition).style('opacity', 0);
+    timedTransition(chart.scene.yLabel, transition, duration).style('opacity', 0);
     return;
   }
   const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
   const labelOffset = themeValue('--sl-axis-label-offset', 48);
   const axisFactory = side === 'right' ? d3.axisRight : d3.axisLeft;
-  let axis = typeof scale.bandwidth === 'function' ? axisFactory(scale) : axisFactory(scale).ticks(tickCount);
+  let axis = typeof scale.bandwidth === 'function'
+    ? axisFactory(scale)
+    : axisFactory(scale).ticks(tickCount, options.tickFormat);
+  axis = axis.tickSizeOuter(0);
   // Adaptive label thinning for band (categorical) y-axes (horizontal bar charts):
   if (typeof scale.bandwidth === 'function') {
     const domain = scale.domain();
@@ -418,52 +431,53 @@ function drawYAxis(chart, scale, title, d3, transition = chart.transition.base, 
   }
   const kind = axisKind(side, scale);
   const yAxis = chart.scene.yAxis.interrupt();
-  const entersFromSide = axisNeedsEntry(yAxis, kind);
-  renderAxisWithGuard(yAxis, axis, transition, kind);
+  const entersFromSide = axisIsEntering(yAxis);
+  renderAxisWithGuard(yAxis, axis, transition, kind, duration);
   if (entersFromSide) {
     yAxis.attr('transform', axisSideTransform(chart, side, true)).style('opacity', 0);
   }
-  yAxis.transition(transition)
+  timedTransition(yAxis, transition, duration)
     .attr('transform', axisSideTransform(chart, side, false))
     .style('opacity', 1);
   if (title) {
     const yLabel = chart.scene.yLabel.interrupt();
-    const yLabelTransition = transitionAxisLabel(yLabel, title, transition);
+    const yLabelTransition = transitionAxisLabel(yLabel, title, transition, duration);
     if (entersFromSide) placeYLabel(yLabel, chart, side, labelOffset, true).style('opacity', 0);
     placeYLabel(yLabelTransition, chart, side, labelOffset, false);
   } else {
-    chart.scene.yLabel.transition(transition).style('opacity', 0);
+    timedTransition(chart.scene.yLabel, transition, duration).style('opacity', 0);
   }
 }
 
 function drawGrid(chart, y, d3, transition = chart.transition.base, options = {}) {
   updateGrid(chart, y, d3, transition, {
     keepX: Boolean(options.x),
-    tickCount: options.yTickCount
+    tickCount: options.yTickCount,
+    duration: options.duration
   });
-  updateXGrid(chart, options.x, d3, transition, options.xTickCount);
+  updateXGrid(chart, options.x, d3, transition, options.xTickCount, options.duration);
 }
 
 function updateGrid(chart, y, d3, transition = chart.transition.base, options = {}) {
-  if (!options.keepX) updateXGrid(chart, null, d3, transition);
+  if (!options.keepX) updateXGrid(chart, null, d3, transition, undefined, options.duration);
   if (!y) {
     markAxisInactive(chart.scene.grid);
-    chart.scene.grid.transition(transition).style('opacity', 0);
+    timedTransition(chart.scene.grid, transition, options.duration).style('opacity', options.keepX ? 1 : 0);
     return;
   }
   const grid = chart.scene.grid.interrupt().attr('transform', null);
   const tickCount = options.tickCount ?? themeValue('--sl-tick-count', 6);
-  renderAxisWithGuard(grid, d3.axisLeft(y).ticks(tickCount).tickSize(-chart.innerWidth).tickFormat(''), transition, axisKind('grid-left', y));
-  grid.transition(transition).style('opacity', 1);
+  renderAxisWithGuard(grid, d3.axisLeft(y).ticks(tickCount).tickSize(-chart.innerWidth).tickFormat(''), transition, axisKind('grid-left', y), options.duration);
+  timedTransition(grid, transition, options.duration).style('opacity', 1);
 }
 
-function updateXGrid(chart, x, d3, transition, tickCount) {
+function updateXGrid(chart, x, d3, transition, tickCount, duration) {
   const layer = chart.scene.grid.selectAll('g.sl-point-x-grid')
     .data(x ? [null] : [])
     .join(
       (enter) => enter.append('g').attr('class', 'sl-point-x-grid'),
       (update) => update,
-      (exit) => exit.transition(transition).style('opacity', 0).remove()
+      (exit) => timedTransition(exit, transition, duration).style('opacity', 0).remove()
     );
   if (!x) return;
 
@@ -473,21 +487,22 @@ function updateXGrid(chart, x, d3, transition, tickCount) {
     .selectAll('line')
     .data(values, (value) => String(value))
     .join(
-      (enter) => enter.append('line')
+      (enter) => {
+        const entered = enter.append('line')
+          .attr('x1', (value) => x(value))
+          .attr('x2', (value) => x(value))
+          .attr('y1', 0)
+          .attr('y2', chart.innerHeight)
+          .style('opacity', 0);
+        return timedTransition(entered, transition, duration).style('opacity', 1);
+      },
+      (update) => timedTransition(update, transition, duration)
         .attr('x1', (value) => x(value))
         .attr('x2', (value) => x(value))
         .attr('y1', 0)
         .attr('y2', chart.innerHeight)
-        .style('opacity', 0)
-        .transition(transition)
         .style('opacity', 1),
-      (update) => update.transition(transition)
-        .attr('x1', (value) => x(value))
-        .attr('x2', (value) => x(value))
-        .attr('y1', 0)
-        .attr('y2', chart.innerHeight)
-        .style('opacity', 1),
-      (exit) => exit.transition(transition).style('opacity', 0).remove()
+      (exit) => timedTransition(exit, transition, duration).style('opacity', 0).remove()
     );
 }
 
@@ -511,19 +526,29 @@ function drawLegend(chart, rows, channel, d3) {
     : quantitativeLegend
       ? luminanceColorScale(colorRows, legendChannel, d3)
       : fieldRegistry
-        ? (d) => fieldRegistry.get(String(d)) ?? DEFAULT_MARK_COLOR
+        ? (d) => fieldRegistry.get(String(d)) ?? themeColor(DEFAULT_LUMINANCE_BASE)
         : d3.scaleOrdinal(channel.range || categoricalRange(domain)).domain(domain);
   const legendRow = (value) => ({ [legendChannel.field]: value });
-  const legend = chart.scene.legend.interrupt().style('opacity', 1)
-    .attr('transform', `translate(${chart.margin.left},${Math.max(18, chart.margin.top - 32)})`);
-  const items = legend.selectAll('g.sl-legend-item').data(domain, (d) => d);
-  const entered = items.enter().append('g').attr('class', 'sl-legend-item').style('opacity', 0);
   const swatchSize = themeValue('--sl-legend-swatch-size', 9);
   const swatchRadius = themeValue('--sl-legend-swatch-radius', 1.5);
+  const legendInset = context.chartStyle?.legendInset ?? { top: 8, left: 8 };
+  const atRight = context.chartStyle?.legendPosition === 'right';
+  const layout = legendLayout(
+    domain,
+    atRight ? 1 : chart.innerWidth,
+    swatchSize
+  );
+  const legend = chart.scene.legend.interrupt().style('opacity', 1)
+    .attr('transform', `translate(${chart.margin.left + legendInset.left + (atRight ? chart.innerWidth : 0)},${legendInset.top + (atRight ? chart.margin.top : 0)})`);
+  const items = legend.selectAll('g.sl-legend-item').data(domain, (d) => d);
+  const entered = items.enter().append('g').attr('class', 'sl-legend-item').style('opacity', 0);
   entered.append('rect').attr('width', swatchSize).attr('height', swatchSize).attr('rx', swatchRadius);
   entered.append('text').attr('x', swatchSize + 6).attr('y', swatchSize - 0.5);
   items.merge(entered).transition(chart.transition.base).style('opacity', 1)
-    .attr('transform', (_, index) => `translate(${legendItemX(domain, index)},0)`);
+    .attr('transform', (_, index) => {
+      const item = layout.items[index];
+      return `translate(${item.x},${item.y})`;
+    });
   items.merge(entered).select('rect').transition(chart.transition.base)
     .attr('fill', (d) => channel.hue || channel.luminance ? scale(legendRow(d)) : scale(d));
   items.merge(entered).select('text').text((d) => quantitativeLegend ? d3.format('~g')(d) : d);
@@ -590,9 +615,9 @@ function axisKind(placement, scale) {
   return `${placement}:${typeof scale.bandwidth === 'function' ? 'band' : 'continuous'}`;
 }
 
-function axisNeedsEntry(axisGroup, kind) {
+function axisIsEntering(axisGroup) {
   const node = axisGroup.node();
-  return !node?.__visDeltaAxisActive || node.__visDeltaAxisKind !== kind;
+  return !node?.__visDeltaAxisActive;
 }
 
 function activeAxisSide(axisGroup, fallback) {
@@ -629,34 +654,48 @@ function placeYLabel(label, chart, side, offset, outside) {
     .attr('transform', `translate(0,${chart.margin.top}) rotate(-90)`);
 }
 
-function renderAxisWithGuard(axisGroup, axis, transition, kind) {
+function renderAxisWithGuard(axisGroup, axis, transition, kind, duration) {
   const node = axisGroup.node();
   const canTransition = node?.__visDeltaAxisActive && node.__visDeltaAxisKind === kind;
   const replacesKind = node?.__visDeltaAxisActive && node.__visDeltaAxisKind !== kind;
   if (node) { node.__visDeltaAxisActive = true; node.__visDeltaAxisKind = kind; }
-  if (canTransition) { axisGroup.transition(transition).call(axis); return; }
+  if (canTransition) { timedTransition(axisGroup, transition, duration).call(axis); return; }
   if (replacesKind) {
-    fadeClone(axisGroup, 'sl-axis sl-axis-ghost', transition);
+    fadeClone(axisGroup, 'sl-axis sl-axis-ghost', transition, duration);
     axisGroup.call(axis).style('opacity', 0);
     return;
   }
   axisGroup.call(axis);
 }
 
-function transitionAxisLabel(label, title, transition) {
+function transitionAxisLabel(label, title, transition, duration) {
   const previousTitle = label.text();
-  const visible = previousTitle && label.style('opacity') !== '0';
-  if (visible && previousTitle !== title) {
-    fadeClone(label, 'sl-axis-label sl-axis-label-ghost', transition);
-    label.style('opacity', 0);
+  // An axis has one meaning in each frame, so it must have one label node.
+  // Keep incompatible axis geometry ghosts, but never duplicate title text.
+  label.node()?.parentNode?.querySelectorAll?.('.sl-axis-label-ghost')
+    .forEach((node) => node.remove());
+  if (previousTitle && previousTitle !== title) {
+    label.text(previousTitle).style('opacity', 1);
+    return timedTransition(label, transition, duration)
+      .tween('text', function() {
+        return (progress) => { this.textContent = progress < 0.5 ? previousTitle : title; };
+      })
+      .style('opacity', 1);
   }
   label.text(title);
-  return label.transition(transition).style('opacity', 1);
+  return timedTransition(label, transition, duration).style('opacity', 1);
 }
 
-function fadeClone(selection, className, transition) {
-  selection.clone(true).attr('class', className).attr('aria-hidden', 'true')
-    .transition(transition).style('opacity', 0).remove();
+function fadeClone(selection, className, transition, duration) {
+  const clone = selection.clone(true).attr('class', className).attr('aria-hidden', 'true');
+  timedTransition(clone, transition, duration).style('opacity', 0).remove();
+}
+
+function timedTransition(selection, transition, duration) {
+  const scheduled = selection.transition(transition);
+  return Number.isFinite(Number(duration))
+    ? scheduled.duration(Math.max(0, Number(duration)))
+    : scheduled;
 }
 
 function resolveColorChannel(rows, channel) {
@@ -708,8 +747,7 @@ function luminanceColorScale(rows, channel, d3) {
 
 function themeColor([name, fallback] = []) {
   if (!name) return fallback;
-  if (typeof document === 'undefined') return fallback;
-  return getComputedStyle(context.root ?? document.documentElement).getPropertyValue(name).trim() || fallback;
+  return themeValue(name, fallback);
 }
 
 function colorRange(range = []) {
@@ -764,8 +802,23 @@ function quantitativeLegendDomain(rows, channel, d3) {
   return d3.ticks(min, max, 3);
 }
 
-function legendItemX(domain, index) {
-  return domain.slice(0, index).reduce((x, value) => x + String(value).length * 7 + 30, 0);
+function legendLayout(domain, availableWidth, swatchSize) {
+  const rowHeight = Math.max(14, swatchSize + 5);
+  const width = Math.max(1, Number(availableWidth) || 1);
+  const items = [];
+  let x = 0;
+  let row = 0;
+  domain.forEach((value) => {
+    const itemWidth = Math.max(30, String(value).length * 6.25 + swatchSize + 18);
+    if (x > 0 && x + itemWidth > width) {
+      row += 1;
+      x = 0;
+    }
+    items.push({ x, y: row * rowHeight });
+    x += itemWidth;
+  });
+  const rows = domain.length ? row + 1 : 0;
+  return { items, rows, height: rows * rowHeight };
 }
 
 function tooltipHtml(row, tooltipSpec) {

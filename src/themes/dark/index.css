@@ -63,11 +63,6 @@
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 body { color-scheme: dark; }
 
-/* ── Axis & grid ─────────────────────────────────────────────────────────── */
-.sl-axis text, .sl-axis-label { fill: var(--sl-muted); font-size: var(--sl-axis-font-size); }
-.sl-legend   { fill: var(--sl-muted); font-size: var(--sl-legend-font-size); }
-.sl-grid line { stroke: var(--sl-grid); stroke-width: var(--sl-grid-width); }
-
 /* ── Figure (chart) card: top accent line marks the chart frame ─────────── */
 .sl-figure {
   border-top: 2px solid var(--sl-color-primary);

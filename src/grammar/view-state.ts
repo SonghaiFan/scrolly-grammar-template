@@ -43,6 +43,14 @@ export class ViewState<S extends object = Record<string, unknown>> {
     return new Ctor(next as S);
   }
 
+  /** Replace one semantic state family instead of leaking fields from its previous mode. */
+  protected replaceState<K extends keyof S>(key: K, value: S[K], operation?: string): this {
+    const next = cloneState(this.state) as StateWithMeta<S>;
+    (next as Record<string, unknown>)[key as string] = cloneState(value);
+    const Ctor = this.constructor as new (s: S) => this;
+    return new Ctor(next as S).with({} as Partial<StateWithMeta<S>>, operation);
+  }
+
   toSpec(): Omit<S, '__grammar'> {
     const spec = cloneState(this.state) as Record<string, unknown>;
     delete spec.__grammar;

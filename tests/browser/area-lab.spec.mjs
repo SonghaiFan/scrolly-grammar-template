@@ -100,6 +100,37 @@ test('area split and merge are the same cached transition in reverse', async ({ 
   for (const frame of frames) expect(frame.merge).toEqual(frame.split);
 });
 
+test('area edge titles align to the plot frame and stay clear of y-axis ticks', async ({ page }) => {
+  await page.goto('/docs/.vitepress/dist/area-lab.html#merge');
+  await ready(page);
+
+  for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+    await page.locator('#progress').fill(String(progress));
+    const frame = await page.locator('#chart svg').evaluate(svg => {
+      const title = svg.querySelector('.sl-y-label')?.getBoundingClientRect();
+      const xTitle = svg.querySelector('.sl-x-label')?.getBoundingClientRect();
+      const plot = svg.querySelector('.sl-frame')?.getBoundingClientRect();
+      if (!title || !xTitle || !plot) return null;
+      const overlaps = [...svg.querySelectorAll('.sl-y-axis .tick text')]
+        .filter(node => {
+          const tick = node.getBoundingClientRect();
+          return title.left < tick.right && title.right > tick.left &&
+            title.top < tick.bottom && title.bottom > tick.top;
+        })
+        .map(node => node.textContent);
+      return {
+        overlaps,
+        leftGap: title.left - plot.left,
+        rightGap: plot.right - xTitle.right
+      };
+    });
+    expect(frame).not.toBeNull();
+    expect(frame.overlaps).toEqual([]);
+    expect(frame.leftGap).toBeCloseTo(0, 1);
+    expect(frame.rightGap).toBeCloseTo(0, 1);
+  }
+});
+
 test('area split draws a thin contrast divider on the cached split timeline', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/area-lab.html#split');
   await ready(page);
@@ -261,7 +292,10 @@ test('area add/remove and restore/filter reuse the same frames backward', async 
           .sort((a, b) => `${a.className}:${a.key}`.localeCompare(`${b.className}:${b.key}`)),
         xTicks: [...document.querySelectorAll(`${selector} .sl-x-axis .tick`)].map(tick => ({
           text: tick.textContent,
-          transform: tick.getAttribute('transform'),
+          transform: (tick.getAttribute('transform') || '').replace(
+            /-?\d+(?:\.\d+)?/g,
+            value => String(Number(Number(value).toFixed(9)))
+          ),
           opacity: tick.style.opacity
         }))
       });

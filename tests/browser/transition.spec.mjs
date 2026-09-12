@@ -194,7 +194,7 @@ test('a numeric midpoint interpolates geometry and endpoints contain only live m
   expect(result.restored).toBe(3);
 });
 
-test('flip crossfades incompatible axes instead of replacing them at the first frame', async ({ page }) => {
+test('incompatible axes crossfade in place instead of exiting and entering', async ({ page }) => {
   const frames = await page.evaluate(async () => {
     const change = await sl.transition(base, base.flip(), opts('#a'));
     const frame = progress => {
@@ -212,11 +212,11 @@ test('flip crossfades incompatible axes instead of replacing them at the first f
         yPosition: translate(change.view.querySelector('.sl-y-axis')),
         ghostAxes: [...change.view.querySelectorAll('.sl-axis-ghost')].map(node => ({
           opacity: opacity(node),
+          position: translate(node),
           labels: [...node.querySelectorAll('.tick text')].map(label => label.textContent)
         })),
-        ghostLabels: [...change.view.querySelectorAll('.sl-axis-label-ghost')].map(node => ({
-          opacity: opacity(node), text: node.textContent
-        }))
+        labels: [...change.view.querySelectorAll('.sl-x-label, .sl-y-label')].map(node => node.textContent),
+        ghostLabelCount: change.view.querySelectorAll('.sl-axis-label-ghost').length
       };
     };
     return [frame(0), frame(0.001), frame(0.5), frame(1)];
@@ -224,15 +224,18 @@ test('flip crossfades incompatible axes instead of replacing them at the first f
   expect(frames[0].ghostAxes).toHaveLength(0);
   expect(frames[1].ghostAxes).toHaveLength(2);
   expect(frames[1].ghostAxes.every(axis => axis.opacity > 0.99)).toBe(true);
-  expect(frames[1].ghostAxes.some(axis => axis.labels.includes('A'))).toBe(true);
-  expect(frames[1].ghostLabels.map(label => label.text).sort()).toEqual(['Category', 'Value']);
-  expect(frames[1].xPosition[0]).toBeCloseTo(frames[3].xPosition[0], 2);
-  expect(frames[1].xPosition[1]).toBeGreaterThan(frames[3].xPosition[1]);
-  expect(frames[1].yPosition[0]).toBeLessThan(frames[3].yPosition[0]);
-  expect(frames[1].yPosition[1]).toBeCloseTo(frames[3].yPosition[1], 2);
+  const oldX = frames[1].ghostAxes.find(axis => axis.labels.includes('A'));
+  const oldY = frames[1].ghostAxes.find(axis => !axis.labels.includes('A'));
+  expect(oldX).toBeTruthy();
+  expect(oldY).toBeTruthy();
+  expect(frames.every(frame => frame.labels.length === 2)).toBe(true);
+  expect(frames.every(frame => frame.ghostLabelCount === 0)).toBe(true);
+  expect(frames[1].xPosition[0]).toBeCloseTo(oldX.position[0], 2);
+  expect(frames[1].xPosition[1]).toBeCloseTo(oldX.position[1], 2);
+  expect(frames[1].yPosition[0]).toBeCloseTo(oldY.position[0], 2);
+  expect(frames[1].yPosition[1]).toBeCloseTo(oldY.position[1], 2);
   expect(frames[2].ghostAxes.some(axis => axis.opacity < 0.99)).toBe(true);
   expect(frames[3].ghostAxes).toHaveLength(0);
-  expect(frames[3].ghostLabels).toHaveLength(0);
   expect(frames[3].x).toBe(1);
   expect(frames[3].y).toBe(1);
 });

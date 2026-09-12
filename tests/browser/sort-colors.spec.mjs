@@ -155,10 +155,10 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
     return { fills, legends, splitFills, splitLegends, segments };
   });
   expect(new Set(result.fills).size).toBe(1);
-  expect(result.fills[0]).toBe('#000000');
+  expect(result.fills[0]).toBe('#4e79a7');
   expect(result.legends).toBe(0);
   expect(new Set(result.splitFills).size).toBe(1);
-  expect(result.splitFills[0]).toBe('#000000');
+  expect(result.splitFills[0]).toBe('#4e79a7');
   expect(result.splitLegends).toBe(0);
   expect(result.segments).toBe(4);
 
@@ -166,12 +166,12 @@ test('undeclared color uses one fill and no legend; split demo declares segment 
   await expect(page.locator('#status')).toHaveText('Ready');
   await page.locator('#scenario').selectOption('split');
   await expect(page.locator('#status')).toHaveText('Ready');
-  await expect(page.locator('#editor')).toHaveValue(/\.color\("type"\)/);
+  await expect(page.locator('#editor')).toHaveValue(/\.color\("age"/);
   await page.locator('#end').click();
-  await expect(page.locator('#chart .sl-legend-item')).toHaveCount(2);
+  await expect(page.locator('#chart .sl-legend-item')).toHaveCount(9);
   const segmentFills = await page.locator('#chart rect.sl-bar').evaluateAll(nodes =>
     nodes.map(node => getComputedStyle(node).fill));
-  expect(new Set(segmentFills).size).toBe(2);
+  expect(new Set(segmentFills).size).toBe(9);
 });
 
 test('stacked split cuts at final segment bounds, then reveals color over the parent', async ({ page }) => {
@@ -257,6 +257,6 @@ test('stacked split cuts at final segment bounds, then reveals color over the pa
     expect(line.length).toBeGreaterThan(0);
     expect(line.length).toBeLessThan(end.length);
   });
-  expect(result.noColor.every(mark => mark.fill === '#000000')).toBe(true);
+  expect(result.noColor.every(mark => mark.fill === '#4e79a7')).toBe(true);
   expect(result.noColorSeams).toBe(1);
 });

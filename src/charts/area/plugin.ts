@@ -5,11 +5,15 @@ import type { AreaViewState } from './authoring.js';
 import { createAreaSpecCompiler } from './compile.js';
 import { createAreaRenderer } from './render.js';
 import { areaObservationChange, areaState, canonicalAreaTransitionPair } from './state.js';
+import { chartStyle } from '../style.js';
 
 export const plugin: ChartPlugin<AreaViewState> = defineChartType<AreaViewState>({
   key: 'area',
   transitionEvaluation: 'cached',
   scenes: ['selection', 'axis', 'detail', 'mapping'],
+  defaults: {
+    margin: (_spec, deps) => chartStyle(deps).charts.area.margin
+  },
   createRenderer: createAreaRenderer,
   createSpecCompiler: createAreaSpecCompiler,
   transition: {

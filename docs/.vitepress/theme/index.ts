@@ -12,5 +12,8 @@ export default {
     app.component('TransitionWorkbench', defineAsyncComponent(
       () => import('../components/TransitionWorkbench.vue')
     ));
+    app.component('ChartStyleGallery', defineAsyncComponent(
+      () => import('../components/ChartStyleGallery.vue')
+    ));
   }
 };

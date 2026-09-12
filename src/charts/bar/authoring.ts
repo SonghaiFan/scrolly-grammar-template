@@ -178,7 +178,28 @@ export class BarState extends ChartState<BarViewState> {
     const value = options.value ?? (this.state as BarViewState).encoding?.y?.field ?? 'count';
     const { color, title, by: _by, groupby: _groupby, value: _value, ...rest } = options;
 
-    let nextState = aggregateBarState(this, {
+    // A wide-data segment creates its measure field through a fold. Preserve
+    // that preparation when rolling the detail back into category totals.
+    // Otherwise rollup would aggregate a field that does not exist in the
+    // original CSV rows.
+    const detail = (this.state as BarViewState).detail;
+    const rollupSource = detail?.fields?.length
+      ? this.with({
+          transform: [
+            ...((this.state as BarViewState).transform ?? []),
+            {
+              fold: {
+                fields: detail.fields,
+                as: [detail.segment ?? 'segment', detail.value ?? value],
+                sourceAs: detail.source ?? '__measure',
+                labels: detail.labels ?? {}
+              }
+            }
+          ]
+        } as Partial<BarViewState>)
+      : this;
+
+    let nextState = aggregateBarState(rollupSource, {
       ...rest,
       groupby: fields,
       value,
@@ -213,7 +234,6 @@ export class BarState extends ChartState<BarViewState> {
           layout?: BarLayout;
           color?: ChannelSpec;
           domain?: unknown[];
-          range?: unknown[];
           source?: string;
           groupby?: string[];
           key?: string | string[];
@@ -248,7 +268,6 @@ export class BarState extends ChartState<BarViewState> {
         layout: config.layout ?? 'stacked',
         color: cloneState(config.color),
         domain: config.domain,
-        range: config.range,
         source: tidy ? segment : config.source,
         groupby: tidy ? [category, segment].filter(Boolean) as string[] : config.groupby
       } as DetailSpec,
@@ -328,7 +347,6 @@ function aggregateBarState(
         layout: normalized.layout ?? 'stacked',
         color: cloneState(normalized.color) as ChannelSpec | undefined,
         domain: normalized.domain as unknown[] | undefined,
-        range: normalized.range as unknown[] | undefined,
         source: segment,
         groupby,
         op: normalized.op

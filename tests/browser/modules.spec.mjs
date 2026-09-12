@@ -26,7 +26,8 @@ test('selected bar transition loads no Story runtime or unrelated chart types', 
   });
   await page.goto('/tests/fixtures/runtime.html');
   await expect(page.locator('#status')).toHaveText('Ready');
-  // The lab uses the A/B/C fixture shared by the transition scenarios.
+  // This isolated fixture intentionally stays tiny; the docs lab uses the
+  // bundled population CSV.
   await expect(page.locator('#chart rect.sl-bar')).toHaveCount(3);
   await page.locator('#progress').fill('0.37');
   await expect(page.locator('#value')).toHaveText('0.37');

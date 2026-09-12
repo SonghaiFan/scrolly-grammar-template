@@ -68,29 +68,26 @@ export class AreaState extends ChartState<AreaViewState> {
   /** Split each x total into stacked parts. Color remains an explicit choice. */
   breakdown(field: string, options: Record<string, unknown> = {}): this {
     if (!field) throw new Error('Area breakdown needs a field name.');
-    return this.with({
-      detail: {
+    return this.replaceState('detail', {
         mode: 'stacked',
         series: field,
         ...(options['color']
           ? Array.isArray(options['color'])
-            ? { range: options['color'] as unknown[] }
+            ? { color: { range: options['color'] as unknown[] } }
             : { color: colorFrom(options['color'] as string) }
-          : {}),
-        ...(options['range'] ? { range: options['range'] as unknown[] } : {})
-      }
+          : {})
     }, 'detail') as this;
   }
 
   /** Combine stacked parts into one total at every x value. */
   rollup(options: Record<string, unknown> = {}): this {
-    return this.with({
-      detail: {
+    const series = (this.state.detail as Record<string, unknown> | undefined)?.['series'];
+    return this.replaceState('detail', {
         mode: 'single',
+        ...(series ? { series } : {}),
         op: String(options['op'] ?? 'sum'),
         ...(options['as'] ? { as: String(options['as']) } : {}),
         ...(options['color'] ? { color: colorFrom(options['color'] as string) } : {})
-      }
     }, 'detail') as this;
   }
 }

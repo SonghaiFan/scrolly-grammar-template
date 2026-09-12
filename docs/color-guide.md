@@ -28,7 +28,7 @@ theory.
 
 ## Categorical color (nominal / ordinal data)
 
-With no color channel, every data mark is black and no legend is shown. Color
+With no color channel, every data mark uses the theme accent and no legend is shown. Color
 enters the visualization only through an explicit constant, field, or composite
 color declaration.
 

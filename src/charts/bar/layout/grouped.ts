@@ -5,9 +5,10 @@ import {
   barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey
 } from './index.js';
 import { specState } from '../../../spec-meta.js';
+import { drawBarAxes } from '../axes.js';
 
 export function createGroupedBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, quantitativeDomain, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, quantitativeDomain, themeValue } = deps;
 
   return function renderGroupedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -56,10 +57,10 @@ export function createGroupedBarRenderer(deps, kit) {
       y: (d) => horizontal ? y(d[categoryField]) + y1(d[segmentField]) + y1.bandwidth() / 2 : y(d[valueField])
     };
 
-    if (horizontal) updateGrid(chart, null, d3, yAxisTransition);
-    else drawGrid(chart, y, d3, yAxisTransition);
-    drawXAxis(chart, x, enc.x?.title, d3, xAxisTransition);
-    drawYAxis(chart, y, enc.y?.title, d3, yAxisTransition);
+    drawBarAxes(chart, x, y, enc, d3, deps, horizontal, {
+      xTransition: xAxisTransition,
+      yTransition: yAxisTransition
+    });
 
     kit.renderBarJoin({
       chart, rows, spec, tooltip, d3, bindTooltip, key,

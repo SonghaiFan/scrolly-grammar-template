@@ -4,7 +4,6 @@ import type {
   ChartDeps,
   ChartType,
   IntermediateSpec,
-  MarginSpec,
   TransitionPlan,
   ViewSpec
 } from '../../types/index.js';
@@ -13,6 +12,7 @@ import {
   barIntermediateSpecs,
   resolveBarTransitionPlan
 } from './state.js';
+import { chartStyle } from '../style.js';
 
 export interface BarSpec extends ViewSpec {
   mark: 'bar';
@@ -20,6 +20,7 @@ export interface BarSpec extends ViewSpec {
 
 export function createBarChart(deps: ChartDeps): ChartType<BarSpec> {
   const renderer = createBarRenderer(deps);
+  const style = chartStyle(deps);
 
   return {
     key: 'bar',
@@ -28,20 +29,11 @@ export function createBarChart(deps: ChartDeps): ChartType<BarSpec> {
     resolveTransitionPlan: resolveBarTransitionPlan as (prev: BarSpec | null, next: BarSpec | null) => TransitionPlan,
     canonicalTransitionPair: canonicalBarTransitionPair,
     intermediateSpecs: barIntermediateSpecs as (prev: BarSpec, next: BarSpec) => IntermediateSpec<BarSpec>[],
-    defaultMargin,
+    defaultMargin: () => style.charts.bar.margin,
     scenes: ['selection', 'axis', 'detail', 'mapping'],
     stateOperations: { selection: 'filter', axis: 'coordinate', detail: 'aggregate' },
     inspect: { transitionPlanKey: 'barTransitionPlan' }
   };
-}
-
-function defaultMargin(spec: BarSpec): Partial<MarginSpec> {
-  const enc = (spec.encoding ?? {}) as Record<string, { type?: string }>;
-  const horizontalBar =
-    String(spec.mark ?? '').toLowerCase() === 'bar' &&
-    enc.x?.type === 'quantitative' &&
-    ['nominal', 'ordinal'].includes(enc.y?.type ?? '');
-  return horizontalBar ? { left: 86, right: 42 } : {};
 }
 
 function prepareBarSpec(spec: BarSpec): BarSpec {

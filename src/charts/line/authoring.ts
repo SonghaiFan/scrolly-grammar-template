@@ -77,28 +77,25 @@ export class LineState extends ChartState<LineViewState> {
   }
 
   breakdown(field: string, options: Record<string, unknown> = {}): this {
-    return this.with({
-      detail: {
+    return this.replaceState('detail', {
         mode: 'series',
         series: field,
         ...(options['color']
           ? Array.isArray(options['color'])
-            ? { range: options['color'] as unknown[] }
+            ? { color: { range: options['color'] as unknown[] } }
             : { color: colorFrom(options['color'] as string) }
-          : {}),
-        ...(options['range'] ? { range: options['range'] as unknown[] } : {})
-      }
+          : {})
     }, 'detail') as this;
   }
 
   rollup(options: Record<string, unknown> = {}): this {
-    return this.with({
-      detail: {
+    const series = (this.state.detail as Record<string, unknown> | undefined)?.['series'];
+    return this.replaceState('detail', {
         mode: 'single',
+        ...(series ? { series } : {}),
         op: String(options['op'] ?? 'sum'),
         ...(options['as'] ? { as: String(options['as']) } : {}),
         ...(options['color'] ? { color: colorFrom(options['color'] as string) } : {})
-      }
     }, 'detail') as this;
   }
 }

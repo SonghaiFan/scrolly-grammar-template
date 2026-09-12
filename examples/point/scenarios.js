@@ -23,9 +23,9 @@ const summarySetup = `${base}
 const detailed = base.color("region");
 const summary = detailed.rollup("region", {
   key: "region",
-  sizeRange: [10, 24],
   x: { op: "mean" },
-  y: { op: "mean" }
+  y: { op: "mean" },
+  size: { op: "count", range: [10, 24] }
 });`;
 
 export const chart = 'point';

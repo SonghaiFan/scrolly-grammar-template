@@ -2,7 +2,7 @@ import * as core from './index.js';
 import type { Visualization, TransitionOptions } from './transition.js';
 
 export { area, availableChartTypes, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, delta, diffViewStates, defineChartType,
-  line, point, registerChartType, registerChartModule, unit,
+  chartStylePresets, darkChartStyle, defineChartStyle, d3ChartStyle, line, paperChartStyle, point, registerChartType, registerChartModule, unit,
   UNIT_LAYOUTS, visualizationSpec } from './index.js';
 
 type BrowserOptions = Record<string, unknown>;

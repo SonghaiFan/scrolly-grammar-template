@@ -65,11 +65,6 @@
 body { background: var(--sl-color-bg); }
 .sl-intro { background: var(--sl-color-bg); }
 
-/* ── Axis & grid ─────────────────────────────────────────────────────────── */
-.sl-axis text, .sl-axis-label { fill: var(--sl-muted); font-size: var(--sl-axis-font-size); }
-.sl-legend   { fill: var(--sl-muted); font-size: var(--sl-legend-font-size); }
-.sl-grid line { stroke: var(--sl-grid); stroke-width: var(--sl-grid-width); }
-
 /* ── Figure (chart) card: bordered print graphic — no shadow, no rounding — */
 .sl-figure {
   border-top: 2px solid var(--sl-color-on-surface);   /* heavy top rule, newspaper column-top */

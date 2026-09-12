@@ -7,6 +7,7 @@ export function createChartRuntimeDeps(context: RenderContext = {}) {
   return {
     bandOrLinear,
     bindTooltip,
+    chartStyle: context.chartStyle,
     channelDomain,
     colorScale,
     drawGrid,

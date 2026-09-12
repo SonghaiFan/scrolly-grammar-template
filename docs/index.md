@@ -22,8 +22,8 @@ features:
     details: Play by time or show any exact frame with a progress value from 0 to 1.
   - title: Any control
     details: Buttons, scroll, sliders, gestures, routes, and timers can control the same transition.
-  - title: Many ways to control it
-    details: Use time, a button, a slider, scrolling, a gesture, or any progress value from 0 to 1.
+  - title: Chart-owned behavior
+    details: Each chart module owns its marks and transitions while the core stays chart-agnostic.
   - title: Small building blocks
     details: Import only the chart and transition pieces your project needs.
 ---

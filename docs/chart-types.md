@@ -19,6 +19,11 @@ and styling methods work identically across chart types.
 This page documents the shared methods first, then each chart type's specific
 methods, defaults, and example progressions.
 
+See [Chart style](./chart-style.md) for the shared presentation vocabulary and
+the justified axis, grid, margin, and mark differences between chart types.
+That layer is a runtime module: pass `chartStyle` to switch structural style
+without adding presentation metadata to the visualization state.
+
 > **Every change makes a new state.** The original stays untouched, so you can
 > make several versions from one `base` chart and move between them safely.
 
@@ -232,8 +237,8 @@ const stacked = area(rows)
   });
 ```
 
-Use `.breakdown("region")` without color for black layers separated by a thin
-boundary. Use `.color("region")` or the `color` option when parts should carry
+Use `.breakdown("region")` without color for one theme-accent fill separated by
+a thin boundary. Use `.color("region")` or the `color` option when parts should carry
 distinct hues.
 
 ### `.rollup(options?)`
@@ -370,7 +375,7 @@ the direct one-total → stacked/grouped-detail operation.
 This changes geometry and grain only. It does not implicitly encode the
 segment field with color: add `.color("type")` or pass an explicit `color`
 option when color carries meaning. Without a color declaration, all segments
-are black and no legend is drawn. The compiled spec keeps
+use one theme-accent fill and no legend is drawn. The compiled spec keeps
 the grouping field in `encoding.detail`, independently of `encoding.color`.
 
 The stacked split transition establishes the final segment geometry first. A
@@ -381,7 +386,7 @@ explicitly encoded colors. With no color encoding, the seams distinguish the
 otherwise-black segments.
 
 ```js
-base.breakdown()                  // geometry only; black fill, no legend
+base.breakdown()                  // geometry only; one fill, no legend
 base.breakdown("type").color("type") // explicitly encode the segment field
 base.breakdown("type", { layout: "grouped", op: "mean" })
 base.breakdown("type", { color: TEMPERATURE_HUE, tooltip: [...] })
@@ -671,22 +676,24 @@ Swaps x/y coordinates. It accepts the same `x`, `y`, `order`, `duration`, and
 
 ### `.rollup(groupby, options?)`
 
-Aggregates individual points into **larger summary circles** — e.g. one
-circle per period instead of one per year.
+Aggregates individual points into **summary circles** — e.g. one circle per
+period instead of one per year. Circle size changes only when `size` declares
+which aggregate value controls it.
 
 ```js
 base.rollup("period")
 base.rollup(["period", "region"], {
-  countAs: "n",
-  sizeRange: [6, 36],          // map aggregate count → circle radius range
   x: { op: "mean" },           // aggregation config for this chart type
-  y: { op: "mean" }
+  y: { op: "mean" },
+  size: { op: "count", range: [6, 36] }
 })
 ```
 
 `options`: `key` (how summary points are matched, defaults from `groupby`),
-`x`/`y` (per-axis aggregation config), `countAs` (name for the synthesized
-count field), `sizeRange` (`[min, max]` radius mapping for aggregate size).
+`x`/`y` (per-axis aggregation config), and `size` (the aggregate value mapped
+to circle radius). For example, `size: { op: "count", range: [6, 36] }`
+means “count the observations in each summary and map that count to a radius
+between 6 and 36.” Without `size`, summary circles keep a constant radius.
 
 ### `.breakdown(detail?, options?)`
 

@@ -3,9 +3,10 @@ import { applyBarIdentity, barKeyAccessor } from '../keys.js';
 import { focusedScale, viewSelection } from '../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding, barRendererKey } from './index.js';
 import { specState } from '../../../spec-meta.js';
+import { drawBarAxes } from '../axes.js';
 
 export function createStackedBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, themeValue } = deps;
 
   return function renderStackedBar(chart, rows, spec, tooltip, d3, segmentField) {
     const enc = spec.encoding || {};
@@ -52,10 +53,10 @@ export function createStackedBarRenderer(deps, kit) {
       y: (d) => horizontal ? position(y, d[categoryField]) : y((d.__stack0 + d.__stack1) / 2)
     };
 
-    if (horizontal) updateGrid(chart, null, d3, yAxisTransition);
-    else drawGrid(chart, y, d3, yAxisTransition);
-    drawXAxis(chart, x, enc.x?.title, d3, xAxisTransition);
-    drawYAxis(chart, y, enc.y?.title, d3, yAxisTransition);
+    drawBarAxes(chart, x, y, enc, d3, deps, horizontal, {
+      xTransition: xAxisTransition,
+      yTransition: yAxisTransition
+    });
 
     kit.renderBarJoin({
       chart, rows: stackedRows, spec, tooltip, d3, bindTooltip, key,

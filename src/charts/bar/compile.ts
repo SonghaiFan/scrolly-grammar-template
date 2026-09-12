@@ -155,13 +155,17 @@ function compileBarAggregate(spec: ViewSpec, detailSpec: AnyRecord = {}, _contex
     detailSpec['color'],
     (encoding['color'] as ChannelSpec | undefined),
     segmentField,
-    segmentDomain,
-    detailSpec['range'] as string[] | undefined
+    segmentDomain
   );
   const newEncoding: Encoding = {
     ...cloneEncoding(spec.encoding) as Encoding,
     x: channelFromField(categoryField, (detailSpec['categoryTitle'] as string) || (encoding['x'] as ChannelSpec)?.title || null, 'nominal'),
-    y: channelFromField(valueField, (detailSpec['valueTitle'] as string) || (encoding['y'] as ChannelSpec)?.title || null, 'quantitative'),
+    y: {
+      ...channelFromField(valueField, (detailSpec['valueTitle'] as string) || (encoding['y'] as ChannelSpec)?.title || null, 'quantitative'),
+      ...((encoding['y'] as ChannelSpec)?.format
+        ? { format: (encoding['y'] as ChannelSpec).format }
+        : {})
+    },
     detail: { field: segmentField, type: 'nominal' },
     ...(color ? { color } : {})
   };
@@ -198,8 +202,7 @@ function explicitDetailColor(
   requested: unknown,
   inherited: ChannelSpec | undefined,
   segmentField: string,
-  segmentDomain: string[],
-  range: string[] | undefined
+  segmentDomain: string[]
 ): ChannelSpec | undefined {
   if (requested === false) return undefined;
   if (Array.isArray(requested)) {
@@ -217,14 +220,6 @@ function explicitDetailColor(
         ? { field: segmentField, type: 'nominal' as const }
         : {}),
       ...channel
-    };
-  }
-  if (range?.length) {
-    return {
-      field: segmentField,
-      type: 'nominal',
-      ...(segmentDomain.length ? { domain: segmentDomain } : {}),
-      range
     };
   }
   return inherited;

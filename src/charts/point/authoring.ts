@@ -57,17 +57,14 @@ export class PointState extends ChartState<PointViewState> {
   rollup(groupby: string | string[] | null, options: Record<string, unknown> = {}): this {
     const fields = Array.isArray(groupby) ? groupby : [groupby].filter(Boolean) as string[];
     const key = options['key'] || (fields.length === 1 ? fields[0] : fields);
-    return this.with({
-      detail: definedState({
+    return this.replaceState('detail', definedState({
         mode: 'aggregate',
         groupby: fields,
         key,
         x: options['x'],
         y: options['y'],
-        countAs: options['countAs'],
-        sizeRange: options['sizeRange']
-      })
-    }, 'detail') as this;
+        size: options['size']
+    }), 'detail') as this;
   }
 
   breakdown(detail: string | Record<string, unknown> | null = null, options: Record<string, unknown> = {}): this {
@@ -75,13 +72,16 @@ export class PointState extends ChartState<PointViewState> {
       ? detail as Record<string, unknown>
       : { detail, ...options };
     const detailKey = config['detail'] || this.state['key'];
-    return this.with({
-      detail: definedState({
+    const previousGroupby = (this.state.detail as Record<string, unknown> | undefined)?.['groupby'];
+    const previousParent = Array.isArray(previousGroupby) && previousGroupby.length === 1
+      ? previousGroupby[0]
+      : previousGroupby;
+    return this.replaceState('detail', definedState({
         mode: 'detail',
         key: config['key'] || detailKey,
-        detail: detailKey
-      })
-    }, 'detail') as this;
+        detail: detailKey,
+        parentField: config['parentField'] || previousParent
+    }), 'detail') as this;
   }
 }
 

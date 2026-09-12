@@ -37,12 +37,13 @@ function compileAreaDetail(spec: ViewSpec, detailSpec: AnyRecord = {}): ViewSpec
   ) || null;
 
   if (mode === 'stacked' && seriesField) {
-    if (detailSpec['color']) encoding['color'] = detailSpec['color'] as AnyRecord;
-    else if (detailSpec['range']) {
+    if (detailSpec['color']) {
+      const requestedColor = detailSpec['color'] as AnyRecord;
       encoding['color'] = {
-        field: seriesField,
-        type: 'nominal',
-        range: detailSpec['range'] as unknown[]
+        ...(!requestedColor['field'] && !requestedColor['value']
+          ? { field: seriesField, type: 'nominal' }
+          : {}),
+        ...requestedColor
       };
     }
     return withSceneState({ ...spec, encoding }, {
@@ -65,7 +66,7 @@ function compileAreaDetail(spec: ViewSpec, detailSpec: AnyRecord = {}): ViewSpec
       'sum'
     );
     encoding['y'] = { ...y, field: aggregate.as };
-    if (encoding['color']?.['field'] === seriesField || detailSpec['series']) delete encoding['color'];
+    if (encoding['color']?.['field']) delete encoding['color'];
     if (detailSpec['color']) encoding['color'] = detailSpec['color'] as AnyRecord;
     return withSceneState(withObject({
       ...spec,

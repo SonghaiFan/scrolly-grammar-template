@@ -12,6 +12,8 @@ const expectedApi = [
   "area",
   "availableChartTypes",
   "bar",
+  "d3ChartStyle",
+  "defineChartStyle",
   "defineChartType",
   "delta",
   "diffViewStates",
@@ -87,6 +89,7 @@ import { D3_CURVE_NAMES as selectedCurveNames, line as selectedLine, lineModule 
 import { UNIT_LAYOUTS as selectedUnitLayouts, unit as selectedUnit, unitModule } from "visdelta/unit";
 import { delta as selectedDelta } from "visdelta/core";
 import { transition as selectedTransition } from "visdelta/transition";
+import { defineChartStyle as selectedChartStyle, d3ChartStyle as selectedD3Style } from "visdelta/chart-style";
 import {
   ChartState as SelectedChartState,
   defineChartModule as selectedChartModule,
@@ -110,6 +113,7 @@ if (typeof selectedUnit !== "function" || selectedUnitLayouts.length !== 4) thro
 if (areaModule.key !== "area" || barModule.key !== "bar" || pointModule.key !== "point" || lineModule.key !== "line" || unitModule.key !== "unit") throw new Error("focused chart module mismatch");
 if (typeof selectedDelta !== "function") throw new Error("core subpath did not export delta()");
 if (typeof selectedTransition !== "function") throw new Error("transition subpath did not export transition()");
+if (typeof selectedChartStyle !== "function" || selectedD3Style.key !== "d3") throw new Error("chart-style subpath mismatch");
 if (typeof selectedPlugin !== "function") throw new Error("plugins subpath did not export defineChartType()");
 if (typeof selectedChartModule !== "function") throw new Error("plugins subpath did not export defineChartModule()");
 if (typeof SelectedChartState !== "function") throw new Error("plugins subpath did not export ChartState");

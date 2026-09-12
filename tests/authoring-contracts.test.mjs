@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { area, bar, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, point, unit, UNIT_LAYOUTS } from '../dist/index.js';
+import { area, bar, chartStylePresets, darkChartStyle, d3ChartStyle, defineChartStyle, D3_AREA_CURVE_NAMES, D3_CURVE_NAMES, line, paperChartStyle, point, unit, UNIT_LAYOUTS } from '../dist/index.js';
 import { areaCells, areaLayers } from '../dist/charts/area/state.js';
 import { matchAreaFramePoints } from '../dist/charts/area/render.js';
 import { connectedLineStretches, lineRowsAtTotal } from '../dist/charts/line/state.js';
@@ -17,6 +17,87 @@ test('documented filtering uses where, not a nonexistent filter method', () => {
     assert.equal(typeof declaration.filter, 'undefined');
     assert.doesNotThrow(() => declaration.where('datum.y >= 2').toSpec());
   }
+});
+
+test('chart style modules inherit the default grammar without entering chart specs', () => {
+  const compact = defineChartStyle({
+    key: 'compact',
+    tickSpacing: { x: 48 },
+    edgeTitleInset: { top: 12, right: 2 },
+    legendInset: { top: 6 },
+    legendPosition: 'right',
+    charts: { bar: { grid: 'horizontal', margin: { left: 32 } } },
+    axisTitle: channel => channel?.title
+  });
+  const spec = bar([{ id: 'A', value: 2 }]).x('id').y('value').toSpec();
+
+  assert.equal(compact.key, 'compact');
+  assert.equal(compact.tickSpacing.x, 48);
+  assert.equal(compact.tickSpacing.y, d3ChartStyle.tickSpacing.y);
+  assert.equal(compact.edgeTitleInset.top, 12);
+  assert.equal(compact.edgeTitleInset.right, 2);
+  assert.equal(compact.edgeTitleInset.bottom, d3ChartStyle.edgeTitleInset.bottom);
+  assert.equal(compact.edgeTitleInset.left, d3ChartStyle.edgeTitleInset.left);
+  assert.equal(compact.legendInset.top, 6);
+  assert.equal(compact.legendInset.left, d3ChartStyle.legendInset.left);
+  assert.equal(compact.legendPosition, 'right');
+  assert.equal(compact.charts.bar.grid, 'horizontal');
+  assert.equal(compact.charts.bar.margin.left, 32);
+  assert.equal(compact.charts.bar.margin.top, d3ChartStyle.charts.bar.margin.top);
+  assert.equal(spec.chartStyle, undefined);
+  assert.throws(() => defineChartStyle({ key: '' }), /require a key/);
+});
+
+test('built-in chart-style presets expose stable structural and CSS keys', () => {
+  assert.deepEqual(Object.keys(chartStylePresets), ['d3', 'paper', 'dark']);
+  assert.equal(chartStylePresets.d3, d3ChartStyle);
+  assert.equal(chartStylePresets.paper, paperChartStyle);
+  assert.equal(chartStylePresets.dark, darkChartStyle);
+  assert.equal(paperChartStyle.key, 'paper');
+  assert.equal(paperChartStyle.charts.point.grid, 'horizontal');
+  assert.equal(paperChartStyle.charts.point.edgeTitles, false);
+  assert.equal(paperChartStyle.charts.point.openXDomain, false);
+  assert.equal(paperChartStyle.charts.point.openYDomain, false);
+  assert.equal(paperChartStyle.legendPosition, 'right');
+  assert.ok(paperChartStyle.charts.point.margin.right >= 100);
+  assert.equal(paperChartStyle.axisTitle({ title: 'Income' }, 'right'), 'Income');
+  assert.equal(darkChartStyle.key, 'dark');
+  assert.equal(darkChartStyle.charts.point.grid, 'both');
+});
+
+test('wide bar segments preserve their fold when rolling up to totals', () => {
+  const ageBands = ['<10', '10-19', '≥80'];
+  const detailed = bar('./population.csv')
+    .x('name')
+    .y('population')
+    .segment({
+      fields: ageBands,
+      as: ['age', 'population'],
+      category: 'name',
+      labels: Object.fromEntries(ageBands.map(age => [age, age])),
+      domain: ageBands
+    })
+    .color('age', { domain: ageBands, range: ['#d53e4f', '#fdae61', '#3288bd'] });
+
+  const total = detailed.rollup().toSpec();
+  assert.deepEqual(total.transform, [
+    {
+      fold: {
+        fields: ageBands,
+        as: ['age', 'population'],
+        sourceAs: '__measure',
+        labels: Object.fromEntries(ageBands.map(age => [age, age]))
+      }
+    },
+    {
+      aggregate: {
+        groupby: ['name'],
+        fields: [{ op: 'sum', field: 'population', as: 'population' }]
+      }
+    }
+  ]);
+  assert.equal(total.encoding?.color, undefined);
+  assert.equal(total.encoding?.y?.field, 'population');
 });
 
 test('where changes rows while focus keeps rows and changes the view', () => {
@@ -227,6 +308,34 @@ test('color is an explicit encoding, including for bar breakdowns', () => {
   assert.equal(base.breakdown('type').color('type').rollup().toSpec().encoding.color, undefined);
 });
 
+test('chart operations never invent a visual encoding', () => {
+  const rows = [
+    { id: 'A', period: 'Q1', region: 'North', value: 10 },
+    { id: 'B', period: 'Q1', region: 'South', value: 20 }
+  ];
+
+  assert.equal(
+    bar(rows).x('period').y('value').breakdown('region').toSpec().encoding.color,
+    undefined
+  );
+  assert.equal(
+    line(rows).x('period').y('value').breakdown('region').toSpec().encoding.color,
+    undefined
+  );
+  assert.equal(
+    area(rows).x('period').y('value').breakdown('region').toSpec().encoding.color,
+    undefined
+  );
+  assert.equal(
+    point(rows).x('value').y('value').rollup('region').toSpec().encoding.size,
+    undefined
+  );
+  assert.equal(
+    unit(rows).value('value').group('region').toSpec().encoding?.color,
+    undefined
+  );
+});
+
 test('order is the canonical authored transition-step order', () => {
   const base = bar([{ category: 'A', value: 1 }]).x('category').y('value');
   const ordered = base.flip({ order: ['x', 'y'], duration: 300 }).toSpec();
@@ -244,8 +353,17 @@ test('point size and summary parent fields survive compilation', () => {
   assert.equal(detailed.toSpec().size, 11);
   assert.throws(() => detailed.radius(0), /positive finite number/);
 
-  const summary = detailed.rollup('region');
+  const summary = detailed.rollup('region', {
+    size: { op: 'count', range: [10, 24] }
+  });
   assert.deepEqual(summary.toSpec().meta.state.sceneState.detail.groupby, ['region']);
+  assert.deepEqual(summary.toSpec().encoding.size, {
+    field: 'count', type: 'quantitative', range: [10, 24]
+  });
+  assert.deepEqual(summary.toSpec().transform.at(-1).aggregate.fields.at(-1), {
+    op: 'count', as: 'count'
+  });
+  assert.equal(detailed.rollup('region').toSpec().encoding.size, undefined);
   assert.equal(
     summary.breakdown('id').toSpec().meta.state.sceneState.detail.parentField,
     'region'

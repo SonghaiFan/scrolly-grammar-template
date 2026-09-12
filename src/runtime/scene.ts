@@ -13,7 +13,10 @@ export function getScene(node, viewConfig, d3) {
   const width = Math.max(60, node.clientWidth || 720);
   const height = viewConfig.height || 500;
   node.innerHTML = '';
-  const svg = d3.select(node).append('svg').attr('viewBox', `0 0 ${width} ${height}`).attr('role', 'img');
+  const svg = d3.select(node).append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .attr('role', 'img');
   const frame = svg.append('g').attr('class', 'sl-frame');
   const grid = frame.append('g').attr('class', 'sl-grid');
   const markRoot = frame.append('g').attr('class', 'sl-mark-root');

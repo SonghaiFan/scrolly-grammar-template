@@ -5,6 +5,7 @@ import { d3Curve } from './curve.js';
 import { linePointKeyAccessor, lineSeriesKey } from './keys.js';
 import { matchLinePathFrames } from './path.js';
 import { connectedLineStretches, selectedLineXScale, lineRowsAtTotal, lineState } from './state.js';
+import { drawLineAxes } from './axes.js';
 
 export function createLineRenderer(deps) {
   return new LineChart(deps).renderer();
@@ -37,9 +38,7 @@ class LineChart extends BaseChart {
     const pointDuration = Math.max(1, totalDuration - pointStart);
     // Geometry and axes move together first. New points use the remaining
     // time. Canonical reverse playback makes a removal do the exact opposite.
-    const t = addsObservations && !addsAndRemoves
-      ? chart.transition.base.duration(lineDuration)
-      : chart.transition.base;
+    const t = chart.transition.base;
     const domainRows = chart.domainRows?.length ? chart.domainRows : rows;
     const plottedRows = state.detailPosition === 'total'
       ? lineRowsAtTotal(rows, enc.x?.field, enc.y?.field, state.detailParentOp)
@@ -113,7 +112,7 @@ class LineChart extends BaseChart {
       x: (d) => position(x, d[enc.x.field]),
       y: (d) => y(d[enc.y.field])
     });
-    this.drawCartesianAxes(chart, x, y, enc, d3);
+    drawLineAxes(chart, x, y, enc, d3, this.deps, { duration: lineDuration });
 
     chart.g.selectAll('path.sl-line')
       .data(series, lineSeriesKey)

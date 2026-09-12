@@ -3,6 +3,7 @@ import { matchesFilter } from '../../data/filter.js';
 import { diffViewStates } from '../../grammar/diff.js';
 import { specObjectKey, specState, specTransition, specUnit } from '../../spec-meta.js';
 import { defaultTransition } from '../../timing.js';
+import { clearUnitAxes, drawUnitXAxis } from './axes.js';
 
 const UNIT_LAYOUT_ORDER = ['grid', 'bar', 'timeline', 'dodge'];
 const VIEW_STAGE_RATIO = 0.28;
@@ -34,7 +35,7 @@ export function expandUnits(rows, spec, d3) {
 }
 
 export function unitLayout(units, chart, spec, deps) {
-  const { bandOrLinear, d3, drawGrid, drawXAxis, drawYAxis, position, updateGrid } = deps;
+  const { bandOrLinear, d3, position } = deps;
   const unit = specUnit(spec) || {};
   const layout = unit.layout || 'grid';
   const columns = positiveInteger(unit.columns, Math.max(8, Math.floor(Math.sqrt(units.length) * 1.4)));
@@ -54,9 +55,7 @@ export function unitLayout(units, chart, spec, deps) {
     const cell = radius * 2.45;
     const x = unitXScale(units, xChannel, [radius, chart.innerWidth - radius], { bandOrLinear, d3 });
     const base = chart.innerHeight - radius;
-    drawXAxis(chart, x, xChannel.title || xKey, d3);
-    drawYAxis(chart, null, null, d3);
-    updateGrid(chart, null, d3);
+    drawUnitXAxis(chart, x, { ...xChannel, title: xChannel.title || xKey }, d3, deps);
     return {
       name: 'timeline', axes: true, r: radius,
       x: (d) => position(x, d.__row[xKey]),
@@ -73,9 +72,7 @@ export function unitLayout(units, chart, spec, deps) {
     let placed = dodgeForHeight(units, radius, chart.innerHeight, (d) => position(x, d.__row[xKey]));
     radius = placed.radius;
     const yByKey = new Map(placed.map((circle) => [circle.data.__unitKey, circle.y]));
-    drawXAxis(chart, x, xChannel.title || xKey, d3);
-    drawYAxis(chart, null, null, d3);
-    updateGrid(chart, null, d3);
+    drawUnitXAxis(chart, x, { ...xChannel, title: xChannel.title || xKey }, d3, deps);
     return {
       name: 'dodge', axes: true, r: radius,
       x: (d) => position(x, d.__row[xKey]),
@@ -92,9 +89,7 @@ export function unitLayout(units, chart, spec, deps) {
     const cell = radius * 2.45;
     const groupColumns = Math.max(1, Math.min(columns, Math.floor(groupScale.bandwidth() / cell) || 1));
     const stackByGroup = stackIndex(units, (d) => d.__row[groupKey]);
-    drawXAxis(chart, groupScale, groupKey, d3);
-    drawYAxis(chart, null, null, d3);
-    updateGrid(chart, null, d3);
+    drawUnitXAxis(chart, groupScale, { field: groupKey, title: groupKey, type: 'nominal' }, d3, deps);
     return {
       name: 'bar', axes: true, r: radius, groupField: groupKey,
       x: (d) => groupScale(d.__row[groupKey]) + (stackByGroup(d) % groupColumns) * cell + radius,
@@ -107,9 +102,7 @@ export function unitLayout(units, chart, spec, deps) {
   const rowsNeeded = Math.ceil(units.length / columns);
   const radius = fitRadius(chart, requestedRadius, { columns, rows: rowsNeeded });
   const cell = radius * 2.45;
-  updateGrid(chart, null, d3);
-  drawXAxis(chart, null, null, d3);
-  drawYAxis(chart, null, null, d3);
+  clearUnitAxes(chart, d3, deps);
   const startX = Math.max(0, (chart.innerWidth - columns * cell) / 2);
   const startY = Math.max(0, (chart.innerHeight - rowsNeeded * cell) / 2);
   return {

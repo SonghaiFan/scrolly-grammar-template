@@ -2,9 +2,10 @@
 import { applyBarIdentity, barKeyAccessor } from '../keys.js';
 import { focusedScale, viewSelection } from '../../focus.js';
 import { barCategoryChannel, barMeasureChannel, barOrientationFromEncoding } from './index.js';
+import { drawBarAxes } from '../axes.js';
 
 export function createSimpleBarRenderer(deps, kit) {
-  const { bandOrLinear, bindTooltip, channelDomain, colorScale, drawGrid, drawXAxis, drawYAxis, niceExtent, position, quantitativeDomain, themeValue, updateGrid } = deps;
+  const { bandOrLinear, bindTooltip, channelDomain, colorScale, niceExtent, position, quantitativeDomain, themeValue } = deps;
 
   return function renderSimpleBar(chart, rows, spec, tooltip, d3) {
     const enc = spec.encoding || {};
@@ -45,10 +46,10 @@ export function createSimpleBarRenderer(deps, kit) {
       y: (d) => horizontal ? position(y, d[categoryField]) : y(d[valueField])
     };
 
-    if (horizontal) updateGrid(chart, null, d3, yAxisTransition);
-    else drawGrid(chart, y, d3, yAxisTransition);
-    drawXAxis(chart, x, enc.x?.title, d3, xAxisTransition);
-    drawYAxis(chart, y, enc.y?.title, d3, yAxisTransition);
+    drawBarAxes(chart, x, y, enc, d3, deps, horizontal, {
+      xTransition: xAxisTransition,
+      yTransition: yAxisTransition
+    });
 
     kit.renderBarJoin({
       chart, rows, spec, tooltip, d3, bindTooltip, key,

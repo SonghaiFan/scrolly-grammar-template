@@ -20,6 +20,8 @@ export {
 } from "./grammar/index.js";
 export type { D3AreaCurveName, D3CurveName, UnitLayout, UnitLayoutOptions, UnitViewState } from "./grammar/index.js";
 export { defineChartType } from "./charts/plugin.js";
+export { chartStylePresets, darkChartStyle, defineChartStyle, d3ChartStyle, paperChartStyle } from "./charts/style.js";
+export type { ChartGridStyle, ChartLegendPosition, ChartStyleDefinition, ChartStyleModule, ChartStyleRule, ChartStyleRuleDefinition } from "./charts/style.js";
 export { transition } from "./transition.js";
 export { delta, diffViewStates, visualizationSpec } from "./core.js";
 export type { Visualization } from "./core.js";

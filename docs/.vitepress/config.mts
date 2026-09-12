@@ -13,7 +13,7 @@ export default defineConfig({
   cleanUrls: false,
   lastUpdated: true,
   head: [
-    ['meta', { name: 'theme-color', content: '#f7f8fc' }],
+    ['meta', { name: 'theme-color', content: '#fbfbf8' }],
     ['link', {
       rel: 'icon',
       href: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect x="8" y="20" width="14" height="34" rx="4" fill="%231c6ae4"/%3E%3Crect x="26" y="10" width="14" height="44" rx="4" fill="%23fa4d1d"/%3E%3Crect x="44" y="28" width="14" height="26" rx="4" fill="%2303b976"/%3E%3C/svg%3E'
@@ -60,6 +60,7 @@ export default defineConfig({
         text: 'Authoring language',
         items: [
           { text: 'Chart types', link: '/chart-types' },
+          { text: 'Chart style', link: '/chart-style' },
           { text: 'Data sources', link: '/data-sources-and-transforms' },
           { text: 'Transform grammar', link: '/data-transforms' },
           { text: 'Color guide', link: '/color-guide' }

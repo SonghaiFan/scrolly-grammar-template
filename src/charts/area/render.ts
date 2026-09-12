@@ -11,6 +11,7 @@ import {
   areaSelectionOpacity,
   areaState
 } from './state.js';
+import { drawAreaAxes } from './axes.js';
 
 export function createAreaRenderer(deps) {
   return new AreaChart(deps).renderer();
@@ -112,7 +113,7 @@ class AreaChart extends BaseChart {
       x: (row) => position(x, row[xField]),
       y: (row) => y(row[yField])
     });
-    this.drawCartesianAxes(chart, x, y, enc, d3);
+    drawAreaAxes(chart, x, y, enc, d3, this.deps);
 
     chart.g.selectAll('path.sl-area')
       .data(cells, (cell) => cell.key)

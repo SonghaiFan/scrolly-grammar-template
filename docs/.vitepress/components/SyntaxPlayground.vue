@@ -311,13 +311,13 @@ async function runCode() {
   try {
     const isLab = isLabMode.value;
     const evaluate = isLab
-      ? new AsyncFunction(labChart.value, `"use strict";\n${code.value}`)
+      ? new AsyncFunction(labChart.value, 'd3', `"use strict";\n${code.value}`)
       : new AsyncFunction(
         'area', 'bar', 'line', 'point', 'unit', 'delta', 'rows', 'segments', 'series', 'units',
         `"use strict";\n${code.value}`
       );
     const authoredResult = isLab
-      ? await evaluate(await labSamples[props.mode].loadChart())
+      ? await evaluate(await labSamples[props.mode].loadChart(), d3)
       : await evaluate(
         api.area, api.bar, api.line, api.point, api.unit, api.delta,
         structuredClone(rows), structuredClone(segments), structuredClone(series), structuredClone(units)
@@ -536,7 +536,7 @@ function handleEditorKeydown(event) {
           spellcheck="false"
           @keydown="handleEditorKeydown"
         ></textarea>
-        <p v-if="isLabMode" class="playground-contract"><code>{{ labChart }}</code> is provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
+        <p v-if="isLabMode" class="playground-contract"><code>{{ labChart }}</code> and <code>d3</code> are provided. Define the data and both states, then end with <code>return { from, to };</code>. Code runs locally in this page.</p>
         <p v-else class="playground-contract">Available: <code>area</code>, <code>bar</code>, <code>line</code>, <code>point</code>, <code>unit</code>, <code>delta</code>, plus <code>rows</code>, <code>segments</code>, <code>series</code>, and <code>units</code>. End with <code>return { from, to };</code>.</p>
       </div>
 

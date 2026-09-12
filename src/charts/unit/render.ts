@@ -18,6 +18,7 @@ class UnitChart extends BaseChart {
     const {
       bandOrLinear,
       bindTooltip,
+      chartStyle,
       colorScale,
       drawGrid,
       drawLegend,
@@ -39,7 +40,7 @@ class UnitChart extends BaseChart {
     const stage = unitStageTiming(chart);
     if (stage) chart.transition.base = transitionFor(chart, d3, stage.viewDuration);
     const layout = unitLayout(units, chart, spec, {
-      bandOrLinear, d3, drawGrid, drawXAxis, drawYAxis, niceExtent, position, updateGrid
+      bandOrLinear, chartStyle, d3, drawGrid, drawXAxis, drawYAxis, niceExtent, position, updateGrid
     });
 
     fadeNonUnitShapes(chart);

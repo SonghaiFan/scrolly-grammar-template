@@ -54,21 +54,21 @@ function compileLineSeries(spec: ViewSpec, detailSpec: AnyRecord = {}, _context:
     (encoding['color'] as AnyRecord | undefined)?.['field'] as string | undefined;
 
   if (mode === 'series' && seriesField) {
-    encoding['color'] = detailSpec['color'] || {
-      field: seriesField,
-      type: 'nominal',
-      range: (detailSpec['range'] as string[]) || [
-        'var(--sl-series-1)',
-        'var(--sl-series-2)',
-        'var(--sl-series-3)'
-      ]
-    };
+    const requestedColor = detailSpec['color'] as AnyRecord | undefined;
+    if (requestedColor) {
+      encoding['color'] = {
+        ...(!requestedColor['field'] && !requestedColor['value']
+          ? { field: seriesField, type: 'nominal' }
+          : {}),
+        ...requestedColor
+      };
+    }
   }
 
   let nextSpec: ViewSpec = { ...spec, encoding: encoding as ViewSpec['encoding'] };
   if (mode === 'single') {
     if (detailSpec['color']) encoding['color'] = detailSpec['color'];
-    else delete encoding['color'];
+    else if ((encoding['color'] as AnyRecord | undefined)?.['field']) delete encoding['color'];
 
     const x = encoding['x'] as import('../../types/index.js').ChannelSpec | undefined;
     const y = encoding['y'] as import('../../types/index.js').ChannelSpec | undefined;

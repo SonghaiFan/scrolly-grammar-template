@@ -40,7 +40,11 @@ export function focusedScale(
     return deps.bandOrLinear(rows, { ...channel, domain }, range, deps.d3);
   }
 
-  return fitDiscreteRange(base, selectedRows, channel.field, range, rows, channel, deps);
+  const selectedDomain = Array.from(new Set(selectedRows.map((row) => row[channel.field!])))
+    .filter((value) => value != null);
+  return selectedDomain.length
+    ? deps.bandOrLinear(rows, { ...channel, domain: selectedDomain }, range, deps.d3)
+    : base;
 }
 
 function focusedDomain(
@@ -53,45 +57,4 @@ function focusedDomain(
     return extent(rows, (row: DataRow) => new Date(row[channel.field!] as string));
   }
   return deps.niceExtent(rows, channel.field!);
-}
-
-function fitDiscreteRange(
-  base: AnyRecord,
-  selectedRows: DataRow[],
-  field: string,
-  range: number[],
-  rows: DataRow[],
-  channel: ChannelSpec,
-  deps: FocusScaleDeps
-): AnyRecord {
-  const positions = selectedRows
-    .map((row) => deps.position(base, row[field]))
-    .filter(Number.isFinite);
-  if (!positions.length) return base;
-
-  const coordinateLow = Math.min(...range);
-  const coordinateHigh = Math.max(...range);
-  const span = coordinateHigh - coordinateLow;
-  if (!(span > 0)) return base;
-
-  const bandwidth = typeof base.bandwidth === 'function' ? Number(base.bandwidth()) : 0;
-  let sourceLow = Math.min(...positions) - bandwidth / 2;
-  let sourceHigh = Math.max(...positions) + bandwidth / 2;
-  if (!(sourceHigh > sourceLow)) {
-    const fallback = Math.max(1, span / Math.max(2, rows.length));
-    sourceLow = positions[0] - fallback / 2;
-    sourceHigh = positions[0] + fallback / 2;
-  }
-
-  const inset = Math.min(span * 0.08, 44);
-  const targetLow = coordinateLow + inset;
-  const targetHigh = coordinateHigh - inset;
-  const factor = (targetHigh - targetLow) / (sourceHigh - sourceLow);
-  const expandedLow = targetLow - sourceLow * factor;
-  const expandedHigh = expandedLow + span * factor;
-  const expandedRange = range[0] <= range[range.length - 1]
-    ? [expandedLow, expandedHigh]
-    : [expandedHigh, expandedLow];
-
-  return deps.bandOrLinear(rows, channel, expandedRange, deps.d3);
 }
