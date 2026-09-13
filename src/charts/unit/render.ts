@@ -60,7 +60,13 @@ class UnitChart extends BaseChart {
       ...baseLayout,
       r: cameraSize(baseLayout.r, camera),
       x: (unit, index) => cameraPosition(baseLayout.x(unit, index), camera, 'x'),
-      y: (unit, index) => cameraPosition(baseLayout.y(unit, index), camera, 'y')
+      y: (unit, index) => cameraPosition(baseLayout.y(unit, index), camera, 'y'),
+      ...(baseLayout.trajectory ? {
+        trajectory: (unit) => baseLayout.trajectory(unit).map((point) => ({
+          x: cameraPosition(point.x, camera, 'x'),
+          y: cameraPosition(point.y, camera, 'y')
+        }))
+      } : {})
     };
     const xScale = baseLayout.axis
       ? cameraScale(baseLayout.axis.scale, camera, 'x')
@@ -83,17 +89,22 @@ class UnitChart extends BaseChart {
 
     const match = matchUnitSlotsByIdentityAndTravel(chart, units, layout);
     units = match.units;
+    const markDuration = stage && layout.trajectory
+      ? stage.markDuration + stage.travelDelay
+      : stage?.markDuration;
     const enterTransition = stage
-      ? transitionFor(chart, d3, stage.markDuration)
+      ? transitionFor(chart, d3, markDuration)
       : (chart.transition.enter || originalTransition);
     const fallsToAxis = Number.isFinite(stage?.moveAcrossDuration);
     const updateTransition = stage
-      ? transitionFor(chart, d3, fallsToAxis ? stage.moveAcrossDuration : stage.markDuration)
+      ? transitionFor(chart, d3, fallsToAxis ? stage.moveAcrossDuration : markDuration)
       : originalTransition;
     const transitionOptions = specTransition(spec);
     const hasStaggerOverride = Object.prototype.hasOwnProperty.call(transitionOptions, 'stagger');
     const perMarkDelay = (unit, index) => stage && !hasStaggerOverride
-      ? travelDelay(unit, match.maxDistance, stage.travelDelay)
+      ? layout.trajectory
+        ? 0
+        : travelDelay(unit, match.maxDistance, stage.travelDelay)
       : staggerDelay(
           spec,
           unit,
@@ -118,8 +129,8 @@ class UnitChart extends BaseChart {
     chart.g.selectAll('circle.vd-unit')
       .data(units, unitKey)
       .join(
-        (enter) => enter
-          .append('circle')
+        (enter) => {
+          const entered = enter.append('circle')
           .attr('class', 'vd-unit')
           .attr('data-key', semanticUnitKey)
           .attr('data-source-key', (d) => d.__sourceUnitKey)
@@ -128,17 +139,19 @@ class UnitChart extends BaseChart {
           .attr('data-parent-key', (d) => d.__parentKey)
           .attr('data-unit-index', (d) => d.__unitIndex)
           .attr('data-group-key', (d) => layout.groupField ? d.__row[layout.groupField] : null)
-          .attr('cx', layout.x)
-          .attr('cy', layout.y)
+          .attr('cx', (unit, index) => trajectoryStart(layout, unit, 'x', layout.x(unit, index)))
+          .attr('cy', (unit, index) => trajectoryStart(layout, unit, 'y', layout.y(unit, index)))
           .attr('r', 0)
           .attr('fill', (d) => color(d.__row || d))
           .attr('stroke', themeValue('--vd-mark-stroke', 'white'))
           .attr('stroke-width', cameraSize(themeValue('--vd-unit-stroke-width', 0.5), camera))
-          .call(bindTooltip, spec, tooltip)
-          .transition(enterTransition)
+          .call(bindTooltip, spec, tooltip);
+          const entering = entered.transition(enterTransition)
           .delay(enterMarkDelay)
           .attr('r', layout.r)
-          .style('opacity', opacity),
+          .style('opacity', opacity);
+          return layout.trajectory ? applyForceTrajectory(entering, layout, d3) : entering;
+        },
         (update) => {
           const moveAcross = update
             .attr('data-key', semanticUnitKey)
@@ -157,6 +170,7 @@ class UnitChart extends BaseChart {
             .attr('stroke-width', cameraSize(themeValue('--vd-unit-stroke-width', 0.5), camera))
             .style('opacity', opacity);
 
+          if (layout.trajectory) return applyForceTrajectory(moveAcross, layout, d3);
           if (!fallsToAxis) return moveAcross.attr('cy', layout.y);
           return moveAcross
             .transition()
@@ -179,6 +193,33 @@ class UnitChart extends BaseChart {
           .remove()
       );
   }
+}
+
+function applyForceTrajectory(transition, layout, d3) {
+  return transition
+    // The force cooling schedule already supplies the motion curve. Linear
+    // playback keeps normalized progress aligned with the recorded tick index.
+    .ease(d3.easeLinear)
+    .attrTween('cx', (unit) => (progress) => trajectoryPoint(layout, unit, progress).x)
+    .attrTween('cy', (unit) => (progress) => trajectoryPoint(layout, unit, progress).y);
+}
+
+function trajectoryStart(layout, unit, axis, fallback) {
+  return layout.trajectory?.(unit)?.[0]?.[axis] ?? fallback;
+}
+
+function trajectoryPoint(layout, unit, progress) {
+  const frames = layout.trajectory(unit);
+  if (!frames?.length) return { x: layout.x(unit), y: layout.y(unit) };
+  if (frames.length === 1) return frames[0];
+  const scaled = Math.max(0, Math.min(1, progress)) * (frames.length - 1);
+  const lower = Math.floor(scaled);
+  const upper = Math.min(frames.length - 1, lower + 1);
+  const mix = scaled - lower;
+  return {
+    x: frames[lower].x + (frames[upper].x - frames[lower].x) * mix,
+    y: frames[lower].y + (frames[upper].y - frames[lower].y) * mix
+  };
 }
 
 function semanticUnitKey(unit) {

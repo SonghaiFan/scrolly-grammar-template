@@ -10,6 +10,9 @@ const TRAVEL_STAGE_RATIO = 0.18;
 const MOVE_ACROSS_STAGE_RATIO = 0.24;
 const FALL_STAGGER_RATIO = 0.10;
 const FALL_STAGE_RATIO = 0.38;
+const FORCE_TICK_COUNT = 180;
+const FORCE_ALPHA_START = 1;
+const FORCE_ALPHA_MIN = 0.001;
 
 export function expandUnits(rows, spec, d3) {
   const unit = specUnit(spec) || {};
@@ -297,58 +300,89 @@ function fitRadius(chart, requestedRadius, { columns = 1, rows = 1 } = {}) {
   ));
 }
 
-/**
- * Resolve a D3 force simulation to a stable endpoint before rendering. The
- * simulation is intentionally stopped and ticked synchronously: Unit motion
- * remains controlled by VisDelta's seekable transition rather than wall time.
- */
+/** Record a deterministic D3 force trajectory from the current mark positions. */
 function centeredForceLayout(units, chart, requestedRadius, d3) {
   if (!units.length) {
     return {
       name: 'force', axes: false, axis: null, r: requestedRadius,
       x: () => chart.innerWidth / 2,
-      y: () => chart.innerHeight / 2
+      y: () => chart.innerHeight / 2,
+      trajectory: () => [{ x: chart.innerWidth / 2, y: chart.innerHeight / 2 }]
     };
   }
 
   const radius = fitForceRadius(chart, requestedRadius, units.length);
   const centerX = chart.innerWidth / 2;
   const centerY = chart.innerHeight / 2;
+  const existing = new Map(chart.g.selectAll('circle.vd-unit').nodes().map((node) => [
+    String(node.dataset.key ?? node.__data__?.__semanticUnitKey ?? node.__data__?.__unitKey),
+    { x: finiteNumber(node.getAttribute('cx')), y: finiteNumber(node.getAttribute('cy')) }
+  ]));
+  const existingEndpoint = units.map((unit) => [
+    unit.__unitKey,
+    existing.get(String(unit.__semanticUnitKey ?? unit.__unitKey))
+  ]);
+  const isTransitionTarget = chart.transitionPlan?.match?.mode === 'key-first-travel';
+
+  // The cached transition surface renders the clean target once more at
+  // progress 1. Keep an already-resolved force endpoint fixed instead of
+  // reheating it and producing a last-frame jump.
+  if (!isTransitionTarget && existingEndpoint.every(([, point]) =>
+    point && Number.isFinite(point.x) && Number.isFinite(point.y))) {
+    const endpoints = new Map(existingEndpoint);
+    return {
+      name: 'force', axes: false, axis: null, r: radius,
+      x: (unit) => endpoints.get(unit.__unitKey).x,
+      y: (unit) => endpoints.get(unit.__unitKey).y,
+      trajectory: (unit) => [endpoints.get(unit.__unitKey)]
+    };
+  }
+  const columns = Math.max(1, Math.ceil(Math.sqrt(units.length * chart.innerWidth / chart.innerHeight)));
+  const rows = Math.max(1, Math.ceil(units.length / columns));
+  const cell = radius * 2.45;
+  const startX = centerX - ((columns - 1) * cell) / 2;
+  const startY = centerY - ((rows - 1) * cell) / 2;
+  const seeds = new Map(units.map((unit, index) => {
+    const current = existing.get(String(unit.__semanticUnitKey ?? unit.__unitKey));
+    const validCurrent = current && Number.isFinite(current.x) && Number.isFinite(current.y);
+    return [unit.__unitKey, validCurrent ? current : {
+      x: startX + (index % columns) * cell,
+      y: startY + Math.floor(index / columns) * cell
+    }];
+  }));
   const nodes = [...units]
     .sort((a, b) => String(a.__unitKey).localeCompare(String(b.__unitKey)))
-    .map((unit) => ({ unit }));
+    .map((unit) => ({ unit, ...seeds.get(unit.__unitKey), vx: 0, vy: 0 }));
+  const trajectories = new Map(nodes.map((node) => [
+    node.unit.__unitKey,
+    [{ x: node.x, y: node.y }]
+  ]));
   const simulation = d3.forceSimulation(nodes)
     .force('center', d3.forceCenter(centerX, centerY))
-    .force('x', d3.forceX(centerX).strength(0.08))
-    .force('y', d3.forceY(centerY).strength(0.08))
+    .force('x', d3.forceX(centerX).strength(0.2))
+    .force('y', d3.forceY(centerY).strength(0.2))
     .force('collide', d3.forceCollide(radius * 1.12).strength(1).iterations(2))
+    .alpha(FORCE_ALPHA_START)
+    .alphaMin(FORCE_ALPHA_MIN)
+    .alphaDecay(1 - Math.pow(
+      FORCE_ALPHA_MIN / FORCE_ALPHA_START,
+      1 / FORCE_TICK_COUNT
+    ))
     .stop();
-
-  const ticks = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()));
-  simulation.tick(ticks);
-
-  const x0 = d3.min(nodes, (node) => node.x - radius);
-  const x1 = d3.max(nodes, (node) => node.x + radius);
-  const y0 = d3.min(nodes, (node) => node.y - radius);
-  const y1 = d3.max(nodes, (node) => node.y + radius);
-  const packedWidth = Math.max(radius * 2, x1 - x0);
-  const packedHeight = Math.max(radius * 2, y1 - y0);
-  const scale = Math.min(1, chart.innerWidth / packedWidth, chart.innerHeight / packedHeight);
-  const fittedRadius = radius * scale;
-  const packedCenterX = (x0 + x1) / 2;
-  const packedCenterY = (y0 + y1) / 2;
-  const positions = new Map(nodes.map((node) => [
-    node.unit.__unitKey,
-    {
-      x: centerX + (node.x - packedCenterX) * scale,
-      y: centerY + (node.y - packedCenterY) * scale
+  for (let tick = 0; tick < FORCE_TICK_COUNT; tick++) {
+    simulation.tick();
+    for (const node of nodes) {
+      trajectories.get(node.unit.__unitKey).push({ x: node.x, y: node.y });
     }
-  ]));
+  }
+  simulation.stop();
+  const endpoints = new Map(nodes.map((node) => [node.unit.__unitKey, { x: node.x, y: node.y }]));
 
   return {
-    name: 'force', axes: false, axis: null, r: fittedRadius,
-    x: (unit) => positions.get(unit.__unitKey).x,
-    y: (unit) => positions.get(unit.__unitKey).y
+    name: 'force', axes: false, axis: null, r: radius,
+    x: (unit) => endpoints.get(unit.__unitKey).x,
+    y: (unit) => endpoints.get(unit.__unitKey).y,
+    trajectory: (unit) => trajectories.get(unit.__unitKey)
   };
 }
 

@@ -61,9 +61,16 @@ that gravity points upward. Reverse playback preserves the same keyed route and
 reverses the phase order, but chooses easing from the actual screen direction:
 down can bounce; up never does.
 
-The `force` layout resolves a deterministic D3 force simulation before drawing.
-It uses centering forces and collision detection, but does not run a live
-simulation: the resulting positions become ordinary, seekable Unit endpoints.
+The `force` layout starts from the marks' current positions and records every
+tick of a deterministic D3 simulation. Those positions become the transition
+trajectory: progress seeks between adjacent ticks, and reverse reads the same
+ticks backward. Centering and collision are therefore visible in every frame
+without leaving a live simulation running after the endpoint. The sample count,
+starting alpha, minimum alpha, and alpha decay are coupled so the final recorded
+tick is cooled; tick playback is linear because the force cooling schedule
+already supplies its motion curve. A clean endpoint reuses that last recorded
+position instead of reheating the simulation. Unit enter/update/exit and
+key-first matching remain part of the same cached path.
 
 Unit transitions use a light per-mark delay by default. Layout changes order
 marks by travel distance, so short moves start first; other Unit changes use

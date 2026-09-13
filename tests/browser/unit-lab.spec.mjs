@@ -88,6 +88,20 @@ test('unit bar uses category position while every unit keeps equal size', async 
 test('Unit force layout is centered, deterministic, non-overlapping, and axis-free', async ({ page }) => {
   await page.goto('/docs/.vitepress/dist/unit-lab.html#force');
   await ready(page);
+  await page.locator('#progress').fill('0.9');
+  const frameAt090 = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => [node.dataset.key, node.getAttribute('cx'), node.getAttribute('cy')])
+      .sort((a, b) => a[0].localeCompare(b[0])));
+  await page.locator('#progress').fill('0.99');
+
+  const beforeForce = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => [node.dataset.key, node.getAttribute('cx'), node.getAttribute('cy')])
+      .sort((a, b) => a[0].localeCompare(b[0])));
+  await page.waitForTimeout(120);
+  expect(await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => [node.dataset.key, node.getAttribute('cx'), node.getAttribute('cy')])
+      .sort((a, b) => a[0].localeCompare(b[0])))).toEqual(beforeForce);
+
   await page.locator('#end').click();
 
   const readLayout = () => page.locator('#chart svg').evaluate(svg => {
@@ -98,10 +112,6 @@ test('Unit force layout is centered, deterministic, non-overlapping, and axis-fr
       y: Number(node.getAttribute('cy')),
       r: Number(node.getAttribute('r'))
     })).sort((a, b) => a.key.localeCompare(b.key));
-    const x0 = Math.min(...marks.map(mark => mark.x - mark.r));
-    const x1 = Math.max(...marks.map(mark => mark.x + mark.r));
-    const y0 = Math.min(...marks.map(mark => mark.y - mark.r));
-    const y1 = Math.max(...marks.map(mark => mark.y + mark.r));
     let minimumGap = Infinity;
     for (let i = 0; i < marks.length; i++) {
       for (let j = i + 1; j < marks.length; j++) {
@@ -114,24 +124,83 @@ test('Unit force layout is centered, deterministic, non-overlapping, and axis-fr
       marks,
       plotWidth: Number(plot?.getAttribute('width')),
       plotHeight: Number(plot?.getAttribute('height')),
-      boundsCenterX: (x0 + x1) / 2,
-      boundsCenterY: (y0 + y1) / 2,
+      centroidX: marks.reduce((sum, mark) => sum + mark.x, 0) / marks.length,
+      centroidY: marks.reduce((sum, mark) => sum + mark.y, 0) / marks.length,
       minimumGap,
       ticks: svg.querySelectorAll('.vd-x-axis .tick, .vd-y-axis .tick').length
     };
   });
 
   const first = await readLayout();
+  expect(beforeForce).not.toEqual(frameAt090);
+  const frameAt099 = new Map(beforeForce.map(([key, x, y]) => [key, { x: Number(x), y: Number(y) }]));
+  const largestLastStep = Math.max(...first.marks.map(mark => {
+    const before = frameAt099.get(mark.key);
+    return Math.hypot(mark.x - before.x, mark.y - before.y);
+  }));
+  expect(largestLastStep).toBeLessThan(0.25);
   await page.locator('#start').click();
   await page.locator('#end').click();
   const second = await readLayout();
 
   expect(first.marks).toHaveLength(150);
-  expect(first.boundsCenterX).toBeCloseTo(first.plotWidth / 2, 5);
-  expect(first.boundsCenterY).toBeCloseTo(first.plotHeight / 2, 5);
+  expect(first.centroidX).toBeCloseTo(first.plotWidth / 2, 5);
+  expect(first.centroidY).toBeCloseTo(first.plotHeight / 2, 5);
   expect(first.minimumGap).toBeGreaterThan(-0.05);
   expect(first.ticks).toBe(0);
   expect(second.marks).toEqual(first.marks);
+
+  await page.locator('#start').click();
+  await page.locator('#progress').fill('0.37');
+  const forwardFrame = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => [node.dataset.key, node.getAttribute('cx'), node.getAttribute('cy')])
+      .sort((a, b) => a[0].localeCompare(b[0])));
+  await page.locator('#end').click();
+  await page.locator('#progress').fill('0.37');
+  const reverseFrame = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => [node.dataset.key, node.getAttribute('cx'), node.getAttribute('cy')])
+      .sort((a, b) => a[0].localeCompare(b[0])));
+  expect(reverseFrame).toEqual(forwardFrame);
+});
+
+test('Unit force endpoints preserve update identity and support enter and exit', async ({ page }) => {
+  await page.goto('/tests/fixtures/isolated.html');
+  const result = await page.evaluate(async () => {
+    const [{ unit }, { transition }] = await Promise.all([
+      import('/dist/unit.js'),
+      import('/dist/transition-entry.js')
+    ]);
+    const sourceRows = Array.from({ length: 8 }, (_, index) => ({ id: `U${index + 1}` }));
+    const targetRows = [
+      ...sourceRows.slice(0, 6),
+      { id: 'U9' },
+      { id: 'U10' },
+      { id: 'U11' }
+    ];
+    const source = unit(sourceRows).key('id').layout('force', { radius: 7 });
+    const target = unit(targetRows).key('id').layout('force', { radius: 7 });
+    const change = await transition(source, target, {
+      target: '#chart', d3, aq, height: 320
+    });
+    window.forceChange = change;
+    return { source: sourceRows.map(row => row.id), target: targetRows.map(row => row.id) };
+  });
+  await page.evaluate(() => window.forceChange.progress(0.5));
+  const middle = await page.locator('#chart circle.vd-unit').evaluateAll(nodes => nodes.map(node => ({
+    key: node.dataset.parentKey,
+    r: Number(node.getAttribute('r'))
+  })));
+  await page.evaluate(() => window.forceChange.progress(1));
+  const endKeys = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => node.dataset.parentKey).sort());
+  await page.evaluate(() => window.forceChange.progress(0));
+  const startKeys = await page.locator('#chart circle.vd-unit').evaluateAll(nodes =>
+    nodes.map(node => node.dataset.parentKey).sort());
+
+  expect(startKeys).toEqual(result.source.sort());
+  expect(endKeys).toEqual(result.target.sort());
+  expect(middle.filter(mark => result.source.includes(mark.key) && result.target.includes(mark.key))
+    .every(mark => mark.r > 0)).toBe(true);
 });
 
 test('Unit bar sets horizontal positions before units fall', async ({ page }) => {
